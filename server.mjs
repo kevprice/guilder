@@ -2,6 +2,8 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 const root = process.cwd();
+const port = Number(process.env.PORT) || 4173;
+const host = process.env.HOST || (process.env.RAILWAY_ENVIRONMENT ? '0.0.0.0' : '127.0.0.1');
 http
   .createServer(async (req, res) => {
     try {
@@ -26,6 +28,4 @@ http
       res.end('Not found');
     }
   })
-  .listen(Number(process.env.PORT) || 4173, '127.0.0.1', () =>
-    console.log('The Bound House: http://127.0.0.1:' + (Number(process.env.PORT) || 4173)),
-  );
+  .listen(port, host, () => console.log(`The Bound House: http://${host}:${port}`));
