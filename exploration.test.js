@@ -5,6 +5,7 @@ import { guildStairs } from './exploration.js';
 test('dormant residents require discovery and capabilities, awaken once, and persist with personal dialogue', () => {
   const s = D.initial();
   s.flags.stairs = true;
+  s.flags.searched_crypt = true;
   s.flags.anchor = true;
   s.gold = 500;
   D.recruit(s, 'bryn');
@@ -30,6 +31,8 @@ test('dormant residents require discovery and capabilities, awaken once, and per
   s.selected = 'ivo';
   D.visitFloor(s, -100);
   D.visitFloor(s, 1020);
+  s.flags.searched_potions = true;
+  s.flags.searched_maze = true;
   for (const id of ['maelin', 'ysra']) {
     D.discoverSleeper(s, id);
     D.awaken(s, id);

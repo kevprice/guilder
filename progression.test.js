@@ -104,6 +104,7 @@ test('outside help opens the archive and releases trained residents without teac
   s.selected = 'ivo';
   D.repairRoom(s, 'library');
   s.flags.towerCrown = true;
+  s.flags.searched_potions = true;
   s.flags.found_maelin = true;
   D.awaken(s, 'maelin');
   assert(s.roster.find((c) => c.id === 'maelin').skills.includes('water'));

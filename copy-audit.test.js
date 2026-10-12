@@ -41,7 +41,8 @@ test('current story, discoveries, mechanics and interface use current player-fac
 
 test('Nell’s old return scene is migrated in every stored surface and stays clean after resaving', () => {
   const s = D.initial();
-  D.recoverResident(s, 'nell', { x: 430, floor: 380 });
+  s.flags.searched_cells = true;
+  D.recoverResident(s, 'nell', { x: 1850, floor: 1770 });
   const old =
     'Nell steps out of the folded corridor.\n“There is no recruitment fee or service obligation.”';
   s.scenes.push({ title: 'Nell returns', body: old });
@@ -88,7 +89,8 @@ test('both reference helpers follow the current cast and XP model', async () => 
 test('the character page renders one person and keeps old Nell prose out of biographies and memories', () => {
   const state = D.initial();
   D.recoverResident(state, 'bryn', { x: 240, floor: 380 });
-  D.recoverResident(state, 'nell', { x: 430, floor: 380 });
+  state.flags.searched_cells = true;
+  D.recoverResident(state, 'nell', { x: 1850, floor: 1770 });
   state.roster
     .find((person) => person.id === 'nell')
     .memories.push({

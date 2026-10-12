@@ -9,6 +9,7 @@ function early() {
   D.recruit(s, 'nell');
   s.flags.breach = true;
   s.flags.stairs = true;
+  s.flags.searched_crypt = true;
   s.roster[0].str = 10;
   s.selected = 'bryn';
   D.discoverSleeper(s, 'oren');

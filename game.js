@@ -1632,10 +1632,6 @@ function drawWorld(c) {
   rect(43, 275, 12, 120, '#8c7d5c');
   text(state.flags.gateOpen ? 'THE ROAD IS OPEN' : 'BOUNDARY', -100, 340, 12, '#c3b38b');
   drawMara();
-  for (const r of D.home(state).filter((r) => r.id !== c.id)) {
-    const position = D.residentPosition(state, r.id);
-    drawResident(r, position.x, position.y);
-  }
   if (state.flags.repaired) {
     ctx.save();
     ctx.translate(0, -240);
@@ -1647,14 +1643,6 @@ function drawWorld(c) {
     ctx.restore();
   }
   drawVerticalRooms();
-  for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
-    drawResident(
-      { ...D.recruits.find((c) => c.id === d.id), name: '', color: '#9bb3ad' },
-      d.x,
-      d.y,
-    );
-    paintResidentPrison(ctx, camera, d, graphics.reducedMotion ? 0 : last / 1000);
-  }
   for (const r of D.chambers.filter(
     (r) =>
       state.flags['discovered_' + r.id] &&
@@ -1664,6 +1652,35 @@ function drawWorld(c) {
       r.y - 190 <= view.bottom,
   ))
     paintChamber(ctx, camera, r, state, ambience.time);
+  for (const r of D.home(state).filter((r) => r.id !== c.id)) {
+    const position = D.residentPosition(state, r.id);
+    drawResident(r, position.x, position.y);
+  }
+  for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
+    drawResident(
+      { ...D.recruits.find((c) => c.id === d.id), name: '', color: '#9bb3ad' },
+      d.x,
+      d.y,
+    );
+    paintResidentPrison(ctx, camera, d, graphics.reducedMotion ? 0 : last / 1000);
+  }
+  for (const d of D.sleepers) {
+    if (d.requires.some((f) => !state.flags[f]) || state.roster.some((c) => c.id === d.id))
+      continue;
+    rect(
+      d.x - 25,
+      d.y - 66,
+      50,
+      66,
+      d.id === 'maelin' ? '#76bdb566' : d.id === 'oren' ? '#797974' : '#4c385d',
+    );
+    drawResident({ ...d, color: d.id === 'oren' ? '#92918a' : d.color }, d.x, d.y);
+    if (d.id === 'maelin') {
+      ctx.strokeStyle = '#b5e2e0';
+      ctx.strokeRect(d.x - 25 - camera, d.y - 66, 50, 66);
+    }
+    text('◇', d.x - 8, d.y - 85, 23, '#76bdb5');
+  }
   drawPassageMarkers();
   drawRouteLandmarks();
   drawHomeAttack();
@@ -1888,23 +1905,6 @@ function drawVerticalRooms() {
   if (state.flags.dragonFound) {
     chamber(300, 1250, 610, 'THE OLD FURNACE', '#773e30');
     drawFurnaceThreat();
-  }
-  for (const d of D.sleepers) {
-    if (d.requires.some((f) => !state.flags[f]) || state.roster.some((c) => c.id === d.id))
-      continue;
-    rect(
-      d.x - 25,
-      d.y - 66,
-      50,
-      66,
-      d.id === 'maelin' ? '#76bdb566' : d.id === 'oren' ? '#797974' : '#4c385d',
-    );
-    drawResident({ ...d, color: d.id === 'oren' ? '#92918a' : d.color }, d.x, d.y);
-    if (d.id === 'maelin') {
-      ctx.strokeStyle = '#b5e2e0';
-      ctx.strokeRect(d.x - 25 - camera, d.y - 66, 50, 66);
-    }
-    text('◇', d.x - 8, d.y - 85, 23, '#76bdb5');
   }
 }
 function drawFurnaceThreat() {

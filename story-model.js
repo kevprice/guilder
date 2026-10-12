@@ -382,12 +382,12 @@ export function optionalHouseLeads(s) {
       title: 'Drain the flooded cellar',
       text: 'Train Ivo to level 3 and learn Water breathing, or use Maelin. Dive from the dry landing, find the labelled drain wheel beside the ship and press E. Opening the sluice drains the room permanently so everyone can enter.',
     });
-  if (f.stairs && !f.awakened_oren)
+  if (f.searched_crypt && !f.awakened_oren)
     out.push({
-      title: f.found_oren ? 'Free the stone mason' : 'The figure on the cellar landing',
+      title: f.found_oren ? 'Free the stone mason' : 'The mason beneath the burial stair',
       text: f.found_oren
-        ? 'Oren’s casting ring is jammed. A resident with Strength 10 can remove it once the stair repairs are supporting the ceiling.'
-        : 'The repaired stairs lead to a dry landing with a human figure standing beneath a broken beam. Investigate it with E.',
+        ? 'Oren’s casting ring is jammed. A resident with Strength 10 can remove it beneath the supported burial stair.'
+        : 'The crypt records identify a mason beneath the burial stair. Investigate the stone figure beyond the memorial lantern with E.',
     });
   if (f.anchor && !f.tower)
     out.push({
@@ -401,6 +401,16 @@ export function optionalHouseLeads(s) {
     out.push({
       title: 'Search the bell tower',
       text: 'The lower landing is connected. Climb again at the stair to reach the bell chamber.',
+    });
+  if (f.towerCrown && !f.searched_potions && !f.awakened_maelin)
+    out.push({
+      title: 'Trace the bell ward',
+      text: 'The crown is sealed in blue ice. Search the wizard’s study and its hidden potion kitchen for the ward’s shutoff sequence.',
+    });
+  if (f.labyrinthHeart && !f.searched_maze && !f.awakened_ysra)
+    out.push({
+      title: 'Find the missing map route',
+      text: 'The living map leads beyond the false arch. Investigate the maze survey records before returning to its tracking rune.',
     });
   if (f.found_maelin && !f.awakened_maelin)
     out.push({

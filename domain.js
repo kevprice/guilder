@@ -1762,7 +1762,7 @@ export function interact(s, action) {
     s.flags.stairs = true;
     note(
       s,
-      'The workers replace the cellar stair and brace the ceiling over its dry landing. A stone figure stands beneath the old beam. Water fills the passage beyond it; a resident with Water breathing can reach the submerged drain wheel, empty the cellar and open it to everyone.',
+      'The workers replace the cellar stair and brace the ceiling over its dry landing. Mason’s marks continue into the buried passages below. Water fills the passage beyond it; a resident with Water breathing can reach the submerged drain wheel, empty the cellar and open it to everyone.',
     );
   } else if (action === 'cellar') {
     if (!s.flags.stairs || (!s.flags.cellarDrained && !c.skills.includes('water')))
@@ -2226,7 +2226,7 @@ export function validateContent() {
     ...records.map((r) => ({ requires: r.requires, sets: ['record_' + r.id] })),
     ...chambers.map((r) => ({
       requires: [],
-      sets: ['discovered_' + r.id, ...(r.key ? ['key_' + r.key] : [])],
+      sets: ['discovered_' + r.id, 'searched_' + r.id, ...(r.key ? ['key_' + r.key] : [])],
     })),
     { requires: ['gateOpen'], sets: ['free'] },
     { requires: ['labyrinthHeart'], sets: ['dragonFound'] },
