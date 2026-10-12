@@ -551,6 +551,16 @@ export function chamberTreasureX(room) {
 export function chamberObjective(s, room) {
   if (room.encounter && !s.flags['cleared_' + room.id])
     return 'Clear the guardian in Contracts. Its treasure and records are on the far side of the room.';
+  if (room.trap && !trapDisarmed(s, room) && !s.flags['searched_' + room.id])
+    return (
+      'Disarm the ' +
+      room.trap +
+      ' trap with ' +
+      trapRequirement(room) +
+      '. Opened passages let you bring the appropriate specialist here.'
+    );
+  if (room.trap && trapDisarmed(s, room) && !s.flags['searched_' + room.id])
+    return 'The trap is disarmed. Any companion can now investigate the records and treasure.';
   if (room.id === 'study')
     return s.flags.searched_study
       ? 'Use the recovered study key at the hidden shelf stair. Search the potion kitchen for the bell ward’s cancellation sequence. Echo sight will open the reflection stair later.'
@@ -569,12 +579,31 @@ export function roomAt(y) {
 export function currentSource(y) {
   return roomAt(y)?.id || { 555: 'cellar', 1020: 'labyrinth', 140: 'tower' }[y];
 }
+export function passageCanStayOpen(p) {
+  return Boolean(p.gate.skills || (p.gate.skill && p.gate.skill !== 'water'));
+}
+export function passageOpened(s, p) {
+  return (
+    passageCanStayOpen(p) && Array.isArray(s.openedPassages) && s.openedPassages.includes(p.id)
+  );
+}
+export function passageLabel(s, p) {
+  return passageOpened(s, p) ? p.label.split(' · ')[0] + ' · opened for all companions' : p.label;
+}
+export function trapDisarmed(s, room) {
+  return Array.isArray(s.disarmedTraps) && s.disarmedTraps.includes(room.id);
+}
+export function trapRequirement(room) {
+  return room.trap === 'physical'
+    ? 'Tracking or Lockcraft'
+    : (room.skill === 'echoSight' ? 'Echo sight' : 'Magical literacy') + ' or Rune thief';
+}
 export function passageError(s, p, c) {
   if (p.gate.flag && !s.flags[p.gate.flag]) return 'Follow the story first: ' + p.label;
   if (p.gate.key && !s.flags['key_' + p.gate.key]) return 'Find the key or clue first: ' + p.label;
-  if (p.gate.skill && !c.skills.includes(p.gate.skill))
+  if (p.gate.skill && !passageOpened(s, p) && !c.skills.includes(p.gate.skill))
     return 'Bring a resident with ' + p.label.split(' · ').at(-1);
-  if (p.gate.skills && !p.gate.skills.some((k) => c.skills.includes(k)))
+  if (p.gate.skills && !passageOpened(s, p) && !p.gate.skills.some((k) => c.skills.includes(k)))
     return 'This passage needs Tracking, Echo sight or Threadwalk.';
   const source = chambers.find((r) => r.id === p.from);
   if (source?.encounter && !s.flags['cleared_' + source.id])

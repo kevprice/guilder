@@ -17,7 +17,14 @@ import {
   paintResidentPrison,
   glow,
 } from './graphics-engine.js';
-import { chamberTreasureX, chamberObjective, currentSource } from './sprawl.js';
+import {
+  chamberTreasureX,
+  chamberObjective,
+  passageLabel,
+  trapDisarmed,
+  trapRequirement,
+  currentSource,
+} from './sprawl.js';
 import { paintSky, paintGuildRoof, paintMagicMotes } from './scenery.js';
 import { abilityNames } from './contracts.js';
 import { paintRoom, paintCharacter } from './artwork.js';
@@ -733,7 +740,7 @@ function renderUI() {
       );
     html += D.passages
       .filter((p) => p.from === here)
-      .map((p) => card(p.label, btn('Walk to this passage', 'routeWalk:' + p.id)))
+      .map((p) => card(passageLabel(state, p), btn('Walk to this passage', 'routeWalk:' + p.id)))
       .join('');
     html += D.chambers
       .filter((r) => state.flags['discovered_' + r.id])
@@ -1313,7 +1320,7 @@ function hotspots() {
       (p.from === 'labyrinth' && !state.flags.labyrinthHeart)
     )
       continue;
-    list.push({ x: p.x, y: p.y, action: 'passage:' + p.id, text: 'E · ' + p.label });
+    list.push({ x: p.x, y: p.y, action: 'passage:' + p.id, text: 'E · ' + passageLabel(state, p) });
   }
   const room = D.roomAt(player.floor);
   if (room) {
@@ -1326,10 +1333,16 @@ function hotspots() {
     list.push({
       x: chamberTreasureX(room),
       y: room.y,
-      action: 'search:' + room.id,
-      text: state.flags['searched_' + room.id]
-        ? 'Records and treasure recovered'
-        : 'E · Investigate the room’s records and treasure',
+      action:
+        room.trap && !trapDisarmed(state, room) && !state.flags['searched_' + room.id]
+          ? 'disarm:' + room.id
+          : 'search:' + room.id,
+      text:
+        room.trap && !trapDisarmed(state, room) && !state.flags['searched_' + room.id]
+          ? 'E · Disarm trap · ' + trapRequirement(room)
+          : state.flags['searched_' + room.id]
+            ? 'Records and treasure recovered'
+            : 'E · Investigate the room’s records and treasure',
       done: state.flags['searched_' + room.id],
     });
   }
@@ -1466,6 +1479,10 @@ document.addEventListener('keydown', (e) => {
         }
         if (h.action?.startsWith('record:')) {
           act(() => D.recoverRecord(state, h.action.slice(7)));
+          return;
+        }
+        if (h.action?.startsWith('disarm:')) {
+          act(() => D.disarmChamberTrap(state, h.action.split(':')[1]));
           return;
         }
         if (h.action?.startsWith('search:')) {

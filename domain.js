@@ -6,6 +6,10 @@ import {
   dungeonContracts,
   earlyDungeonBalance,
   legacyPassagePositions,
+  passageCanStayOpen,
+  passageOpened,
+  trapDisarmed,
+  trapRequirement,
   passageError,
   roomAt,
 } from './sprawl.js';
@@ -323,6 +327,8 @@ export function initial() {
   return {
     version: 2,
     dungeonBalanceVersion: 1,
+    openedPassages: [],
+    disarmedTraps: [],
     day: 1,
     gold: 100,
     seed: 48271,
@@ -439,6 +445,17 @@ export function enterPassage(s, id, origin) {
     throw Error('Reach this part of the guild first.');
   const error = passageError(s, p, c);
   if (error) throw Error(error);
+  if (passageCanStayOpen(p) && !passageOpened(s, p)) {
+    s.openedPassages ||= [];
+    s.openedPassages.push(p.id);
+    const text =
+      c.name +
+      ' opens and secures ' +
+      p.label.split(' · ')[0].toLowerCase() +
+      '. Other companions can now follow this route without the opening skill. Traps inside still need their own specialist.';
+    note(s, text, 'Passage opened');
+    s.scenes.push({ title: 'Passage opened for the guild', body: text });
+  }
   const r = chambers.find((r) => r.id === p.to);
   s.dungeonReturns ||= {};
   s.dungeonReturns[r.id] = { x: p.x, y: p.y, floor: p.y };
@@ -454,8 +471,8 @@ export function enterPassage(s, id, origin) {
             ? 'The room contains a ' +
               r.trap +
               ' trap. ' +
-              r.skill +
-              ' or appropriate trap training can disarm it.'
+              trapRequirement(r) +
+              ' can disarm it. Opened passages let another specialist follow the explorer here.'
             : 'Its records and treasure remain to be investigated.'),
       'Dungeon discovery',
     );
@@ -488,6 +505,36 @@ export function leaveChamber(s, id) {
   if (!r || !back) throw Error('No marked return route.');
   return { ...back, vy: 0 };
 }
+export function disarmChamberTrap(s, id) {
+  const room = chambers.find((r) => r.id === id),
+    c = home(s).find((c) => c.id === s.selected);
+  if (!room || !room.trap || !c || !s.flags['discovered_' + id])
+    throw Error('Discover this trapped room first.');
+  if (room.encounter && !s.flags['cleared_' + id]) throw Error('Clear the room’s guardian first.');
+  if (trapDisarmed(s, room)) throw Error('This trap is already disarmed.');
+  if (
+    !c.skills.includes(room.skill) &&
+    !(c.talents || []).includes(room.trap === 'physical' ? 'lockcraft' : 'runeThief')
+  )
+    throw Error(
+      'The ' +
+        room.trap +
+        ' trap needs ' +
+        trapRequirement(room) +
+        '. Bring a specialist through the opened passages.',
+    );
+  s.disarmedTraps ||= [];
+  s.disarmedTraps.push(id);
+  const text =
+    c.name +
+    ' disarms the ' +
+    room.trap +
+    ' trap in ' +
+    room.name +
+    '. The mechanism is secured. Any companion can now investigate this room’s records and treasure.';
+  note(s, text, 'Trap disarmed');
+  s.scenes.push({ title: 'Trap disarmed · route safe', body: text });
+}
 export function investigateChamber(s, id) {
   const r = chambers.find((r) => r.id === id),
     c = home(s).find((c) => c.id === s.selected);
@@ -497,20 +544,7 @@ export function investigateChamber(s, id) {
   if (damagedRooms(s).length)
     throw Error('Repair the damaged guild rooms before continuing investigations.');
   if (r.encounter && !s.flags['cleared_' + id]) throw Error('Clear the room’s creature first.');
-  if (
-    r.trap &&
-    !c.skills.includes(r.skill) &&
-    !(c.talents || []).includes(r.trap === 'physical' ? 'lockcraft' : 'runeThief')
-  )
-    throw Error(
-      'The ' +
-        r.trap +
-        ' trap needs ' +
-        r.skill +
-        ' or ' +
-        (r.trap === 'physical' ? 'Lockcraft' : 'Rune thief') +
-        '. Investigating without it is unsafe.',
-    );
+  if (r.trap && !trapDisarmed(s, r)) disarmChamberTrap(s, id);
   s.flags['searched_' + id] = true;
   if (r.key) s.flags['key_' + r.key] = true;
   if (r.id === 'potions') showBellWardDiagram(s);
@@ -2124,6 +2158,39 @@ export function load(raw) {
     oldSpillwayReturn.floor === 1510
   )
     oldSpillwayReturn.x = passages.find((p) => p.id === 'spillway').x;
+  if (s.openedPassages === undefined)
+    s.openedPassages = passages
+      .filter((p) => {
+        const back = s.dungeonReturns?.[p.to];
+        return (
+          passageCanStayOpen(p) &&
+          s.flags['discovered_' + p.to] &&
+          back?.x === p.x &&
+          back.y === p.y &&
+          back.floor === p.y
+        );
+      })
+      .map((p) => p.id);
+  if (s.disarmedTraps === undefined)
+    s.disarmedTraps = chambers
+      .filter((r) => r.trap && s.flags['searched_' + r.id])
+      .map((r) => r.id);
+  if (
+    !Array.isArray(s.openedPassages) ||
+    new Set(s.openedPassages).size !== s.openedPassages.length ||
+    s.openedPassages.some(
+      (id) =>
+        !passages.some(
+          (p) => p.id === id && passageCanStayOpen(p) && s.flags['discovered_' + p.to],
+        ),
+    ) ||
+    !Array.isArray(s.disarmedTraps) ||
+    new Set(s.disarmedTraps).size !== s.disarmedTraps.length ||
+    s.disarmedTraps.some(
+      (id) => !chambers.some((r) => r.id === id && r.trap && s.flags['discovered_' + id]),
+    )
+  )
+    throw Error('Invalid prepared exploration routes.');
   if (
     s.dungeonReturns !== undefined &&
     (!s.dungeonReturns ||
