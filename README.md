@@ -24,7 +24,7 @@ The wall survey, mason's tool recovery and another opening request can bring Bry
 
 ## Current game systems
 
-Contracts identify story leads, plot rewards, companion journeys, regional work, exploration and repeatable wages. Party stats combine to determine duration. Each working day has a harm roll modified by protection, skills and equipment. Conscious survivors can retreat; home defenders remain visible beside the threat.
+Contracts identify story leads, plot rewards, companion journeys, regional work, exploration and repeatable wages. Party stats combine to determine duration. Each working day has a harm roll modified by protection, skills and equipment. Home attacks begin once three surviving companions have joined. The early jailer, rat king and crypt warden take two base days, and ordinary injuries add one recovery day. The rat king uses intellect to plan safe approaches rather than requiring a scout before one can be recruited. Conscious survivors can retreat; home defenders remain visible beside the threat.
 
 XP requirements grow quadratically from 35, 60 and 105 XP. Each contract can grant one level and carry surplus XP forward. Stats increase automatically with class growth. Each earned level gives one choice between skills, spells, class talents and a quartermaster equipment requisition. Equipment requisitions add a physical item to shared storage without charging gold. Warriors specialise as Barbarian or Paladin, Wizards as Necromancer or Healer, and Scouts as Thief or Archer.
 

@@ -1,5 +1,12 @@
 import { advancementAbilities } from './advancement-abilities.js';
-import { chambers, passages, dungeonContracts, passageError, roomAt } from './sprawl.js';
+import {
+  chambers,
+  passages,
+  dungeonContracts,
+  earlyDungeonBalance,
+  passageError,
+  roomAt,
+} from './sprawl.js';
 import { cleanStoredCopy } from './player-copy.js';
 import { maraDialogue } from './mara.js';
 import {
@@ -313,6 +320,7 @@ const knownFlags = new Set([
 export function initial() {
   return {
     version: 2,
+    dungeonBalanceVersion: 1,
     day: 1,
     gold: 100,
     seed: 48271,
@@ -1324,7 +1332,7 @@ function resolve(s, m, choice) {
   });
 }
 function homeAttacksEnabled(s) {
-  return s.roster.filter((c) => !['dead', 'departed'].includes(c.status)).length >= 2;
+  return s.roster.filter((c) => !['dead', 'departed'].includes(c.status)).length >= 3;
 }
 export function dailyHomeEvent(s) {
   if (!homeAttacksEnabled(s)) return;
@@ -1460,6 +1468,7 @@ export function day(s) {
       continue;
     }
     const def = contracts.find((d) => d.id === m.id);
+    if (def.homeEvent && !homeAttacksEnabled(s)) continue;
     if (m.simulation !== 'daily') {
       if (--m.remaining <= 0) {
         if (def.choices) m.status = 'decision';
@@ -2117,6 +2126,33 @@ export function load(raw) {
       )
     )
       throw Error('Invalid level training choices.');
+  }
+  if (s.dungeonBalanceVersion !== undefined && s.dungeonBalanceVersion !== 1)
+    throw Error('Invalid dungeon balance version.');
+  if (s.dungeonBalanceVersion === undefined) {
+    for (const [id, balance] of Object.entries(earlyDungeonBalance)) {
+      const def = contracts.find((d) => d.id === id),
+        work = def.days * profiles[id].amount;
+      const convert = (value) => {
+        if (!Number.isFinite(value) || value < 0 || value > balance.previousWork)
+          throw Error('Invalid legacy dungeon progress.');
+        return (value / balance.previousWork) * work;
+      };
+      if (s.threats?.[id]) s.threats[id].progress = convert(s.threats[id].progress);
+      for (const m of s.missions.filter((m) => m.id === id && m.simulation === 'daily')) {
+        m.progress = convert(m.progress);
+        if (m.status === 'travelling') {
+          const a = assessContract(
+            def,
+            m.party.map((id) => resident(s, id)),
+            m.progress,
+          );
+          m.remaining = a.days || 0;
+          m.stalled = !a.rate;
+        }
+      }
+    }
+    s.dungeonBalanceVersion = 1;
   }
   const activeMembers = new Set();
   for (const m of s.missions) {

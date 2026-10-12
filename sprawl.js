@@ -442,9 +442,9 @@ export const passages = [
   ),
 ];
 const enemies = [
-  ['jailer', 'Iron jailer', 'str', 28, 65, 'armour'],
-  ['ratking', 'Rat king of the cistern', 'agi', 24, 55, 'hound'],
-  ['cryptwarden', 'Warden of the erased crypt', 'int', 32, 72, 'wraith'],
+  ['jailer', 'Iron jailer', 'str', 14, 34, 'armour'],
+  ['ratking', 'Rat king of the cistern', 'int', 16, 30, 'hound'],
+  ['cryptwarden', 'Warden of the erased crypt', 'int', 20, 40, 'wraith'],
   ['wellshade', 'Shade in the oubliette', 'int', 35, 76, 'ghost'],
   ['vaultmimic', 'Root-bound treasury mimic', 'str', 38, 75, 'mimic'],
   ['sporebeast', 'Cavern spore beast', 'end', 40, 80, 'slime'],
@@ -453,23 +453,52 @@ const enemies = [
   ['boundfiend', 'Fiend in the broken circle', 'int', 40, 85, 'golem'],
   ['stormelemental', 'The bottled storm', 'end', 55, 95, 'moth'],
 ];
+export const earlyDungeonBalance = {
+  jailer: {
+    previousWork: 84,
+    days: 2,
+    injuryDays: 1,
+    skills: { guard: 14, literacy: 6 },
+    advice:
+      'Guard protects the fighter while the jailer’s control markings reveal its weak joints.',
+  },
+  ratking: {
+    previousWork: 72,
+    days: 2,
+    injuryDays: 1,
+    skills: { water: 12, literacy: 8, guard: 6, tracking: 10 },
+    advice:
+      'Use intellect to follow the cistern channels and cut off the nest. Water breathing avoids the flooded approaches; a fighter can guard the explorer.',
+  },
+  cryptwarden: {
+    previousWork: 128,
+    days: 2,
+    injuryDays: 1,
+    skills: { literacy: 14, echoSight: 12, guard: 6 },
+    advice:
+      'Read the burial wards with Magical literacy. A guarded expedition can recover the names without fighting through every apparition.',
+  },
+};
 export const dungeonContracts = enemies.map(([id, name, stat, amount, threat, shape]) => {
   const room = chambers.find((r) => r.encounter === id);
   return {
     id,
     name,
     internal: true,
-    damageType: ['ghost', 'wraith', 'armour'].includes(shape)
-      ? 'undead'
-      : stat === 'int'
-        ? 'magical'
-        : 'physical',
+    damageType:
+      id === 'ratking'
+        ? 'physical'
+        : ['ghost', 'wraith', 'armour'].includes(shape)
+          ? 'undead'
+          : stat === 'int'
+            ? 'magical'
+            : 'physical',
     hiddenReward: true,
-    days: room.depth + 1,
+    days: earlyDungeonBalance[id]?.days || room.depth + 1,
     reward: 80 + room.depth * 45,
     xp: 70 + room.depth * 25,
     capacity: 6,
-    injuryDays: 2,
+    injuryDays: earlyDungeonBalance[id]?.injuryDays || 2,
     lethal: room.depth >= 5,
     requires: ['discovered_' + room.id],
     exclusive: 'cleared_' + room.id,
@@ -478,7 +507,8 @@ export const dungeonContracts = enemies.map(([id, name, stat, amount, threat, sh
     desc:
       'An internal threat in ' +
       room.name +
-      '. Clearing it preserves progress on withdrawal and opens the room’s records and treasure.',
+      '. Clearing it preserves progress on withdrawal and opens the room’s records and treasure. ' +
+      (earlyDungeonBalance[id]?.advice || ''),
     checks: [{ stat, min: amount, label: 'Combined ' + stat.toUpperCase() + ' ' + amount }],
     location: { x: room.x + room.w * 0.6, y: room.y },
     result:
@@ -496,7 +526,7 @@ export const dungeonProfiles = Object.fromEntries(
       stat,
       amount,
       threat,
-      skills: {
+      skills: earlyDungeonBalance[id]?.skills || {
         guard: 10,
         tracking: 8,
         literacy: 10,

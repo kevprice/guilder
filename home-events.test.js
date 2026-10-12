@@ -6,12 +6,13 @@ function guild() {
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
+  D.recruit(s, 'nell');
   return s;
 }
 test('a daily roll creates one persistent home threat with no pay and no immediate damage', () => {
   const s = guild(),
     gold = s.gold;
-  s.eventSeed = 17;
+  s.eventSeed = 31;
   D.day(s);
   const def = D.homeDanger(s);
   assert(def);
@@ -31,7 +32,7 @@ test('a daily roll creates one persistent home threat with no pay and no immedia
 test('away residents cannot defend; assigned residents stop damage and clear the attack without gold', () => {
   const s = guild();
   D.dispatch(s, 'quarry', ['bryn']);
-  s.eventSeed = 17;
+  s.eventSeed = 31;
   D.day(s);
   const def = D.homeDanger(s);
   assert.throws(() => D.dispatch(s, def.id, ['bryn']), /home/);
@@ -53,7 +54,7 @@ test('away residents cannot defend; assigned residents stop damage and clear the
 });
 test('withdrawal resumes monster damage and preserves defender progress; no funds never become negative', () => {
   const s = guild();
-  s.eventSeed = 117;
+  s.eventSeed = 17;
   D.day(s);
   const def = D.homeDanger(s);
   D.dispatch(s, def.id, ['bryn']);
@@ -87,7 +88,7 @@ test('ghost room damage blocks plot until paid repair, survives clearing and per
   const s = guild();
   s.flags.breach = true;
   s.flags.repaired = true;
-  s.eventSeed = 17;
+  s.eventSeed = 31;
   D.day(s);
   D.day(s);
   assert(s.roster.some((c) => c.recovery === 2));
@@ -121,7 +122,7 @@ test('one companion cannot trigger home attacks at home or while away', () => {
     assert.equal(s.roster[0].status, 'home');
   }
   D.dispatch(s, 'road', ['bryn']);
-  s.eventSeed = 17;
+  s.eventSeed = 31;
   D.day(s);
   assert.equal(D.homeDanger(s), null);
   assert.deepEqual(s.threats, {});
@@ -133,16 +134,16 @@ test('dead or departed companions do not unlock home attacks', () => {
   for (const status of ['dead', 'departed']) {
     const s = guild();
     s.roster[1].status = status;
-    s.eventSeed = 17;
+    s.eventSeed = 31;
     D.day(s);
     assert.equal(D.homeDanger(s), null);
     assert.deepEqual(s.threats, {});
   }
 });
 
-test('existing home threats pause their damage when only one companion remains', () => {
+test('existing home threats pause their damage when fewer than three companions remain', () => {
   const s = guild();
-  s.eventSeed = 17;
+  s.eventSeed = 31;
   D.day(s);
   const def = D.homeDanger(s);
   s.roster[1].status = 'dead';

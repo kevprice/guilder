@@ -134,6 +134,7 @@ test('every regional arc unlocks its next job, recruits and rooms and survives a
 test('all new home threats accept home parties and persist progress through withdrawal', () => {
   for (const def of homeThreats) {
     const s = guild();
+    D.recruit(s, 'nell');
     s.threats[def.id] = {
       active: true,
       progress: 0,
@@ -145,7 +146,7 @@ test('all new home threats accept home parties and persist progress through with
     };
     D.dispatch(s, def.id, ['bryn', 'ivo']);
     const m = s.missions.at(-1);
-    assert(s.roster.every((c) => c.status === 'assigned'));
+    assert(s.roster.filter((c) => m.party.includes(c.id)).every((c) => c.status === 'assigned'));
     safeDay(s);
     if (m.status === 'travelling') D.withdraw(s, m.uid);
     assert.equal(s.threats[def.id].progress, m.progress);
