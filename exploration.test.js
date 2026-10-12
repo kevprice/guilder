@@ -27,7 +27,7 @@ test('dormant residents require discovery and capabilities, awaken once, and per
   const ivo = s.roster.find((c) => c.id === 'ivo');
   ivo.level = 3;
   ivo.points = 2;
-  D.advance(s, 'ivo', 'literacy');
+  assert(ivo.skills.includes('literacy'));
   s.selected = 'ivo';
   D.visitFloor(s, -100);
   D.visitFloor(s, 1020);

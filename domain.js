@@ -122,6 +122,7 @@ export const recruits = [
   {
     id: 'ivo',
     name: 'Ivo',
+    startingSkills: ['literacy'],
     type: 'mage',
     str: 3,
     agi: 4,
@@ -1950,6 +1951,18 @@ export function load(raw) {
     (!Number.isInteger(s.eventSeed) || s.eventSeed <= 0 || s.eventSeed >= 2147483647)
   )
     throw Error('Invalid home-event seed.');
+  if (
+    s.navigationSeen !== undefined &&
+    (!s.navigationSeen ||
+      typeof s.navigationSeen !== 'object' ||
+      Array.isArray(s.navigationSeen) ||
+      Object.entries(s.navigationSeen).some(([key, value]) =>
+        ['contracts', 'stories'].includes(key)
+          ? !Array.isArray(value) || value.some((id) => typeof id !== 'string')
+          : !['reports', 'journal'].includes(key) || !Number.isInteger(value) || value < 0,
+      ))
+  )
+    throw Error('Invalid navigation read markers.');
   if (s.rowanRecovery !== undefined && (!Number.isInteger(s.rowanRecovery) || s.rowanRecovery < 0))
     throw Error('Invalid Rowan recovery.');
   if (
@@ -1979,6 +1992,7 @@ export function load(raw) {
   )
     throw Error('Invalid dungeon return route.');
   for (const c of s.roster) {
+    if (c.id === 'ivo' && !c.undead && !c.skills.includes('literacy')) c.skills.push('literacy');
     migrateTraining(c);
     if (
       !c.levelChoices ||

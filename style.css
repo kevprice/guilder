@@ -1227,3 +1227,50 @@ select:focus-visible {
     gap: 6px;
   }
 }
+
+.mission-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.mission-tabs button {
+  flex: 1 1 auto;
+  padding: 8px 10px;
+}
+.mission-tabs [aria-pressed='true'] {
+  color: #fff0c5;
+  border-color: #c8aa70;
+  background: #4a3b26;
+}
+.mission-tabs button span {
+  opacity: 0.7;
+  margin-left: 4px;
+}
+.mission-impact {
+  padding: 8px 10px;
+  border-left: 3px solid #8c806b;
+  background: #ffffff08;
+}
+.mission-impact span {
+  font-size: 0.85em;
+  color: #c8bca7;
+}
+.mission-impact-main {
+  border-color: #d8bb76;
+}
+
+.nav-notice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 10px;
+  background: #d7b572;
+  color: #211b14;
+  font-size: 11px;
+  font-weight: 700;
+}

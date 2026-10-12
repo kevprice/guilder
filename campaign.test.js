@@ -76,7 +76,7 @@ function campaign(branch, settings = {}) {
     while (s.missions.at(-1).status === 'travelling') tick(s);
     rest(s);
     assert(s.flags.archiveAssistance);
-    assert(!s.roster.some((c) => c.skills.includes('literacy')));
+    assert(s.roster.find((c) => c.id === 'ivo').skills.includes('literacy'));
   } else {
     while (s.roster.find((c) => c.id === 'ivo').level < 2) {
       fund(s, 20);
@@ -85,7 +85,7 @@ function campaign(branch, settings = {}) {
       while (s.missions.at(-1).status === 'travelling') tick(s);
       rest(s);
     }
-    D.advance(s, 'ivo', 'literacy');
+    assert(s.roster.find((c) => c.id === 'ivo').skills.includes('literacy'));
   }
   if (settings.paths)
     for (const [id, path] of Object.entries(settings.paths)) {
@@ -381,7 +381,7 @@ for (const [index, paths] of Array.from({ length: 8 }, (_, i) => ({
 })).entries())
   for (const right of [false, true])
     test(
-      'complete ending without literacy: class combination ' +
+      'complete ending with archivist assistance: class combination ' +
         index +
         ' · ' +
         (right ? 'right' : 'left') +
@@ -390,7 +390,7 @@ for (const [index, paths] of Array.from({ length: 8 }, (_, i) => ({
         const ending = right ? 'community' : 'research',
           s = campaign(ending, { scholar: true, paths, right });
         assert(s.flags.archiveAssistance);
-        assert(!s.roster.some((c) => c.skills.includes('literacy')));
+        assert(s.roster.find((c) => c.id === 'ivo').skills.includes('literacy'));
         travel(
           s,
           ending === 'community' ? 'covenant' : 'lattice',

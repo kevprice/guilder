@@ -54,8 +54,8 @@ test('stats, foundation skills and class talents share one level budget', () => 
     c = s.roster[0];
   level(c, 6);
   D.specialise(s, c.id, 'healer');
-  D.advance(s, c.id, 'literacy', 2);
-  assert.throws(() => D.advance(s, c.id, 'end', 2));
+  D.advance(s, c.id, 'end', 2);
+  assert.throws(() => D.advance(s, c.id, 'str', 2));
   D.advance(s, c.id, 'water', 3);
   assert.throws(() => D.learnTalent(s, c.id, 'turnUndead'));
   D.learnTalent(s, c.id, 'healingWord');
@@ -88,8 +88,10 @@ test('legacy fast-level builds retain stats and abilities but cannot add rejecte
   assert.deepEqual(D.load(D.save(loaded)), loaded);
 });
 test('outside help opens the archive and releases trained residents without teaching the party literacy', () => {
-  const s = guild(),
-    c = s.roster[0];
+  const s = D.initial();
+  s.gold = 1000;
+  D.recruit(s, 'bryn');
+  const c = s.roster[0];
   s.flags.archiveSeal = true;
   c.end = 100;
   const gold = s.gold;
@@ -101,7 +103,7 @@ test('outside help opens the archive and releases trained residents without teac
   assert(s.flags.archiveAssistance);
   assert.equal(s.gold, gold - 60);
   assert(!c.skills.includes('literacy'));
-  s.selected = 'ivo';
+  s.selected = c.id;
   D.repairRoom(s, 'library');
   s.flags.towerCrown = true;
   s.flags.searched_potions = true;

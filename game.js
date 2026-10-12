@@ -1,3 +1,5 @@
+import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
+import { missionTabs, missionCategory, missionImpact } from './mission-categories.js';
 import { paintChamber } from './dungeon-art.js';
 import { playerCopy, rewardSummary } from './player-copy.js';
 import { renderCharacterPanel } from './character-panel.js';
@@ -48,6 +50,7 @@ let trainingResident = null,
 let hoveredObject = null;
 let characterPage = null;
 let selectedRecord = null;
+let contractTab = 'all';
 function renderRecords() {
   const available = D.availableRecords(state),
     pages = D.records.filter(
@@ -231,7 +234,18 @@ function renderStore() {
   return html;
 }
 function renderContracts() {
-  let html = '';
+  const available = D.availableContracts(state).sort(
+    (a, b) => D.contractLabel(a).priority - D.contractLabel(b).priority,
+  );
+  const filtered = available.filter(
+    (def) => contractTab === 'all' || missionCategory(def) === contractTab,
+  );
+  let html = `<div class="mission-tabs" role="group" aria-label="Mission types">${missionTabs
+    .map(([id, name]) => {
+      const count = available.filter((def) => id === 'all' || missionCategory(def) === id).length;
+      return `<button data-action="contractTab:${id}" aria-pressed="${contractTab === id}">${esc(name)} <span>${count}</span></button>`;
+    })
+    .join('')}</div>`;
 
   if (state.flags.truth)
     html += `<p class="stats">Preparation resources: ${state.community} community contacts; ${state.knowledge} research findings.</p>`;
@@ -249,6 +263,7 @@ function renderContracts() {
       'HOME UNDER ATTACK',
       `<p class="threat-badge">${esc(D.homeDanger(state).name)}</p>`,
     );
+  if (D.activeMissions(state).length) html += '<h3>Active missions</h3>';
   for (const m of D.activeMissions(state).sort(
     (a, b) =>
       Number(D.contracts.find((d) => d.id === b.id).homeEvent || false) -
@@ -260,7 +275,7 @@ function renderContracts() {
       progress = m.simulation === 'daily' ? Math.floor((m.progress / total) * 100) : null;
     html += card(
       def.name,
-      `<span class="tag">${def.internal ? 'GUILD THREAT · PARTY AT HOME' : def.lethal ? 'LETHAL EXPEDITION' : 'EXPEDITION'}</span><p>${m.party
+      `<span class="tag">${def.internal ? 'GUILD THREAT · PARTY AT HOME' : def.lethal ? 'LETHAL EXPEDITION' : 'EXPEDITION'}</span>${renderMissionImpact(def)}<p>${m.party
         .map((id) => {
           const c = state.roster.find((c) => c.id === id);
           return esc(c.name) + ' (' + D.injuryNames[D.injuryLevel(c)] + ')';
@@ -285,16 +300,18 @@ function renderContracts() {
       }${m.status === 'travelling' && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div>` : ''}`,
     );
   }
-  for (const def of D.availableContracts(state).sort(
-    (a, b) => D.contractLabel(a).priority - D.contractLabel(b).priority,
-  )) {
+  html += `<h3>${esc(missionTabs.find(([id]) => id === contractTab)[1])} · Available missions</h3>`;
+  if (!filtered.length)
+    html +=
+      '<p class="stats">No missions of this type are available yet. Explore the house or follow another story lead.</p>';
+  for (const def of filtered) {
     const profile = D.profiles[def.id],
       cost = D.missionCost(state, def),
       saved = def.internal ? state.threats?.[def.id]?.progress || 0 : 0,
       total = def.days * profile.amount;
     html += card(
       def.name,
-      `<span class="tag">${esc(contractKind(def))}</span><p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
+      `<span class="tag">${esc(contractKind(def))}</span>${renderMissionImpact(def)}<p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
         .filter((c) => c.status === 'home')
         .map(
           (c) =>
@@ -305,8 +322,16 @@ function renderContracts() {
         )}</div><div class="party-preview" data-risk="${def.id}">—</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> Medical kit · 10g · one treatment</label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
     );
   }
-  html += card('Work at the doorstep', `${btn('Spend a day mending · +12g', 'emergency')}`);
+  if (['all', 'work'].includes(contractTab))
+    html += card(
+      'Work at the doorstep',
+      `<p class="mission-impact">Daily work · does not advance the plot</p>${btn('Spend a day mending · +12g', 'emergency')}`,
+    );
   return html;
+}
+function renderMissionImpact(def) {
+  const { category, impact, detail } = missionImpact(def);
+  return `<p class="mission-impact mission-impact-${category}"><strong>${esc(impact)}</strong><br><span>${esc(detail)}</span></p>`;
 }
 function contractKind(def) {
   if (def.homeEvent) return 'Defence';
@@ -577,6 +602,8 @@ function renderUI() {
   $('panel').hidden = !tab;
   $('resident').textContent =
     `Controlling ${D.home(state).find((c) => c.id === state.selected)?.name || 'Rowan'}`;
+  acknowledgeNavigation(state, tab, contractTab);
+  const notices = navigationNotices(state);
   $('nav').innerHTML = [
     'Exploration',
     'Characters',
@@ -588,7 +615,13 @@ function renderUI() {
     'Reports',
     'Journal',
   ]
-    .map((t) => `<button class="${t === tab ? 'active' : ''}" data-tab="${t}">${t}</button>`)
+    .map((t) => {
+      const notice = notices[t];
+      const badge = notice?.count
+        ? `<span class="nav-notice" aria-label="${notice.count} ${esc(notice.label)}" title="${notice.count} ${esc(notice.label)}">${notice.count}</span>`
+        : '';
+      return `<button class="${t === tab ? 'active' : ''}" data-tab="${t}">${t}${badge}</button>`;
+    })
     .join('');
   let html = `<div class="panel-header"><div><h2>${tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
   if (tab === 'Options')
@@ -732,6 +765,13 @@ document.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (!a) return;
   const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'contractTab') {
+    if (!missionTabs.some(([key]) => key === id)) return;
+    contractTab = id;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
   if (op === 'trainingPage') {
     trainingSection = id;
     renderUI();
@@ -942,7 +982,11 @@ function visualRoom() {
   if (player.floor === 555) return { x: 430, w: 390, name: 'Cellar' };
   if (player.floor === 510) return { x: 450, w: 330, name: 'Dry landing' };
   if (player.floor === 140 && player.x > 700) return { x: 705, w: 270, name: 'Store room' };
-  return { x: 300, w: 600, name: player.floor < 380 ? 'Bell tower' : 'Labyrinth' };
+  return {
+    x: 300,
+    w: player.floor === 140 ? 390 : 600,
+    name: player.floor < 380 ? 'Bell tower' : 'Labyrinth',
+  };
 }
 const zoomControls = document.createElement('div');
 zoomControls.className = 'zoom-controls';
@@ -1833,6 +1877,12 @@ function drawVerticalRooms() {
     ctx.restore();
   }
   if (state.flags.tower) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(280 - camera, -500, 670, 410);
+    ctx.rect(280 - camera, -90, 420, 300);
+    // The lower landing ends before the store room at x 705.
+    ctx.clip();
     rect(292, -290, 626, 495, '#353a40');
     ctx.strokeStyle = '#83bbb766';
     ctx.lineWidth = 1;
@@ -1858,7 +1908,7 @@ function drawVerticalRooms() {
     ctx.lineTo(605 - camera, -420);
     ctx.lineTo(932 - camera, -290);
     ctx.fill();
-    chamber(300, 140, 610, 'THE BELL TOWER · lower landing', '#425968');
+    chamber(300, 140, 390, 'THE BELL TOWER · lower landing', '#425968');
     if (state.flags.towerCrown) chamber(300, -100, 610, 'THE SILENT CROWN', '#405a69');
     else {
       rect(300, -275, 610, 185, '#101722');
@@ -1882,6 +1932,7 @@ function drawVerticalRooms() {
       rect(775, -149, 9, 8, '#b9af9f');
       text('An alarm caught between heartbeats', 580, -120, 11, '#76bdb5');
     }
+    ctx.restore();
   }
   if (state.flags.labyrinth) {
     rect(290, 605, 630, 445, '#181e27');

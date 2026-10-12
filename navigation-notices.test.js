@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as D from './domain.js';
+import { gainLevel } from './classes.js';
+import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
+test('new contract badges clear when viewed and reappear for newly unlocked missions', () => {
+  const s = D.initial();
+  D.recruit(s, 'bryn');
+  assert(navigationNotices(s).Contracts.count > 0);
+  acknowledgeNavigation(s, 'Contracts', 'main');
+  assert(navigationNotices(s).Contracts.count > 0);
+  acknowledgeNavigation(s, 'Contracts');
+  assert.equal(navigationNotices(s).Contracts.count, 0);
+  s.flags.ledger = true;
+  assert(navigationNotices(s).Contracts.count > 0);
+  acknowledgeNavigation(s, 'Contracts');
+  const loaded = D.load(D.save(s));
+  assert.equal(navigationNotices(loaded).Contracts.count, 0);
+});
+test('training indicators persist until a level choice is spent', () => {
+  const s = D.initial();
+  D.recruit(s, 'bryn');
+  gainLevel(s.roster[0]);
+  assert.equal(navigationNotices(s).Training.count, 1);
+  assert.equal(navigationNotices(s).Characters.count, 1);
+  acknowledgeNavigation(s, 'Training');
+  assert.equal(navigationNotices(s).Training.count, 1);
+  D.advance(s, 'bryn', 'str');
+  assert.equal(navigationNotices(s).Training.count, 0);
+});
+test('unread reports and journals clear separately and later entries restore badges', () => {
+  const s = D.initial();
+  s.reports.push({ day: 1, title: 'Test', text: 'A report', reward: 0, xp: 0, party: [] });
+  assert.equal(navigationNotices(s).Reports.count, 1);
+  acknowledgeNavigation(s, 'Reports');
+  assert.equal(navigationNotices(s).Reports.count, 0);
+  assert(navigationNotices(s).Journal.count > 0);
+  acknowledgeNavigation(s, 'Journal');
+  assert.equal(navigationNotices(s).Journal.count, 0);
+  s.journal.push({ kind: 'Discovery', text: 'New record' });
+  assert.equal(navigationNotices(s).Journal.count, 1);
+});
+test('Ivo arrives literate and old saves gain literacy without spending a choice', () => {
+  const s = D.initial();
+  D.recruit(s, 'ivo');
+  assert.deepEqual(s.roster[0].skills, ['literacy']);
+  s.roster[0].skills = [];
+  const loaded = D.load(D.save(s));
+  assert(loaded.roster[0].skills.includes('literacy'));
+  assert.equal(loaded.roster[0].points, 0);
+  assert.deepEqual(loaded.roster[0].levelChoices, {});
+});

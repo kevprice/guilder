@@ -62,6 +62,7 @@ test('all chambers are reachable through produced keys and skills; graph branche
 test('tower traps require actual skill; shortcuts and malformed saved routes are checked', () => {
   const s = guild();
   s.flags.tower = true;
+  s.roster[0].skills = [];
   assert.throws(() => enter(s, 'studyDoor'), /literacy/i);
   s.roster[0].skills = ['literacy'];
   enter(s, 'studyDoor');
