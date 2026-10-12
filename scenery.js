@@ -1,5 +1,6 @@
 // Atmospheric scenery stays behind the playable cutaway and never obscures its labels.
 const TAU = Math.PI * 2;
+import { paintMaterial } from './materials.js';
 function glow(ctx, x, y, r, color) {
   const g = ctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, color);
@@ -165,10 +166,15 @@ export function paintGuildRoof(ctx, camera, time) {
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = '#77857a';
+  ctx.save();
+  ctx.clip();
+  paintMaterial(ctx, 43, 119, 249, 85, 'stone', 271);
+  ctx.restore();
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.fillStyle = '#5b6660';
   ctx.fillRect(111, 129, 18, 54);
+  paintMaterial(ctx, 111, 129, 18, 54, 'stone', 88);
   ctx.fillRect(108, 124, 24, 7);
   for (let i = 0; i < 4; i++) {
     ctx.fillStyle = '#b7c5ba12';

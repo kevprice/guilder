@@ -255,7 +255,7 @@ export function characterAccount(s, c) {
         'Nell recognises the shelter route she learned from her grandmother and later used during the evacuation. Sera’s newer marks show that somebody maintained it during the thirty years Nell missed. She wants to meet the keepers and trace the families she guided.';
     else
       text =
-        'Nell guided families past guild patrols, then folded the evacuation route behind them. The severance trapped her inside it. The road is open again, but she does not yet know which shelters and households survived.';
+        'Nell led families out of the guild during the evacuation, then went back to check for anyone left behind. The passage closed while she was inside. For her, no time passed; outside, thirty years went by. She still has the shelter addresses she gave the families. She wants to find out whether they arrived.';
   } else if (c.id === 'ivo') {
     if (f.ivoResolved)
       text =
@@ -314,7 +314,7 @@ export function knownHistory(s) {
     events = [
       {
         title: 'Mara found the entrance',
-        text: 'Mara is Halden’s adopted daughter. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.',
+        text: 'Mara is a small brass golem built and raised by Halden, now Rowan’s familiar. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.',
       },
     ];
   if (f.breach)

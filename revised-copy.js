@@ -382,7 +382,7 @@ export const revisedCopy = new Map([
   ],
   [
     'A chalk line beneath a quarters curtain doubles back into itself. Rowan rubs out its final turn. Nell steps through carrying a guide’s satchel. She was the old guild’s local pathfinder; she hid families from its customs patrol and became caught in the escape route she folded behind them. The shelter addresses in her satchel begin her own search.',
-    'The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.\nNell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.\nShe opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.\n“Did they get there?” she asks. Nobody can answer yet.\nShe had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.',
+    'Behind the quarters curtain, a doorway has been drawn in chalk. Rowan rubs out the line across its handle. A latch appears beneath their hand.\nNell steps through with a guide’s satchel. “Is anyone else still in here?”\nShe had led the last families out, given them directions to the shelters and come back to search the rooms. When she turned to leave, the door was gone.\nRowan tells her that was thirty years ago. Nell looks at the bread in her satchel. It is still soft.\nShe takes out a list of names and addresses. “These are the places I sent them. Can we ask?”',
   ],
   [
     'Ada’s apprentice is suspended above an open notebook. His own protective rune kept the falling shelves away but never received its finishing stroke. A diagram in the margin shows where to close it. Ivo lands with the book in his hands. He remembers Rowan cataloguing these rooms and asks where Professor Merrow went. The answer lies in the archive.',
@@ -1206,7 +1206,7 @@ export const revisedCopy = new Map([
   ],
   [
     'Nell was a guild pathfinder, trapped in a folded evacuation route behind the quarters curtain. Her grandmother refused commissions from the old guild. Nell’s shelter maps begin the search for the people she guided away.',
-    'Nell guided families past guild patrols, then folded the evacuation route behind them. The severance trapped her inside it. The road is open again, but she does not yet know which shelters and households survived.',
+    'Nell led families out of the guild during the evacuation, then went back to check for anyone left behind. The passage closed while she was inside. For her, no time passed; outside, thirty years went by. She still has the shelter addresses she gave the families. She wants to find out whether they arrived.',
   ],
   [
     'Ivo is studying the wall inscriptions while Rowan keeps the binding off limits. He hopes the old records will lead to his missing teacher, Ada.',
@@ -1230,7 +1230,7 @@ export const revisedCopy = new Map([
   ],
   [
     'A local guide who remembers paths that the maps have forgotten. Her grandmother once sheltered a returning guild party.',
-    'A guild pathfinder who secretly guided displaced families past its customs posts. Nell has woken to roads and households changed by thirty years. She wants to find the people she helped escape.',
+    'Nell knew the local roads and helped families reach shelter during the evacuation. She returned to search the guild for anyone left behind and was trapped inside. Thirty years later, she wants to find out what happened to those families.',
   ],
   [
     'An apprentice archivist searching for a missing teacher. He suspects the house’s silence is a language.',

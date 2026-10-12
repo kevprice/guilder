@@ -117,6 +117,10 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
   ctx.beginPath();
   ctx.ellipse(sx, y - 43, 7, 9, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = '#754a3544';
+  ctx.beginPath();
+  ctx.ellipse(sx + 3, y - 41, 3.5, 6, -0.2, 0, Math.PI * 2);
+  ctx.fill();
   const hair = ['rowan', 'oren', 'maelin'].includes(c.id)
     ? '#cec8b6'
     : c.id === 'bryn'
@@ -173,6 +177,34 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
     ],
     accent,
   );
+  // Cloth seams, armour rivets and warm rim light retain the original silhouette.
+  ctx.strokeStyle = '#f4ddad55';
+  ctx.lineWidth = 0.65;
+  ctx.beginPath();
+  ctx.moveTo(sx - broad, y - 34);
+  ctx.lineTo(sx - broad - 3, y - 23);
+  ctx.lineTo(sx - broad + 1, y - 19);
+  ctx.moveTo(sx + 4, y - 15);
+  ctx.lineTo(sx + 7, y - 6);
+  ctx.stroke();
+  ctx.strokeStyle = '#0b162b55';
+  ctx.beginPath();
+  ctx.moveTo(sx + 4, y - 33);
+  ctx.lineTo(sx + 2, y - 20);
+  ctx.moveTo(sx - 4, y - 14);
+  ctx.lineTo(sx - 6, y - 5);
+  ctx.stroke();
+  if (warrior) {
+    ctx.strokeStyle = '#dce4d488';
+    ctx.beginPath();
+    ctx.moveTo(sx - 8, y - 33);
+    ctx.quadraticCurveTo(sx, y - 29, sx + 8, y - 33);
+    ctx.moveTo(sx, y - 32);
+    ctx.lineTo(sx, y - 21);
+    ctx.stroke();
+    ctx.fillStyle = '#e2cc93';
+    for (const dx of [-7, 7]) ctx.fillRect(sx + dx, y - 23, 1, 1);
+  }
   ctx.fillStyle = controlled ? '#fff0d0' : '#dfd3bd';
   ctx.font = '12px Georgia';
   ctx.textAlign = 'center';

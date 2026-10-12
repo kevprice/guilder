@@ -1,4 +1,5 @@
 import { roomTheme, glow } from './graphics-engine.js';
+import { paintMaterial, paintRoomDepth } from './materials.js';
 // Architectural silhouettes and evidence of daily life, not repeated window grids.
 export function paintInterior(ctx, camera, x, w, name, restored, time = 0) {
   const sx = x - camera,
@@ -54,7 +55,18 @@ export function paintInterior(ctx, camera, x, w, name, restored, time = 0) {
   wall.addColorStop(1, restored ? colors[0] : '#232830');
   ctx.fillStyle = wall;
   ctx.fillRect(sx, top, w, base - top);
+  paintRoomDepth(
+    ctx,
+    sx,
+    top,
+    w,
+    base - top,
+    accent,
+    [...name].reduce((n, c) => Math.imul(n, 31) + c.charCodeAt(0), 7),
+    ['water', 'forge', 'frost', 'chapel', 'baths'].includes(theme) || !restored,
+  );
   rect(0, base, w, 17, '#242526');
+  paintMaterial(ctx, sx, base, w, 17, 'wood', Math.floor(x));
   rect(0, base, w, 4, accent + '77');
   if (!restored) {
     for (let i = 0; i < 8; i++)
@@ -647,6 +659,39 @@ export function paintInterior(ctx, camera, x, w, name, restored, time = 0) {
       1,
     );
     oval(w - 16, 315, 4, 3, '#d0b4cf');
+  }
+  // Bevelled cutaway framing, worn joints and a foreground floor lip.
+  for (const px of [0, w - 7]) {
+    rect(px, top, 7, base - top, '#302b29');
+    rect(px + 1, top + 3, 1, base - top - 5, '#dcc39a55');
+    rect(px + 5, top, 2, base - top, '#060c1866');
+    for (let py = top + 15; py < base; py += 49) oval(px + 3, py, 0.8, 0.8, '#d3b98e77');
+  }
+  rect(0, top, w, 5, '#584c3e');
+  rect(0, top + 1, w, 1, '#d3bc8a66');
+  rect(0, top + 5, w, 3, '#060b1744');
+  const floorLight = ctx.createLinearGradient(0, base - 11, 0, base + 17);
+  floorLight.addColorStop(0, '#c6a27400');
+  floorLight.addColorStop(0.4, '#c6a27426');
+  floorLight.addColorStop(1, '#01071188');
+  ctx.fillStyle = floorLight;
+  ctx.fillRect(sx + 7, base - 11, w - 14, 28);
+  rect(0, base + 15, w, 2, '#0c111c');
+  if (['hearth', 'rest', 'workshop', 'council'].includes(theme) && w > 120) {
+    const lampX = w - 17;
+    oval(lampX, 281, 5, 10, '#0b132955');
+    rect(lampX - 3, 274, 6, 17, '#554633');
+    rect(lampX - 5, 272, 10, 2, '#c7a36b');
+    rect(lampX - 2, 274, 4, 10, '#f7dda1');
+    glow(ctx, sx + lampX, 279, 55, '#edb66a', 0.22);
+    line(
+      [
+        [lampX - 3, 284],
+        [lampX + 3, 284],
+      ],
+      '#ffe5a8',
+      0.7,
+    );
   }
   ctx.restore();
 }

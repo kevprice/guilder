@@ -22,26 +22,18 @@
     <main>
       <section id="world">
         <canvas id="game" width="1200" height="650" aria-label="Explorable cutaway estate"></canvas>
-        <div class="world-caption">
-          <small>A HOME BETWEEN WORLDS</small><span>Keep the hearth. Recover the house.</span>
-        </div>
         <button id="overview" class="overview-button" data-tab="Overview">◇ House overview</button>
         <div id="expeditions"></div>
         <div id="hint"></div>
         <div id="character-hud"></div>
         <div id="home-strip" aria-label="Home residents"></div>
-        <footer>
-          <span
-            >A / D · walk &nbsp; Space · jump &nbsp; W / S · stairs &nbsp; E · interact &nbsp; Tab ·
-            switch</span
-          ><span id="resident" hidden></span><span id="position" class="stats"></span>
-        </footer>
+        <footer><span id="resident" hidden></span><span id="position" class="stats"></span></footer>
       </section>
       <section id="story-rail" aria-label="Current narrative">
         <small id="chapter-label"></small>
         <h2 id="objective"></h2>
         <p id="story-event"></p>
-        <button data-tab="Stories">Follow the story →</button>
+        <button data-tab="Stories">Stories</button>
       </section>
       <aside id="panel" hidden aria-label="Guild ledger"></aside>
     </main>

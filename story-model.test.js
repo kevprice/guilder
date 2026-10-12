@@ -34,7 +34,7 @@ test('resident accounts distinguish motives and reveal personal evidence only wh
   bryn.visits = ivo.visits = 1;
   assert.match(D.characterArc(s, bryn), /father/);
   assert.match(D.characterArc(s, ivo), /Ada/);
-  assert.match(D.characterArc(s, nell), /guide/);
+  assert.match(D.characterArc(s, nell), /families/);
   assert.doesNotMatch(D.characterArc(s, bryn), /recognised.*mark/);
   s.flags.anchor = true;
   D.narrativeChoice(s, 'brynAnchor', 'promise');

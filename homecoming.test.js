@@ -1,7 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
-import { journeys, records } from './homecoming.js';
+import { journeys, records, recordBody, recordEntry, recordContextText } from './homecoming.js';
+
+test('diary content excludes editorial source and recovery context', () => {
+  const r = records.find((r) => r.id === 'entrance');
+  assert.equal(recordEntry(r), 'Rowan\n3 March · Year 1\n' + r.text);
+  assert.doesNotMatch(recordEntry(r), /Recovered|private diary|Diary entry|old guild/);
+  assert.match(recordContextText(r, 1), /Recovered on guild day 1/);
+  assert.match(recordContextText(r, 1), /private diary/);
+});
+
+test('personal documents retain their context and recovery dates across saves', () => {
+  for (const r of records) {
+    assert.ok(r.documentType && r.date && r.source, r.id);
+    if (r.author === 'Rowan') assert.notEqual(r.date, 'Undated', r.id);
+  }
+  const s = D.initial();
+  D.recoverRecord(s, 'entrance');
+  const saved = D.load(D.save(s));
+  assert.equal(saved.recordDays.entrance, s.day);
+  assert.equal(saved.scenes.at(-1).recordId, 'entrance');
+  assert.match(saved.journal.at(-1).text, /Rowan\n3 March/);
+  assert.doesNotMatch(recordBody(records[0]), /Recovered|private diary|Diary entry/);
+});
 
 test('all playable companions have distinct homecomings; every interior has a personal record', () => {
   assert.equal(Object.keys(journeys).length, 30);

@@ -22,6 +22,8 @@ import { guildStairs } from './exploration.js';
 import * as D from './domain.js';
 import { houseChoices } from './narrative.js';
 import { useStairs } from './movement.js';
+import { mara } from './mara.js';
+import { recordEntry } from './homecoming.js';
 
 const $ = (id) => document.getElementById(id),
   canvas = $('game'),
@@ -53,12 +55,9 @@ function renderRecords() {
     );
   const current = pages.find((r) => r.id === selectedRecord) || pages[0];
   selectedRecord = current?.id;
-  const recordText = current
-    ? (current.provenance ? current.provenance + '\n' : '') + current.text
-    : '';
   return card(
-    'Personal records · diaries and letters',
-    `<p>Read one page at a time. Restored and investigated rooms reveal records; correspondence opens roads home.</p><label for="personal-record">Room or correspondence</label><select id="personal-record">${pages.map((r) => `<option value="${r.id}" ${r.id === selectedRecord ? 'selected' : ''}>${esc(r.room + ' · ' + r.author)}${state.flags['record_' + r.id] ? ' · collected' : ' · unread'}</option>`).join('')}</select>${current ? (state.flags['record_' + current.id] ? paragraphs(recordText) : '<p>This record is ready to recover.</p>' + btn('Read ' + current.room, 'record:' + current.id)) : '<p>No records are accessible yet.</p>'}`,
+    '',
+    `<select id="personal-record" aria-label="Choose a page">${pages.map((r) => `<option value="${r.id}" ${r.id === selectedRecord ? 'selected' : ''}>${esc(r.room + ' · ' + r.author)}${state.flags['record_' + r.id] ? '' : ' · unread'}</option>`).join('')}</select>${current ? (state.flags['record_' + current.id] ? renderRecordPage(current) : btn('Read ' + current.room, 'record:' + current.id)) : '<p>No records are accessible yet.</p>'}`,
   );
 }
 const esc = (s) =>
@@ -82,6 +81,9 @@ function paragraphs(text) {
     .map((p) => `<p>${esc(p)}</p>`)
     .join('');
 }
+function renderRecordPage(record) {
+  return `<article class="record-page">${paragraphs(recordEntry(record))}</article>`;
+}
 function btn(text, action, disabled = false) {
   return `<button data-action="${action}" ${disabled ? 'disabled' : ''}>${esc(text)}</button>`;
 }
@@ -96,17 +98,18 @@ window.addEventListener('pagehide', () => {
   D.rememberPosition(state, state.selected, player);
   persist();
 });
-function scene(title, body, options = []) {
-  $('story-event').textContent = playerCopy(body);
+function scene(title, body, options = [], recordId = null) {
+  const record = D.records.find((r) => r.id === recordId);
+  $('scene-label').hidden = true;
+  $('scene-label').textContent = 'THE HOUSE REMEMBERS';
+  $('scene-body').classList.remove('record-page');
+  $('story-event').textContent = '';
   $('scene-title').textContent = title;
-  $('scene-body').innerHTML = paragraphs(body);
+  $('scene-body').innerHTML = record ? renderRecordPage(record) : paragraphs(body);
   $('scene-options').innerHTML = options
-    .map(
-      (c) =>
-        `<div class="card"><p>${esc(c.preview)}</p>${btn(c.label, c.action, c.disabled)}</div>`,
-    )
+    .map((c) => `<div class="card">${btn(c.label, c.action, c.disabled)}</div>`)
     .join('');
-  $('close-scene').textContent = options.length ? 'Think about it' : 'Continue →';
+  $('close-scene').textContent = options.length ? 'Close' : 'Continue →';
   if (!$('scene').open) $('scene').showModal();
   keys = {};
   walkTarget = null;
@@ -115,7 +118,7 @@ function presentScene() {
   const next = state.scenes.shift();
   if (next) {
     persist();
-    scene(next.title, next.body);
+    scene(next.title, next.body, [], next.recordId);
   }
 }
 $('dismiss-scene').onclick = () => {
@@ -168,7 +171,7 @@ function openMission(uid) {
   );
 }
 function card(title, body) {
-  return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`;
+  return `<div class="card">${title ? `<h3>${esc(title)}</h3>` : ''}${body}</div>`;
 }
 
 function renderGuild() {
@@ -180,18 +183,15 @@ function renderGuild() {
   });
 }
 function renderStore() {
+  if (!D.storeAvailable(state)) return '';
   const visitor = state.roster.find((c) => c.id === state.storeVisitor && c.status === 'home');
-  let html =
-    '<p>Purchases are delivered to shared storage. Each resident carries one item. Return it here before another resident can use it.</p>';
+  let html = '';
   html += visitor
     ? card(
         visitor.name + ' · in the store',
         `<p>Equipped: ${esc(D.equipment.find((e) => e.id === visitor.gear)?.name || 'nothing')}</p>${visitor.gear ? btn('Return equipment to storage', 'unequip:' + visitor.id) : ''}`,
       )
-    : card(
-        'Visit the store to equip items',
-        `<p>Control a fit resident, walk to the service room’s labelled STORE door, and press E. Rowan cannot carry expedition equipment.</p>${btn('Walk to store door', 'walk:790')}`,
-      );
+    : card('Store room', `${btn('Walk to store door', 'walk:790')}`);
   html += '<h3>Guild inventory</h3>';
   for (const item of state.inventory || []) {
     const def = D.equipment.find((e) => e.id === item.id),
@@ -224,10 +224,8 @@ function renderStore() {
   return html;
 }
 function renderContracts() {
-  let html =
-    '<p>Party stats add together. Below the target, a contract takes longer. Every working day has a fresh chance of harm to one party member. Defensive stats and relevant abilities reduce that chance.</p>';
-  html +=
-    '<p class="stats">Every day has an 8% chance of a home attack. Keep some residents at home. Story and plot-item missions appear first. One-time requests disappear permanently when finished; repeatable work is labelled and returns the next day.</p><button data-tab="Journal">Completed contracts in Journal</button>';
+  let html = '';
+
   if (state.flags.truth)
     html += `<p class="stats">Preparation resources: ${state.community} community contacts; ${state.knowledge} research findings.</p>`;
   for (const id of D.damagedRooms(state))
@@ -237,12 +235,12 @@ function renderContracts() {
         : id === 'quarters'
           ? 'Quarters'
           : D.rooms.find((r) => r.id === id).name) + ' · DAMAGED',
-      `<p>Story work is blocked until this room is repaired. Clearing the attacker does not restore it.</p>${btn('Repair room · 30g', 'repairDamage:' + id)}`,
+      `${btn('Repair room · 30g', 'repairDamage:' + id)}`,
     );
   if (D.homeDanger(state))
     html += card(
       'HOME UNDER ATTACK',
-      `<p class="threat-badge">${esc(D.homeDanger(state).name)} · ${D.homeDanger(state).id !== 'monster' ? 'Attacks residents first, then damages rooms. Each damaged room needs a 30g repair.' : state.threats[D.homeDanger(state).id].damage + ' gold lost to damage. Undefended days cost up to 8 gold.'} Only fit residents at home can help.</p>`,
+      `<p class="threat-badge">${esc(D.homeDanger(state).name)}</p>`,
     );
   for (const m of D.activeMissions(state).sort(
     (a, b) =>
@@ -277,7 +275,7 @@ function renderContracts() {
                 : ''
             }</p>`
           : '<p class="stats">The expedition is underway.</p>'
-      }${m.status === 'travelling' && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div><p class="stats">${def.internal ? 'Withdrawal is immediate. Clearing progress stays.' : 'A conscious survivor must lead the retreat. The party returns tomorrow with its wounded.'} Injuries need recovery. ${def.homeEvent ? 'Defenders protect the guild.' : 'The hoard is paid only after clearing the threat.'}</p>` : ''}`,
+      }${m.status === 'travelling' && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div>` : ''}`,
     );
   }
   for (const def of D.availableContracts(state).sort(
@@ -289,7 +287,7 @@ function renderContracts() {
       total = def.days * profile.amount;
     html += card(
       def.name,
-      `<span class="tag">${esc(D.contractLabel(def).kind)}</span><p><strong>${esc(D.contractLabel(def).detail)}</strong></p><p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL · repeated harm can kill. Retreat before everyone loses consciousness.</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
+      `<span class="tag">${esc(contractKind(def))}</span><p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
         .filter((c) => c.status === 'home')
         .map(
           (c) =>
@@ -297,27 +295,32 @@ function renderContracts() {
         )
         .join(
           '',
-        )}</div><div class="party-preview" data-risk="${def.id}">Select residents to calculate time and daily threat.</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> One medical kit · 10g · treats the first harm event; later harm still causes injury</label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
+        )}</div><div class="party-preview" data-risk="${def.id}">—</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> Medical kit · 10g · one treatment</label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
     );
   }
-  html += card(
-    'Work at the doorstep',
-    `<p>Mara pays 12 gold for a day of mending. Available with no active assignment. Time passes and injured residents recover.</p>${btn('Spend a day mending · +12g', 'emergency')}`,
-  );
+  html += card('Work at the doorstep', `${btn('Spend a day mending · +12g', 'emergency')}`);
   return html;
+}
+function contractKind(def) {
+  if (def.homeEvent) return 'Defence';
+  if (def.internal) return 'Clearing';
+  if (def.lethal) return 'Lethal expedition';
+  if (def.personal) return D.recruits.find((c) => c.id === def.personal)?.name || 'Request';
+  if (def.region) return D.regions.find((r) => r.id === def.region)?.name || 'Expedition';
+  return D.contractLabel(def).kind === 'REPEATABLE WORK' ? 'Daily work' : 'Request';
 }
 function updatePartyPreview(id) {
   const ids = [...document.querySelectorAll(`[data-party="${id}"]:checked`)].map((x) => x.value),
     target = document.querySelector(`[data-risk="${id}"]`),
     button = document.querySelector(`[data-action="dispatch:${id}"]`);
   if (!ids.length) {
-    target.textContent = 'Select residents to calculate time and daily threat.';
+    target.textContent = '—';
     button.disabled = true;
     return;
   }
   const r = D.risk(state, id, ids),
     def = D.contracts.find((d) => d.id === id);
-  target.innerHTML = `<strong>Combined ${r.requirement.stat.toUpperCase()} ${r.combined} / ${r.requirement.amount}</strong><p>${r.days === null ? 'No progress' : r.days + ' days'}${r.combined < r.requirement.amount ? ' · below target; longer exposure' : ''} · <strong>${r.threat}% chance of harm each day</strong></p><p class="stats">${r.damageType} harm · ${r.workBonus}% class work bonus<br>${r.baseThreat}% base threat${r.reductions.length ? ' − ' + r.reductions.map((x) => esc(x.label) + ' (' + (x.amount < 0 ? 'adds ' + Math.abs(Math.round(x.amount * 10) / 10) + ' risk points' : Math.round(x.amount * 10) / 10 + ' points') + ')').join(' − ') : ''}<br>Approximately ${r.exposure}% chance of at least one harm event over this assignment. A kit treats one event; it does not prevent the roll.</p>`;
+  target.innerHTML = `<strong>Combined ${r.requirement.stat.toUpperCase()} ${r.combined} / ${r.requirement.amount}</strong><p>${r.days === null ? 'No progress' : r.days + ' days'}${r.combined < r.requirement.amount ? ' · below target; longer exposure' : ''} · <strong>${r.threat}% chance of harm each day</strong></p><p class="stats">${r.damageType} harm · ${r.workBonus}% class work bonus<br>${r.baseThreat}% base threat${r.reductions.length ? ' − ' + r.reductions.map((x) => esc(x.label) + ' (' + (x.amount < 0 ? 'adds ' + Math.abs(Math.round(x.amount * 10) / 10) + ' risk points' : Math.round(x.amount * 10) / 10 + ' points') + ')').join(' − ') : ''}<br>${r.exposure}% risk over assignment</p>`;
   button.disabled =
     !r.rate || ids.length > def.capacity || (def.personal && !ids.includes(def.personal));
 }
@@ -352,7 +355,7 @@ function renderTraining() {
   if (trainingSection === 'choices') {
     if (pending.length) {
       const level = trainingLevels[c.id];
-      html += `<h3 class="training-choice-title">Level ${level} · Choose one</h3><p class="stats">Choosing closes every other option for this level.</p><div class="row">${['str', 'agi', 'int', 'end'].map((k) => btn(k.toUpperCase() + ' +1', 'advance:' + c.id + ':' + k + ':' + level, !fit)).join('')}</div>`;
+      html += `<h3 class="training-choice-title">Level ${level} · Choose one</h3><div class="row">${['str', 'agi', 'int', 'end'].map((k) => btn(k.toUpperCase() + ' +1', 'advance:' + c.id + ':' + k + ':' + level, !fit)).join('')}</div>`;
       if (!c.undead) {
         html +=
           '<div class="training-options">' +
@@ -372,12 +375,9 @@ function renderTraining() {
             .join('') +
           '</div>';
         if ([3, 6, 9, 12, 15, 18].includes(level) && !c.specialisation)
-          html +=
-            '<p>Choose a class first to see its talent alternatives.</p>' +
-            btn('Choose class →', 'trainingPage:path');
+          html += '' + btn('Choose class →', 'trainingPage:path');
       }
-    } else html += '<p>Complete contracts to earn your next level and its training choice.</p>';
-    html += `<details class="training-help"><summary>How progression works</summary><p>The first level costs ${D.xpRequired(1)} XP. The next two cost ${D.xpRequired(2)} and ${D.xpRequired(3)} XP; later requirements grow progressively. Each contract can grant one level, with surplus XP carried forward. Each earned level gives one choice: stat, skill or talent. Talents appear at levels 3, 6, 9, 12, 15 and 18.</p><p>The independent archivist can supply seal diagrams after Sera’s archive seal is recovered.</p></details>`;
+    }
   }
   if (trainingSection === 'path') {
     if (!c.undead && !c.specialisation && c.level >= 3)
@@ -396,14 +396,14 @@ function renderTraining() {
       )
         .map(([k, v]) => k.toUpperCase() + ' +' + v)
         .join(' · ')}. This class is permanent.</p>`;
-    else if (c.level < 3) html += '<p>Class specialisation unlocks at level 3.</p>';
+    else if (c.level < 3) html += '<p>Class · Level 3</p>';
   }
   if (trainingSection === 'abilities') {
     html += `<p>${klass.desc}</p><h3>Learned abilities</h3>`;
     html += (c.skills || [])
       .map(
         (id) =>
-          `<div class="class-node"><strong>${esc(abilityNames[id] || id)}</strong><p>${esc(D.skills[c.type].find((k) => k.id === id)?.desc || 'Innate ability used in exploration and contract assessments.')}</p></div>`,
+          `<div class="class-node"><strong>${esc(abilityNames[id] || id)}</strong><p>${esc(D.skills[c.type].find((k) => k.id === id)?.desc || '')}</p></div>`,
       )
       .join('');
     html += (c.talents || [])
@@ -443,7 +443,7 @@ function renderTraining() {
     html += actions
       ? '<p class="stats">One cast per caster per day. The target must be at home with the caster or in the same adventure party.</p>' +
         actions
-      : '<p>No spell actions available. Learn a healing, repair or reanimation talent; wounded companions must be within reach.</p>';
+      : '<p>No spells ready.</p>';
   }
   return html;
 }
@@ -459,13 +459,13 @@ function renderStories() {
             ? 'Assign a clearing party in Contracts, or return through the entrance.'
             : state.flags['searched_' + chamber.id]
               ? 'Follow the labelled passages; keys and resident abilities open new routes.'
-              : 'Investigate the marked plinth to recover records, keys and equipment.',
+              : 'Unsearched to recover records, keys and equipment.',
         summary: state.flags['searched_' + chamber.id]
           ? chamber.story
           : 'A new chamber has been discovered. Its records still need investigation.',
       }
     : D.currentInvestigation(state);
-  let html = `<article class="investigation"><small>CURRENT INVESTIGATION</small><h3>${esc(investigation.title)}</h3><p>${esc(investigation.summary)}</p><p class="story-next">${esc(investigation.next)}</p>${investigation.walk ? btn('Walk to the next step', 'walk:' + investigation.walk) : investigation.tab ? `<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>` : ''}</article>`;
+  let html = `<article class="investigation"><h3>${esc(investigation.title)}</h3>${investigation.walk ? btn(investigation.title, 'walk:' + investigation.walk) : investigation.tab ? `<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>` : ''}</article>`;
   html +=
     '<h3 class="story-section">What we have learned</h3>' +
     D.knownHistory(state)
@@ -477,10 +477,7 @@ function renderStories() {
     html += '<h3 class="story-section">Places to investigate</h3>';
     for (const n of discoveries) {
       const x = choiceLocation(n.id);
-      html += card(
-        n.title,
-        `<p>There is more to inspect in ${locationName(n.id)}.</p>${btn('Walk there', 'walk:' + x)}`,
-      );
+      html += card(n.title, `${btn('Walk there', 'walk:' + x)}`);
     }
   }
   if (state.flags.free) {
@@ -494,7 +491,7 @@ function renderStories() {
           ).filter(Boolean).length;
           return card(
             r.name,
-            `<p>${esc(r.problem)}</p><label class="stats">${completed}/12 story contracts completed<progress value="${completed}" max="12"></progress></label>${completed === 12 ? paragraphs(r.ending) : ''}`,
+            `<p>${esc(r.problem)}</p><label class="stats">${completed}/12<progress value="${completed}" max="12"></progress></label>${completed === 12 ? paragraphs(r.ending) : ''}`,
           );
         })
         .join('');
@@ -517,7 +514,7 @@ function renderStories() {
       .reverse()
       .find((m) => m.status === 'resolved' && m.party.includes(c.id));
     if (returned)
-      body += `<p class="stats">Last expedition: ${esc(D.contracts.find((m) => m.id === returned.id).name)}. The report is in Reports.</p>`;
+      body += `<p class="stats">Last expedition: ${esc(D.contracts.find((m) => m.id === returned.id).name)}.</p>`;
     html += card(c.name, body);
   }
   const leads = D.optionalHouseLeads(state);
@@ -528,6 +525,7 @@ function renderStories() {
   return html;
 }
 function renderUI() {
+  if (tab === 'Store room' && !D.storeAvailable(state)) tab = null;
   $('status').textContent = `Day ${state.day} · ${state.gold} gold`;
   const selected = D.home(state).find((c) => c.id === state.selected);
   const portrait = (c) =>
@@ -547,11 +545,11 @@ function renderUI() {
           : 'A new chamber has been discovered. Its records still need investigation.',
       }
     : D.currentInvestigation(state);
-  $('chapter-label').textContent = investigation.title;
-  $('objective').textContent = investigation.next;
-  $('story-event').textContent = investigation.summary;
+  $('chapter-label').textContent = '';
+  $('objective').textContent = investigation.title;
+  $('story-event').textContent = '';
   $('character-hud').innerHTML = selected
-    ? `${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id === 'rowan' ? (state.flags.gateOpen ? 'Unbound · House sight' : state.flags.anchor ? 'Bound protagonist · House sight' : 'Bound protagonist · Entrance') : 'Home · Level ' + selected.level}</span></div>`
+    ? `${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id === 'rowan' ? (state.flags.gateOpen ? 'Unbound · House sight' : state.flags.anchor ? 'Bound · House sight' : 'Bound') : 'Home · Level ' + selected.level}</span></div>`
     : '';
   $('home-strip').innerHTML = D.home(state)
     .map(
@@ -576,7 +574,7 @@ function renderUI() {
     'Exploration',
     'Characters',
     'Contracts',
-    'Store room',
+    ...(D.storeAvailable(state) ? ['Store room'] : []),
     'Training',
     'Stories',
     'Diaries',
@@ -585,18 +583,18 @@ function renderUI() {
   ]
     .map((t) => `<button class="${t === tab ? 'active' : ''}" data-tab="${t}">${t}</button>`)
     .join('');
-  let html = `<div class="panel-header"><div><small>GUILD LEDGER</small><h2>${tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
+  let html = `<div class="panel-header"><div><h2>${tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
   if (tab === 'Options')
     html +=
-      '<p>Camera: mouse wheel or + / − zooms. Focus room fits the current room; Wide view shows the surrounding guild. <a href="/graphics-preview.html" target="_blank" rel="noopener">Open the graphics workshop</a>.</p><p>A / D or arrows walks. Space jumps; W / S uses stairs; E investigates; Tab switches home residents.</p><p>Management pauses exploration. Close the ledger or press Escape to return.</p>';
+      '<dl class="controls"><dt>Walk</dt><dd>A / D · ← / →</dd><dt>Jump</dt><dd>Space</dd><dt>Stairs</dt><dd>W / S</dd><dt>Interact</dt><dd>E</dd><dt>Switch resident</dt><dd>Tab</dd><dt>Zoom</dt><dd>Mouse wheel · + / −</dd><dt>Close</dt><dd>Escape</dd></dl>';
   if (tab === 'Overview') {
     html +=
       '<p><a href="/guild-sprawl.html" target="_blank" rel="noopener">View the full tower and underworld map →</a></p>';
     html += card(
-      'Routes and unlocks',
-      `<p>Every route has a visible stair or door. Walk directly to its entrance using these buttons.</p>${btn('Tower stair · ' + (state.flags.tower ? 'open' : state.flags.anchor ? 'Wren’s key recovered · repair required' : 'key from Wren’s Crossing contract'), 'walk:350')}<p>Wren’s keeper returns the tower key with the landing fitting. Repair the supports, then use W to climb.</p>${btn('Cellar stair · ' + (state.flags.stairs ? 'open' : 'repair required'), 'walk:505')}<p>Restore the service room to recover the cellar access key. The dry landing needs no water magic; a resident with Water breathing must open the submerged drain wheel. Once drained, everyone can enter.</p><p>Labyrinth gate: the second key from Wren’s Crossing opens it from the dry cellar landing. Tracking or Echo sight reveals the stair to its lower floor.</p><p>Archive: Sera’s quest returns its door seal; Magical literacy or the escorted independent archivist opens it. Greenhouse: Edda’s quest returns its fitting. Observatory: Elian’s quest returns its lens. Threshold: the infirmary recording reveals its location; a completed safety-plan contract unlocks restoration.</p>`,
+      'Stairs',
+      btn('Tower · ' + (state.flags.tower ? 'open' : 'locked'), 'walk:350') +
+        btn('Cellar · ' + (state.flags.stairs ? 'open' : 'locked'), 'walk:505'),
     );
-    html += '<p>Known rooms of the estate. Unreturned interiors remain concealed.</p>';
     const known = [
       { name: 'Entrance', x: 160 },
       { name: 'Quarters', x: 340 },
@@ -613,23 +611,14 @@ function renderUI() {
       html += card(
         state.flags.cellarDrained ? 'Drained cellar' : 'Flooded cellar',
         state.flags.cellarDrained
-          ? '<p>The drain is locked open. All residents can use the cellar.</p>'
-          : '<p>S reaches the dry landing. A Water breather can dive, walk to the labelled drain wheel and press E. Draining permanently opens the cellar to everyone.</p>',
+          ? '<p>Drain open</p>'
+          : '<p>Submerged drain · Water breathing</p>',
       );
-    if (state.flags.tower)
-      html += card(
-        'Bell tower · 2 floors',
-        '<p>W at the quarters stair climbs to the lower landing, then the crown. S returns.</p>',
-      );
+    if (state.flags.tower) html += card('Bell tower · 2 floors', btn('Tower stair', 'walk:350'));
     if (state.flags.labyrinth)
-      html += card(
-        'Labyrinth · 2 floors',
-        '<p>E at the dry landing enters the upper maze. Tracking or Echo sight reveals the stair to its heart.</p>',
-      );
+      html += card('Labyrinth · 2 floors', '<p>Lower stair · Tracking / Echo sight</p>');
   }
   if (tab === 'Exploration') {
-    html +=
-      '<p>The old cellar leads into drains and prison tunnels. The lower labyrinth branches into caverns and crypts. The bell tower opens into the wizard’s rooms. E uses labelled passages; every chamber keeps a return route.</p>';
     const here = currentSource(player.floor),
       room = D.roomAt(player.floor);
     if (room)
@@ -647,7 +636,7 @@ function renderUI() {
       .map((r) =>
         card(
           r.name,
-          `<p>${state.flags['searched_' + r.id] ? esc(r.story) : 'Records not yet recovered.'}</p><span class="stats">${r.encounter && !state.flags['cleared_' + r.id] ? 'Creature guards this room' : state.flags['searched_' + r.id] ? 'Investigated · treasure in shared store' : 'Investigate the marked plinth'}</span>`,
+          `<p>${state.flags['searched_' + r.id] ? esc(r.story) : ''}</p><span class="stats">${r.encounter && !state.flags['cleared_' + r.id] ? 'Creature guards this room' : state.flags['searched_' + r.id] ? 'Searched' : 'Investigate the marked plinth'}</span>`,
         ),
       )
       .join('');
@@ -659,18 +648,16 @@ function renderUI() {
   if (tab === 'Stories') html += renderStories();
   if (tab === 'Diaries') html += renderRecords();
   if (tab === 'Reports')
-    html +=
-      '<p>Reports record journeys, discoveries and rewards.</p>' +
-      (state.reports.length
-        ? state.reports
-            .map((r) =>
-              card(
-                r.title,
-                `<span class="tag">Day ${r.day}${rewardSummary(r.reward, r.xp) ? ' · ' + rewardSummary(r.reward, r.xp) : ''}</span>${paragraphs(r.text)}<div class="stats">${esc(r.party.join(', '))}${r.cost > 0 ? ' · Preparation expense: ' + r.cost + 'g' : ''}</div>`,
-              ),
-            )
-            .join('')
-        : '<p>Expedition reports will appear here when your parties return.</p>');
+    html += state.reports.length
+      ? state.reports
+          .map((r) =>
+            card(
+              r.title,
+              `<span class="tag">Day ${r.day}${rewardSummary(r.reward, r.xp) ? ' · ' + rewardSummary(r.reward, r.xp) : ''}</span>${paragraphs(r.text)}<div class="stats">${esc(r.party.join(', '))}${r.cost > 0 ? ' · Preparation expense: ' + r.cost + 'g' : ''}</div>`,
+            ),
+          )
+          .join('')
+      : '<p>No reports.</p>';
   if (tab === 'Journal')
     html += `<details><summary>Completed contracts · ${state.missions.filter((m) => m.status === 'resolved').length}</summary>${state.missions
       .filter((m) => m.status === 'resolved')
@@ -681,7 +668,7 @@ function renderUI() {
       )
       .join(
         '',
-      )}</details><div class="card"><h3>Recovered keys</h3><p>${state.flags.repaired ? 'Cellar hatch key · recovered from the restored service room.<br>' : ''}${state.flags.anchor ? 'Bell-tower key and labyrinth-gate key · returned by Wren’s keeper.' : 'Complete The bell at Wren’s Crossing to recover the tower and labyrinth keys.'}</p></div><p>Next: ${esc(D.nextSteps(state))}</p><div class="row">${btn('Save checkpoint', 'save')}${btn('Load checkpoint', 'load')}${btn('Export save', 'export')}${btn('Import save', 'import')}${btn('New guild', 'new')}</div><input hidden type="file" id="save-file" accept="application/json">${[
+      )}</details><div class="card"><h3>Recovered keys</h3><p>${state.flags.repaired ? 'Cellar hatch key · recovered from the restored service room.<br>' : ''}${state.flags.anchor ? 'Bell-tower key and labyrinth-gate key · returned by Wren’s keeper.' : ''}</p></div><div class="row">${btn('Save checkpoint', 'save')}${btn('Load checkpoint', 'load')}${btn('Export save', 'export')}${btn('Import save', 'import')}${btn('New guild', 'new')}</div><input hidden type="file" id="save-file" accept="application/json">${[
       ...state.journal,
     ]
       .reverse()
@@ -728,6 +715,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (b.dataset.tab) {
+    if (b.dataset.tab === 'Store room' && !D.storeAvailable(state)) return;
     tab = tab === b.dataset.tab ? null : b.dataset.tab;
     keys = {};
     walkTarget = null;
@@ -775,6 +763,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (op === 'visitStore') {
+    if (!D.storeAvailable(state)) return;
     chooseResident(id);
     closePanel();
     walkTarget = 790;
@@ -782,6 +771,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (op === 'walk') {
+    if (Number(id) === 790 && !D.storeAvailable(state)) return;
     if (player.floor !== 380) {
       toast('Return to the ground floor using W / S first.');
       return;
@@ -789,7 +779,7 @@ document.addEventListener('click', (e) => {
     closePanel();
     walkTarget = Number(id);
     canvas.focus();
-    toast('Walking toward the discovery. Use E when you arrive.');
+    toast('On the way.');
     return;
   }
   act(() => {
@@ -800,7 +790,7 @@ document.addEventListener('click', (e) => {
       state.flags.opening = true;
       player = spawn();
       walkTarget = null;
-      toast('A new guild begins. Find Bryn in the entrance hall.');
+      toast('A new guild begins.');
     }
     if (op === 'select') chooseResident(id);
     if (op === 'gear') D.equip(state, id, value);
@@ -1015,14 +1005,21 @@ canvas.addEventListener('mouseleave', () => {
 });
 function hotspots() {
   const list = [
+    { x: mara.x, y: mara.y, action: 'mara', text: 'E · Speak to Mara · brass golem familiar' },
     {
       x: 790,
       y: 380,
       action: 'storeEnter',
       text: 'E · Enter STORE ROOM · shared equipment',
-      show: state.flags.repaired,
+      show: D.storeAvailable(state),
     },
-    { x: 865, y: 140, action: 'storeOpen', text: 'E · Open equipment shelves' },
+    {
+      x: 865,
+      y: 140,
+      action: 'storeOpen',
+      text: 'E · Open equipment shelves',
+      show: D.storeAvailable(state),
+    },
     { x: 750, y: 140, action: 'storeExit', text: 'E · Leave store room' },
     {
       x: 880,
@@ -1396,7 +1393,9 @@ document.addEventListener('keydown', (e) => {
                 ? 'The wall opens. Restoration is a separate job.'
                 : h.action === 'ledger'
                   ? 'A new expedition lead is in Contracts.'
-                  : 'The house has changed.',
+                  : h.action === 'mara'
+                    ? 'Mara sets the kettle down to listen.'
+                    : 'The house has changed.',
             );
           });
       }
@@ -1413,6 +1412,20 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
 window.addEventListener('blur', () => (keys = {}));
 
+function drawMara() {
+  const { x, y } = mara;
+  rect(x - 15, y - 30, 30, 22, '#a77c39');
+  rect(x - 12, y - 49, 24, 18, '#d4ad62');
+  rect(x - 19, y - 29, 5, 19, '#d4ad62');
+  rect(x + 15, y - 29, 5, 19, '#d4ad62');
+  rect(x - 11, y - 8, 8, 8, '#73572e');
+  rect(x + 3, y - 8, 8, 8, '#73572e');
+  rect(x - 7, y - 43, 4, 4, '#a8eff0');
+  rect(x + 3, y - 43, 4, 4, '#a8eff0');
+  rect(x - 4, y - 25, 8, 8, '#89d9e5');
+  rect(x + 8, y - 19, 4, 7, '#f3d68c');
+  text('MARA · BRASS GOLEM', x - 48, y - 59, 9, '#e4c890');
+}
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x - camera, y, w, h);
@@ -1611,6 +1624,7 @@ function drawWorld(c) {
   rect(-330, 395, 385, 12, '#736749');
   rect(43, 275, 12, 120, '#8c7d5c');
   text(state.flags.gateOpen ? 'THE ROAD IS OPEN' : 'BOUNDARY', -100, 340, 12, '#c3b38b');
+  drawMara();
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
     const position = D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);
@@ -1973,19 +1987,7 @@ function frame(now) {
   D.rememberPosition(state, state.selected, player);
   drawWorld(c);
   const h = hoveredObject || nearest();
-  $('hint').textContent = h
-    ? h.text
-    : c.id === 'rowan' && !state.flags.repaired && !state.flags.anchor && player.x > 650
-      ? 'Rowan’s binding ends here. An adventurer must go further.'
-      : D.roomAt(player.floor)
-        ? 'E at a marked door · Exploration lists routes and return passage'
-        : player.floor !== 380
-          ? 'Explore this floor · W / S at the stair · E investigate'
-          : state.flags.gateOpen
-            ? 'Rowan can walk left through the entrance gate.'
-            : player.x >= D.worldBoundary(state) - 10 && state.flags.anchor
-              ? 'The next span is missing. Follow the house’s leads before crossing.'
-              : 'Explore the rooms · E investigates and starts conversations';
+  $('hint').textContent = h ? h.text : '';
   $('position').textContent =
     visualRoom()?.name ||
     (player.floor === 140 && player.x > 705

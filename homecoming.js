@@ -397,10 +397,69 @@ export const records = [
   })),
 ].map((record) => ({
   ...record,
+  ...recordContext(record),
   ...(record.author === 'Halden'
     ? { provenance: 'From the correspondence Mara brought to the guild' }
     : {}),
 }));
+function recordContext(record) {
+  const dates = {
+    entrance: '3 March · Year 1 of Rowan’s time at the old guild',
+    service: '10 April · Year 1 of Rowan’s time at the old guild',
+    quarters: '22 November · Year 2 of Rowan’s time at the old guild',
+    library: '6 February · Year 3 of Rowan’s time at the old guild',
+    garden: '19 May · Year 3 of Rowan’s time at the old guild',
+    observatory: '8 September · Year 3 of Rowan’s time at the old guild',
+    threshold: '14 October · Year 3 of Rowan’s time at the old guild',
+    vault: '2 June · Year 3 of Rowan’s time at the old guild',
+    mirror: '21 September · Year 3 of Rowan’s time at the old guild',
+    orrery: '9 October · Year 3 of Rowan’s time at the old guild',
+  };
+  if (record.author === 'Rowan')
+    return {
+      documentType: 'Diary entry',
+      date: dates[record.id] || 'Undated',
+      source: 'A page from Rowan’s private diary, kept during their time at the old guild.',
+    };
+  if (record.who)
+    return {
+      documentType: 'Personal letter',
+      date: 'Undated',
+      source: 'Correspondence shared with Rowan while arranging a journey home.',
+    };
+  if (['tower', 'labyrinth'].includes(record.id))
+    return {
+      documentType: 'Emergency note',
+      date: 'Undated',
+      source: 'A handwritten warning left in this room during the evacuation of the old guild.',
+    };
+  const haldenDates = {
+    stars: 'Year 29 after the disaster · day and month unrecorded',
+    cellar: 'Year 1 after the disaster · day and month unrecorded',
+    rift: 'Year 7 after the disaster · day and month unrecorded',
+    potions: 'Year 14 after the disaster · day and month unrecorded',
+  };
+  return {
+    documentType: record.author === 'Halden' ? 'Letter' : 'Personal testimony',
+    date: haldenDates[record.id] || 'Undated',
+    source: 'A personal document preserved among this room’s records.',
+  };
+}
+export function recordEntry(record) {
+  const date =
+    record.date === 'Undated'
+      ? ''
+      : record.date
+          .replace(' of Rowan’s time at the old guild', '')
+          .replace(' after the disaster · day and month unrecorded', '');
+  return `${record.author}\n${date ? date + '\n' : ''}${record.text}`;
+}
+export function recordContextText(record, recoveredDay) {
+  return `${record.documentType} · ${record.author}\n${record.source}${record.date === 'Undated' ? '\nWriting date unknown.' : ''}${recoveredDay != null ? '\nRecovered on guild day ' + recoveredDay : ''}${record.provenance ? '\n' + record.provenance : ''}`;
+}
+export function recordBody(record) {
+  return recordEntry(record);
+}
 export function availableRecords(s) {
   return records.filter(
     (r) =>
@@ -413,9 +472,11 @@ export function recoverRecord(s, id) {
   const r = availableRecords(s).find((r) => r.id === id);
   if (!r) throw Error('This personal record is not accessible or has already been read.');
   s.flags['record_' + id] = true;
-  const text = `${r.author} · ${r.room}${r.provenance ? '\n' + r.provenance : ''}\n${r.text}`;
+  s.recordDays ??= {};
+  s.recordDays[id] = s.day;
+  const text = recordBody(r, s.day);
   s.journal.push({ kind: 'Personal record', text });
-  s.scenes.push({ title: r.room + ' · ' + r.author, body: text });
+  s.scenes.push({ title: r.room + ' · ' + r.author, body: text, recordId: id });
 }
 export const homecomingChoices = Object.entries(journeys).map(([id, j]) => ({
   id: 'homecoming-' + id,
@@ -423,14 +484,7 @@ export const homecomingChoices = Object.entries(journeys).map(([id, j]) => ({
   requires: [...j.requires, 'record_home-' + id],
   title: 'A road home',
   until: ['departed_' + id],
-  body:
-    j.record +
-    '\nThey want to return to ' +
-    j.home +
-    '. ' +
-    (j.kind === 'spirit'
-      ? 'Their body did not survive the disaster, but the house kept their spirit here. They now know where the people who remember them can be found. Meeting them will allow a farewell and release the spirit from the house.'
-      : 'They have found a place they want to go and ask Rowan to help arrange the journey.'),
+  body: j.record,
   choices: [
     {
       id: 'release',

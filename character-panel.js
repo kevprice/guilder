@@ -39,7 +39,7 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
             : 'At home';
   let body = '';
   if (person.status === 'home')
-    body += `<div class="row">${btn('Control ' + person.name, 'select:' + person.id)}${btn('Visit store room', 'visitStore:' + person.id)}</div>`;
+    body += `<div class="row">${btn('Control ' + person.name, 'select:' + person.id)}${D.storeAvailable(state) ? btn('Visit store room', 'visitStore:' + person.id) : ''}</div>`;
   if (person.status === 'injured') body += btn('Arrange treatment · 15 gold', 'treat:' + person.id);
   for (const node of D.availableChoices(state, person.id))
     body += `<div class="row">${btn(node.title, 'talk:' + node.id)}</div>`;

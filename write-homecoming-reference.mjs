@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { journeys, records } from './homecoming.js';
+import { journeys, records, recordBody } from './homecoming.js';
 import { recruits, sleepers } from './domain.js';
 import { residentDiscoveries } from './resident-discoveries.js';
 import { expansionRooms } from './expansion.js';
@@ -18,10 +18,7 @@ await writeFile(
   '# Room diaries, letters and testimony\n\nCurrent authored records. This document includes spoilers; the game only exposes accessible pages. Character correspondence is also collected in HOMECOMINGS.md.\n\n' +
     records
       .filter((r) => !r.who)
-      .map(
-        (r) =>
-          `## ${r.room}\n\n**${r.author}**\n\n${r.provenance ? r.provenance + '\n\n' : ''}${r.text}\n`,
-      )
+      .map((r) => `## ${r.room}\n\n${recordBody(r).split('\n').join('\n\n')}\n`)
       .join('\n'),
 );
 await writeFile(

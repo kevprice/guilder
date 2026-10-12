@@ -1,5 +1,6 @@
 // Deliberately different silhouettes and props; no repeated domestic windows below ground.
 import { glow } from './graphics-engine.js';
+import { paintMaterial, paintRoomDepth } from './materials.js';
 export function paintChamber(ctx, camera, r, s, time) {
   const x = r.x - camera,
     y = r.y,
@@ -38,6 +39,10 @@ export function paintChamber(ctx, camera, r, s, time) {
   ctx.lineTo(x + w, y + 10);
   ctx.closePath();
   ctx.fill();
+  ctx.save();
+  ctx.clip();
+  paintRoomDepth(ctx, x, top, w, 180, accent, Math.floor(r.x + r.y), true);
+  ctx.restore();
   ctx.strokeStyle = accent + '55';
   ctx.lineWidth = 3;
   ctx.stroke();
@@ -53,6 +58,7 @@ export function paintChamber(ctx, camera, r, s, time) {
   }
   ctx.fillStyle = '#131c24';
   ctx.fillRect(x, y, w, 18);
+  paintMaterial(ctx, x, y, w, 18, 'stone', Math.floor(r.x));
   ctx.fillStyle = accent + '77';
   ctx.fillRect(x, y, w, 4);
   ctx.fillStyle = accent;

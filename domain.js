@@ -1,5 +1,6 @@
 import { chambers, passages, dungeonContracts, passageError, roomAt } from './sprawl.js';
 import { cleanStoredCopy } from './player-copy.js';
+import { maraDialogue } from './mara.js';
 import {
   residentDiscoveries,
   discoveryAvailable,
@@ -97,7 +98,7 @@ export const recruits = [
     int: 5,
     end: 5,
     color: '#99b890',
-    bio: 'A guild pathfinder who secretly guided displaced families past its customs posts. Nell has woken to roads and households changed by thirty years. She wants to find the people she helped escape.',
+    bio: 'Nell knew the local roads and helped families reach shelter during the evacuation. She returned to search the guild for anyone left behind and was trapped inside. Thirty years later, she wants to find out what happened to those families.',
   },
   {
     id: 'ivo',
@@ -300,7 +301,7 @@ export function initial() {
     journal: [
       {
         kind: 'Observed',
-        text: 'Mara reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.\n“Halden raised me,” she said. “They died last autumn.”\nRowan asked her to repeat that. Mara sat on the doorstep while they tried to understand the date.\nHalden had spent years searching for a route back. Their last papers helped Mara align the token with the entrance fittings; she had finally made the crossing hold. She brought their letters too. Rowan could read them when they were ready.\nBefore dusk Mara asked where she could put her tools. The house had no safe beds and little money. There were local contracts they could take once Rowan found people fit to travel.\nRowan showed her the dry corner beside the entrance. Mara put the kettle there first.',
+        text: 'Mara, a small brass golem, reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.\n“Halden built me, then raised me,” she said. “They died last autumn.”\nRowan asked her to repeat that. Mara sat on the doorstep while they tried to understand the date.\nHalden had spent years searching for a route back. Their last papers helped Mara align the token with the entrance fittings; she had finally made the crossing hold. She brought their letters too. Rowan could read them when they were ready.\nBefore dusk Mara asked where she could put her tools. The house had no safe beds and little money. There were local contracts they could take once Rowan found people fit to travel.\nRowan showed her the dry corner beside the entrance. Mara put the kettle there first.',
       },
     ],
     transactions: [],
@@ -740,6 +741,9 @@ export function buyEquipment(s, gear) {
   s.inventory.push(item);
   return item.uid;
 }
+export function storeAvailable(s) {
+  return Boolean(s.flags.repaired && !s.damagedRooms?.service);
+}
 export function enterStore(s, id) {
   readyResident(s, id);
   if (!s.flags.repaired)
@@ -816,7 +820,7 @@ export function repairDamage(s, id) {
   delete s.damagedRooms[id];
   note(
     s,
-    `${id === 'service' ? 'Service room' : id === 'quarters' ? 'Quarters' : rooms.find((r) => r.id === id).name} repaired. Its previous story progress is preserved.`,
+    `${id === 'service' ? 'Service room' : id === 'quarters' ? 'Quarters' : rooms.find((r) => r.id === id).name} repaired.`,
     'Room repaired',
   );
 }
@@ -1616,6 +1620,10 @@ export function repairRoom(s, id) {
   );
 }
 export function interact(s, action) {
+  if (action === 'mara') {
+    s.scenes.push(maraDialogue(s));
+    return;
+  }
   if (action.startsWith('repairDamage:')) {
     repairDamage(s, action.slice(13));
     return;
@@ -1656,7 +1664,7 @@ export function interact(s, action) {
     );
     s.scenes.push({
       title: 'A dragon beneath the guild',
-      body: 'Heat escapes through the east door. Inside, the furnace has been dragged open and packed with nesting stone. A dragon lifts its head from the coals.\nThe resident closes the door before it can force its shoulders through. The passage is clear enough for a fighting party, but this will take repeated attacks and days of work.\nA contract is now in Contracts. Its daily threat is high. You can pull assigned residents back immediately; the dragon will remain wounded until you resume. Nobody has reached the hoard, so the reward is unknown.',
+      body: 'Heat escapes through the east door. Inside, the furnace has been dragged open and packed with nesting stone. A dragon lifts its head from the coals.\nThe resident closes the door before it can force its shoulders through. Claws scrape against the other side.',
     });
     return;
   }

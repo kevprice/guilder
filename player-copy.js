@@ -1,6 +1,9 @@
 import { revisedCopy } from './revised-copy.js';
+import { maraCopy } from './mara.js';
 // Compatibility for stored prose. Current authored content is checked separately.
 const retiredSentences = [
+  /Its previous story progress is preserved\.\s*/gi,
+  /A contract is now in Contracts\. Its daily threat is high\. You can pull assigned residents back immediately; the dragon will remain wounded until you resume\. Nobody has reached the hoard, so the reward is unknown\./gi,
   /(?:["“]\s*)?there\s+is\s+no\s+recruitment\s+fee\s+or\s+service\s+obligation\s*[.!]?(?:\s*["”])?/gi,
   /nobody\s+is\s+hired\s*[.!]?/gi,
   /there\s+is\s+no\s+gold\s+reward\s*[.!]?/gi,
@@ -17,7 +20,7 @@ export function playerCopy(value) {
   return retiredSentences
     .reduce(
       (text, pattern) => text.replace(pattern, ''),
-      revisedCopy.get(String(value).trim()) || String(value),
+      maraCopy(revisedCopy.get(String(value).trim()) || String(value)),
     )
     .replace(/[ \t]+\n/g, '\n')
     .replace(/ {2,}/g, ' ')

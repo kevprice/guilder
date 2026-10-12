@@ -67,6 +67,21 @@ test('funds and combined requirements are atomic', () => {
   assert.equal(s.gold, 0);
   assert.throws(() => D.interact(s, 'cellar'));
 });
+test('store access follows service-room restoration and damage', () => {
+  const s = D.initial();
+  D.recruit(s, 'bryn');
+  assert.equal(D.storeAvailable(s), false);
+  assert.throws(() => D.enterStore(s, 'bryn'));
+  s.flags.repaired = true;
+  assert.equal(D.storeAvailable(s), true);
+  D.enterStore(s, 'bryn');
+  s.damagedRooms = { service: { cost: 30 } };
+  assert.equal(D.storeAvailable(s), false);
+  assert.throws(() => D.enterStore(s, 'bryn'));
+  delete s.damagedRooms.service;
+  assert.equal(D.storeAvailable(s), true);
+});
+
 test('distinct parties, shared equipment and away availability', () => {
   const s = D.initial();
   s.gold = 200;

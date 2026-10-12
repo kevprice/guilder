@@ -15,7 +15,7 @@ Read long scenes as short paragraphs with player-controlled continuation. The in
 ## Continuity used throughout
 
 - Rowan, Bryn, Nell, Ivo, Oren, Maelin and Ysra were present during the disaster. The adventurers were trapped; Rowan remained conscious in the surviving house. Outside, thirty years passed normally. Halden lived twenty-nine of those years and died last autumn; the opening occurs during the thirtieth year.
-- Halden uses they/them. Rowan and Halden shared affection, a home and a planned journey. The script does not force a romance label where the existing game has none. Mara is Halden’s adopted daughter, a present-day craftswoman, and has a life outside the guild.
+- Halden uses they/them. Rowan and Halden shared affection, a home and a planned journey. The script does not force a romance label where the existing game has none. Mara is a small brass golem built and raised by Halden, now Rowan’s familiar, a present-day craftswoman, and has a life outside the guild.
 - Rowan knew Halden tried to save them but not the treatment’s workings. Mara tells Rowan about Halden’s death at the start. The late recording explains the emergency binding, not their death or Mara’s parentage for the first time.
 - Bryn’s father worked at the waystation after the severance and died the following winter. Bryn missed that year while trapped. She was not searching the outside world for thirty years.
 - Nell learned the shelter route as a child and used it herself as a guild pathfinder. Its keepers and descendants maintained it while she was trapped. Ivo was Ada’s apprentice at the guild, not a new student corresponding from elsewhere.
@@ -7898,7 +7898,7 @@ Mara found the entrance
 
 **Context:** knownHistory → events → Mara found the entrance → text
 
-Mara is Halden’s adopted daughter. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.
+Mara is a small brass golem built and raised by Halden, now Rowan’s familiar. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.
 
 ### story-model.js:319
 
@@ -8400,8 +8400,8 @@ Observed
 
 **Context:** initial → journal → text
 
-Mara reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.
-“Halden raised me,” she said. “They died last autumn.”
+Mara, a small brass golem, reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.
+“Halden built me, then raised me,” she said. “They died last autumn.”
 Rowan asked her to repeat that. Mara sat on the doorstep while they tried to understand the date.
 Halden had spent years searching for a route back. Their last papers helped Mara align the token with the entrance fittings; she had finally made the crossing hold. She brought their letters too. Rowan could read them when they were ready.
 Before dusk Mara asked where she could put her tools. The house had no safe beds and little money. There were local contracts they could take once Rowan found people fit to travel.
@@ -16437,7 +16437,7 @@ The visitor at the gate
 
 **Context:** Interface / runtime text
 
-A craftswoman waits at the gate with a brass guild token. “I’m Mara. Halden raised me. They kept this for you.” Rowan recognises the name: Halden was the guild surgeon, and someone they loved. Mara grew up outside while the house was cut off. She has come to find the person Halden spoke about.
+A craftswoman waits at the gate with a brass guild token. “I’m Mara. Halden built me, then raised me. They kept this for you.” Rowan recognises the name: Halden was the guild surgeon, and someone they loved. Mara grew up outside while the house was cut off. She has come to find the person Halden spoke about.
 The token steadies the entrance for the first time in decades. Mara sets down her tools and begins arranging supplies and repairs at the doorstep. Rowan is still bound to the house, but its rooms are beginning to answer.
 A woman stands beneath a workshop door in the entrance hall, held in a motionless fall. In the quarters, a chalk route folds around someone hidden behind a curtain. These are people of the old guild, waiting for the moment that trapped them to end. Walk to the woman beneath the door and press E. Her name is Bryn. Freeing her begins both the rebuilding and her own story.
 

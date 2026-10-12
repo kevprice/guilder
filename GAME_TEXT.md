@@ -7899,7 +7899,7 @@ Mara found the entrance
 
 **Context:** knownHistory → events → Mara found the entrance → text
 
-Mara is Halden’s adopted daughter. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.
+Mara is a small brass golem built and raised by Halden, now Rowan’s familiar. Following their final treatment notes, she repaired the entrance connection with their brass token. She told Rowan that Halden died last autumn and brought the letters from their years outside. Mara arranges supplies while the guild earns enough to reopen the house.
 
 ### story-model.js:322
 
@@ -8401,8 +8401,8 @@ Observed
 
 **Context:** initial → journal → text
 
-Mara reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.
-“Halden raised me,” she said. “They died last autumn.”
+Mara, a small brass golem, reached the gate with Halden’s old brass token and a bag of tools. Rowan recognised the worn cord around it.
+“Halden built me, then raised me,” she said. “They died last autumn.”
 Rowan asked her to repeat that. Mara sat on the doorstep while they tried to understand the date.
 Halden had spent years searching for a route back. Their last papers helped Mara align the token with the entrance fittings; she had finally made the crossing hold. She brought their letters too. Rowan could read them when they were ready.
 Before dusk Mara asked where she could put her tools. The house had no safe beds and little money. There were local contracts they could take once Rowan found people fit to travel.

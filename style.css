@@ -866,6 +866,39 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
 }
+#story-event:empty,
+#chapter-label:empty,
+#hint:empty {
+  display: none;
+}
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+.controls dd {
+  margin: 0;
+  color: var(--paper);
+}
+.record-page {
+  margin: 16px 0;
+  padding: 22px 24px;
+  border: 1px solid #b7a784;
+  border-left: 4px solid #9b8054;
+  background: #eee5cf;
+  color: #30291e;
+  font-family: Georgia, serif;
+  line-height: 1.8;
+}
+.record-page p {
+  color: inherit;
+}
+.record-page p:first-child {
+  font-weight: bold;
+}
+.record-page p:nth-child(2) {
+  font-style: italic;
+}
 .scene-header {
   display: flex;
   justify-content: space-between;

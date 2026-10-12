@@ -16,10 +16,10 @@ const first = [
     x: 430,
     y: 380,
     requires: [],
-    condition: 'Hidden inside a folded corridor',
-    method: 'Unfold the chalk route',
+    condition: 'Trapped behind a sealed door',
+    method: 'Open the chalk doorway',
     story:
-      'The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.\nNell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.\nShe opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.\n“Did they get there?” she asks. Nobody can answer yet.\nShe had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.',
+      'Behind the quarters curtain, a doorway has been drawn in chalk. Rowan rubs out the line across its handle. A latch appears beneath their hand.\nNell steps through with a guide’s satchel. “Is anyone else still in here?”\nShe had led the last families out, given them directions to the shelters and come back to search the rooms. When she turned to leave, the door was gone.\nRowan tells her that was thirty years ago. Nell looks at the bread in her satchel. It is still soft.\nShe takes out a list of names and addresses. “These are the places I sent them. Can we ask?”',
   },
   {
     id: 'ivo',

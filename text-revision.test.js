@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { expansionMissions } from './expansion.js';
 import { revisedCopy } from './revised-copy.js';
+import { playerCopy } from './player-copy.js';
 
 test('Mara establishes Halden’s death and the correspondence packet at the opening', () => {
   const text = D.initial().journal[0].text;
-  assert.match(text, /Halden raised me/);
+  assert.match(text, /Halden built me, then raised me/);
   assert.match(text, /They died last autumn/);
   assert.match(text, /letters/);
   const letter = D.contracts.find((contract) => contract.id === 'witness').arrival;
@@ -18,7 +19,9 @@ test('Halden’s room records identify their existing correspondence rather than
   const state = D.initial();
   state.flags.cellarDrained = true;
   D.recoverRecord(state, 'cellar');
-  assert.match(state.scenes.at(-1).body, /correspondence Mara brought/);
+  const record = D.records.find((record) => record.id === 'cellar');
+  assert.match(record.provenance, /correspondence Mara brought/);
+  assert.doesNotMatch(state.scenes.at(-1).body, /correspondence Mara brought|Recovered on/);
   assert.equal(D.records.find((record) => record.id === 'cellar').requires[0], 'cellarDrained');
 });
 
@@ -39,7 +42,7 @@ test('an old opening account migrates to the revised text without changing campa
   assert.ok(old);
   state.journal[0].text = old[0];
   const loaded = D.load(D.save(state));
-  assert.equal(loaded.journal[0].text, old[1]);
+  assert.equal(loaded.journal[0].text, playerCopy(old[1]));
   assert.equal(loaded.gold, state.gold);
   assert.deepEqual(loaded.flags, state.flags);
   assert.deepEqual(loaded.choices, state.choices);
