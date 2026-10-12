@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>The recovered guild wings — original room atlas</title><style>body{margin:0;background:#111b28}canvas{display:block;width:1900px;height:1300px}</style></head><body><p style="padding:16px;color:#d8c091;font:18px Georgia"><a style="color:#a8d6cc" href="/guild-sprawl.html">View the new sprawling tower and underworld →</a> · This atlas shows the original interiors and recovered regional wings.</p><canvas id="panorama" width="3800" height="2600" aria-label="Original guild and regional wings: 48 interiors"></canvas><script type="module">
+import * as D from './domain.js';
+import {paintRoom,paintCharacter} from './artwork.js';
+const canvas=document.getElementById('panorama'),ctx=canvas.getContext('2d');
+const colors=['#91c4b2','#d8a071','#a5cce1','#9cbf8e','#badde7','#d8bd85','#82c5cb','#c7b5e4'];
+const bg=ctx.createLinearGradient(0,0,3800,2600);bg.addColorStop(0,'#183039');bg.addColorStop(1,'#101924');ctx.fillStyle=bg;ctx.fillRect(0,0,3800,2600);
+for(let i=0;i<240;i++){ctx.fillStyle=i%4?'#d8ebd544':'#b4d6ec77';ctx.fillRect((i*227)%3800,(i*71)%2600,2,2);}
+function text(t,x,y,size=26,color='#e9dfca'){ctx.fillStyle=color;ctx.font=`${size}px Georgia`;ctx.fillText(t,x,y);}
+function line(x,y,xx,yy,color='#c5a26877'){ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(xx,yy);ctx.stroke();}
+function room(name,x,y,w=365,color='#9bc6bf',kind=0){
+ ctx.save();ctx.translate(x,y-205);paintRoom(ctx,0,0,w,'',true,'');ctx.restore();
+ ctx.fillStyle='#172b34';ctx.fillRect(x+8,y+8,w-16,32);text(name,x+19,y+32,w<200?16:21,color);
+ const floor=y+187;
+ if(kind%4===0){for(let i=0;i<4;i++){ctx.fillStyle=i%2?color:'#a8865d';ctx.fillRect(x+w*.35+i*22,floor-45-i%2*9,17,45+i%2*9);}}
+ if(kind%4===1){ctx.fillStyle='#7b9f77';for(let i=0;i<3;i++){ctx.fillRect(x+w*.4+i*24,floor-30,16,26);line(x+w*.4+8+i*24,floor-30,x+w*.4+8+i*24,floor-65,color);}}
+ if(kind%4===2){ctx.fillStyle='#6e8294';ctx.fillRect(x+w*.35,floor-30,w*.4,25);ctx.fillStyle='#dbd7b8';ctx.fillRect(x+w*.35+4,floor-39,w*.4-8,12);}
+ if(kind%4===3){ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x+w*.6,floor-40,23,0,Math.PI*2);ctx.stroke();line(x+w*.6,floor-18,x+w*.6,floor-7,color);}
+ ctx.fillStyle=color+'44';ctx.fillRect(x+8,y+183,w-16,3);
+}
+text('THE BOUND HOUSE',90,100,66);text('THE COMPLETED GUILD · 48 INTERIORS · ALL ROOMS RESTORED',95,151,27,'#aecabe');
+text('Main house and vertical routes',90,233,32,'#d5bb86');
+room('Silent crown / bell chamber',350,300,550,'#b4dbe5',3);room('Lower tower landing',350,540,550,'#b4dbe5',3);line(410,485,410,550);line(410,725,410,808);
+room('Store room',970,540,550,'#c8b89b',0);line(1080,731,1080,808);text('Shared equipment',1160,775,22,'#cfbd9d');
+const primary=['Entrance','Quarters','Service corridor','Service room','Returned landing','Archive','Greenhouse','Observatory','Threshold chamber'];
+primary.forEach((name,i)=>room(name,90+i*171,815,170,colors[i%8],i));
+text('Original ground-floor spine · the entrance gate is open',100,1070,24,'#c3cbb8');
+room('Drained cellar + dry landing',390,1140,670,'#94bcbd',0);line(600,1005,600,1140);text('The sluice is locked open: everyone can enter.',1100,1225,24,'#a8c4c1');
+room('Upper labyrinth',390,1430,670,'#a8accc',3);line(600,1330,600,1430);text('Tracking or Echo sight reveals the lower route.',1100,1515,23,'#bbb9d2');
+room('Labyrinth heart / map room',390,1720,670,'#c9abc8',0);line(600,1620,600,1720);
+room('Old furnace / dragon forge',390,2010,670,'#d8a078',0);line(600,1910,600,2010);text('Dragon cleared · forge tools recovered',1100,2100,23,'#d5b79b');
+line(1745,320,1745,2270,'#b4c8b566');text('EAST CLOISTER',1595,300,22,'#adc6b5');
+for(const [i,region] of D.regions.entries()){
+ const y=365+i*235,color=colors[i];line(1745,y+85,1845,y+85,color+'88');text(region.name.toUpperCase(),1845,y-20,25,color);
+ for(const [j,name] of region.rooms.entries())room(name,1845+j*460,y,445,color,j);
+}
+line(1620,916,1745,916);text('Eight regional wings · four rooms each',1850,2330,29,'#d8dbc5');
+text('31 residents · shared store · tower · cellar · labyrinth · furnace · 32 regional rooms',95,2440,30,'#d1dbc5');
+text('Cutaway atlas: regional wings are folded into rows so every room can be read. In the game they extend east along one floor.',95,2500,25,'#9fb9b8');
+const residents=[{id:'rowan',name:'Rowan',type:'bound survivor',color:'#e2c889'},...D.recruits,...D.sleepers];
+residents.forEach((c,i)=>{ctx.save();ctx.translate(100+(i%16)*96,2250+Math.floor(i/16)*110);paintCharacter(ctx,0,c,0,0,false,1);ctx.restore();});
+</script></body></html>
