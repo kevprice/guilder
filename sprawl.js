@@ -140,7 +140,7 @@ export const chambers = [
     theme: 'study',
     depth: 1,
     story:
-      "Ada's apprentice kept full copies of the tests removed from the public archive. The voice continued after the speaking tube was disconnected; the same result appears on three dates. The notes show a stair concealed behind the shelves. An examination lens makes the erased annotations readable. This was more than one frightened witness. Ada had measurements she chose not to publish.",
+      "Ada's apprentice kept full copies of the tests removed from the public archive. The voice continued after the speaking tube was disconnected; the same result appears on three dates. The notes identify a stair concealed behind the shelves, with a key taped inside the cover. A margin note reads: ‘Maelin’s emergency bell-ward release diagram — filed under the cooling tiles in the potion kitchen.’ Maelin froze herself at the tower crown to stop the repeating alarm; the diagram is needed to release her safely. An examination lens makes the erased annotations readable. This was more than one frightened witness. Ada had measurements she chose not to publish.",
     item: 'echoLens',
     key: 'studyKey',
   },
@@ -153,7 +153,7 @@ export const chambers = [
     theme: 'potions',
     depth: 2,
     story:
-      "The cooker changes the pull of gravity as it heats. Bottles are suspended above the floor, but the shutoff sequence survives on the cooling tiles. Following it restores the room's ordinary weight. The party recovers the protective cloak kept for spills and explosions. On its inner seam someone has sewn a repair with blue thread. The laboratory had people working in it, not just apparatus waiting to be found.",
+      "The cooker changes the pull of gravity as it heats. Bottles are suspended above the floor, but the shutoff sequence survives on the cooling tiles. Following it restores the room's ordinary weight. Beneath a separate cooling tile is a sheet labelled ‘Maelin — emergency bell ward’. Its drawing matches the frozen bellkeeper at the tower crown. It supplies the missing cancellation stroke, which someone with Magical literacy can use to free Maelin without restarting the false alarm. The party takes the diagram back for her rescue. The party recovers the protective cloak kept for spills and explosions. On its inner seam someone has sewn a repair with blue thread. The laboratory had people working in it, not just apparatus waiting to be found.",
     item: 'frostCloak',
     trap: 'magical',
     skill: 'literacy',
@@ -302,7 +302,7 @@ export const passages = [
   route(
     'wellDrop',
     'maze',
-    240,
+    600,
     2130,
     'oubliette',
     { skill: 'tracking' },
@@ -339,7 +339,7 @@ export const passages = [
   route(
     'studyDoor',
     'tower',
-    810,
+    560,
     140,
     'study',
     { skill: 'literacy' },
@@ -348,7 +348,7 @@ export const passages = [
   route(
     'shelfStair',
     'study',
-    1170,
+    1570,
     -390,
     'potions',
     { key: 'studyKey' },
@@ -386,7 +386,7 @@ export const passages = [
   route(
     'moonStair',
     'menagerie',
-    2530,
+    3100,
     -1290,
     'orrery',
     { skill: 'threadwalk' },
@@ -395,7 +395,7 @@ export const passages = [
   route(
     'stormStair',
     'orrery',
-    1570,
+    2050,
     -1540,
     'storm',
     { key: 'orbitKey' },
@@ -538,6 +538,31 @@ export const dungeonProfiles = Object.fromEntries(
     },
   ]),
 );
+export const legacyPassagePositions = {
+  studyDoor: 810,
+  shelfStair: 1170,
+  wellDrop: 240,
+  moonStair: 2530,
+  stormStair: 1570,
+};
+export function chamberTreasureX(room) {
+  return room.encounter ? room.x + Math.round(room.w * 0.78) : room.x + 135;
+}
+export function chamberObjective(s, room) {
+  if (room.encounter && !s.flags['cleared_' + room.id])
+    return 'Clear the guardian in Contracts. Its treasure and records are on the far side of the room.';
+  if (room.id === 'study')
+    return s.flags.searched_study
+      ? 'Use the recovered study key at the hidden shelf stair. Search the potion kitchen for the bell ward’s cancellation sequence. Echo sight will open the reflection stair later.'
+      : 'Investigate the records and treasure with E. The notes contain the potion-kitchen key and tell you where Maelin’s bell-ward release diagram was filed.';
+  if (room.id === 'potions')
+    return s.flags.searched_potions
+      ? 'Return through the study to the bell tower crown. Investigate the frozen figure, then use Ivo’s Magical literacy to awaken Maelin. She joins with Echo sight.'
+      : 'Use Ivo’s Magical literacy to investigate the trapped records and treasure. Recover Maelin’s bell ward release diagram from beneath the cooling tiles.';
+  return s.flags['searched_' + room.id]
+    ? 'Follow the labelled passages; recovered keys and companion abilities open new routes.'
+    : 'Investigate the records and treasure with E.';
+}
 export function roomAt(y) {
   return chambers.find((r) => r.y === y);
 }

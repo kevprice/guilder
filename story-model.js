@@ -405,7 +405,7 @@ export function optionalHouseLeads(s) {
   if (f.towerCrown && !f.searched_potions && !f.awakened_maelin)
     out.push({
       title: 'Trace the bell ward',
-      text: 'The crown is sealed in blue ice. Search the wizard’s study and its hidden potion kitchen for the ward’s shutoff sequence.',
+      text: 'The crown is sealed in blue ice. Control Ivo and enter the wizard’s study through the lower tower landing’s east doorway. Search its notes for a key, use the hidden shelf stair, then investigate the potion kitchen. Return here to awaken Maelin; she joins with Echo sight.',
     });
   if (f.labyrinthHeart && !f.searched_maze && !f.awakened_ysra)
     out.push({
@@ -415,7 +415,9 @@ export function optionalHouseLeads(s) {
   if (f.found_maelin && !f.awakened_maelin)
     out.push({
       title: 'Break the frost ward',
-      text: 'Maelin is trapped with the bell at the tower crown. Magical literacy, or diagrams supplied by the escorted independent archivist, disables the repeating frost rune.',
+      text: f.searched_potions
+        ? 'You recovered Maelin’s bell ward release diagram from the potion kitchen. Return to the tower crown and use Ivo’s Magical literacy, or the independent archivist’s seal diagrams, to cancel the repeating frost rune. Maelin joins with Echo sight.'
+        : 'Maelin is already frozen beside the bell at the tower crown. Recover her bell ward release diagram from beneath the cooling tiles in the suspended potion kitchen before attempting to free her.',
     });
   if (f.stairs && f.anchor && !f.labyrinth)
     out.push({

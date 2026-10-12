@@ -1339,3 +1339,45 @@ select:focus-visible {
     width: 100px;
   }
 }
+
+.quest-reward {
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 2px solid #82bcc8;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #253c47, #202b30);
+}
+.quest-reward-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.quest-reward-heading svg {
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+}
+.quest-reward h3 {
+  font-size: 1.4rem;
+  margin: 4px 0;
+  color: #d6edf1;
+}
+.quest-reward-next {
+  padding: 14px;
+  margin-top: 16px;
+  border-left: 3px solid #b6d6c7;
+  background: #101b2560;
+}
+.quest-reward-next p {
+  margin-bottom: 0;
+}
+@media (max-width: 550px) {
+  .quest-reward-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .quest-reward-heading svg {
+    width: 60px;
+    height: 60px;
+  }
+}

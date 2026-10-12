@@ -44,10 +44,9 @@ test('regional companions are spaced across three expedition milestones and dist
 test('advanced sleepers require evidence from separate dungeon branches', () => {
   const s = D.initial();
   for (const flag of ['stairs', 'towerCrown', 'labyrinthHeart']) s.flags[flag] = true;
-  for (const id of ['oren', 'maelin', 'ysra']) assert.throws(() => D.discoverSleeper(s, id));
+  for (const id of ['oren', 'ysra']) assert.throws(() => D.discoverSleeper(s, id));
   for (const [id, flag] of [
     ['oren', 'searched_crypt'],
-    ['maelin', 'searched_potions'],
     ['ysra', 'searched_maze'],
   ]) {
     s.flags[flag] = true;

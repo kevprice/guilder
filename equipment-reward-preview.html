@@ -13,12 +13,12 @@
     </main>
     <script type="module">
       import { renderEquipmentRewards } from './equipment-rewards.js';
+      import { renderQuestReward } from './quest-rewards.js';
       const esc = (s) =>
         String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-      document.getElementById('rewards').innerHTML = renderEquipmentRewards(
-        ['thornSpear', 'oathShield'],
-        { esc },
-      );
+      document.getElementById('rewards').innerHTML =
+        renderQuestReward('bellWardDiagram', { esc }) +
+        renderEquipmentRewards(['thornSpear', 'oathShield'], { esc });
     </script>
   </body>
 </html>

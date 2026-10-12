@@ -201,7 +201,7 @@ const rows = [
     3,
     [],
     { undead: 10, echo: true },
-    'Undead threat −10; reveals false labyrinth routes.',
+    'Grants Echo sight, opening the study’s reflection stair and false labyrinth routes. Undead threat −10.',
   ],
   ['necromancer', 'boneWard', 'Bone ward', 3, [], { physical: 10 }, 'Physical daily threat −10.'],
   [
@@ -376,7 +376,7 @@ const rows = [
     9,
     ['shadowStep'],
     { echo: true, undead: 10 },
-    'Reveal false labyrinth paths; undead threat −10.',
+    'Grants Echo sight, opening reflection stairs and false labyrinth paths. Undead threat −10.',
   ],
   [
     'thief',

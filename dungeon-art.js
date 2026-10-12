@@ -1,3 +1,4 @@
+import { chamberTreasureX } from './sprawl.js';
 // Deliberately different silhouettes and props; no repeated domestic windows below ground.
 import { glow } from './graphics-engine.js';
 import { paintMaterial, paintRoomDepth } from './materials.js';
@@ -286,8 +287,9 @@ export function paintChamber(ctx, camera, r, s, time) {
   // A visible entrance and investigation plinth on every floor.
   box(28, -72, 40, 72, '#0c1520');
   box(24, -78, 48, 7, accent);
-  box(112, -32, 48, 30, '#735944');
-  box(116, -39, 40, 8, '#d8c697');
+  const treasure = chamberTreasureX(r) - r.x;
+  box(treasure - 23, -32, 48, 30, '#735944');
+  box(treasure - 19, -39, 40, 8, '#d8c697');
   ctx.restore();
 }
 function colors(i) {

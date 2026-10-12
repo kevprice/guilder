@@ -1,3 +1,4 @@
+import { renderQuestReward } from './quest-rewards.js';
 import { renderEquipmentRewards, equipmentIcon } from './equipment-rewards.js';
 import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
 import { missionTabs, missionCategory, missionImpact } from './mission-categories.js';
@@ -16,12 +17,12 @@ import {
   paintResidentPrison,
   glow,
 } from './graphics-engine.js';
-import { currentSource } from './sprawl.js';
+import { chamberTreasureX, chamberObjective, currentSource } from './sprawl.js';
 import { paintSky, paintGuildRoof, paintMagicMotes } from './scenery.js';
 import { abilityNames } from './contracts.js';
 import { paintRoom, paintCharacter } from './artwork.js';
 import { portraits } from './portraits.js';
-import { guildStairs } from './exploration.js';
+import { guildStairs, towerObjective } from './exploration.js';
 import * as D from './domain.js';
 import { houseChoices } from './narrative.js';
 import { useStairs } from './movement.js';
@@ -102,16 +103,23 @@ window.addEventListener('pagehide', () => {
   D.rememberPosition(state, state.selected, player);
   persist();
 });
-function scene(title, body, options = [], recordId = null, equipmentRewards = []) {
+function scene(
+  title,
+  body,
+  options = [],
+  recordId = null,
+  equipmentRewards = [],
+  questReward = null,
+) {
   const record = D.records.find((r) => r.id === recordId);
   $('scene-label').hidden = true;
   $('scene-label').textContent = 'THE HOUSE REMEMBERS';
   $('scene-body').classList.remove('record-page');
-  $('story-event').textContent = '';
   $('scene-title').textContent = title;
   $('scene-body').innerHTML =
+    renderQuestReward(questReward, { esc }) +
     renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
-    (record ? renderRecordPage(record) : paragraphs(body));
+    (questReward ? '' : record ? renderRecordPage(record) : paragraphs(body));
   $('scene-options').innerHTML = options
     .map((c) => `<div class="card">${btn(c.label, c.action, c.disabled)}</div>`)
     .join('');
@@ -124,7 +132,7 @@ function presentScene() {
   const next = state.scenes.shift();
   if (next) {
     persist();
-    scene(next.title, next.body, [], next.recordId, next.equipmentRewards);
+    scene(next.title, next.body, [], next.recordId, next.equipmentRewards, next.questReward);
   }
 }
 $('dismiss-scene').onclick = () => {
@@ -510,24 +518,38 @@ function renderTraining() {
   return html;
 }
 
+function roomInvestigation() {
+  const room = D.roomAt(player.floor);
+  if (room)
+    return {
+      title: room.name,
+      next: chamberObjective(state, room),
+      summary: state.flags['searched_' + room.id]
+        ? room.story
+        : 'Explore this chamber and recover its records.',
+    };
+  if (
+    [140, -100].includes(player.floor) &&
+    (player.floor !== 140 || player.x < 700) &&
+    state.flags.tower
+  )
+    return {
+      title: player.floor === -100 ? 'The frozen bell ward' : 'Explore the bell tower',
+      next: towerObjective(state),
+      summary: 'The tower’s ward connects to the wizard’s study and potion kitchen.',
+    };
+  return D.currentInvestigation(state);
+}
 function renderStories() {
   // Recovered records are browsable individually; unopened rooms reveal no text.
   const chamber = D.roomAt(player.floor);
-  const investigation = chamber
-    ? {
-        title: chamber.name,
-        next:
-          chamber.encounter && !state.flags['cleared_' + chamber.id]
-            ? 'Assign a clearing party in Contracts, or return through the entrance.'
-            : state.flags['searched_' + chamber.id]
-              ? 'Follow the labelled passages; keys and resident abilities open new routes.'
-              : 'Unsearched to recover records, keys and equipment.',
-        summary: state.flags['searched_' + chamber.id]
-          ? chamber.story
-          : 'A new chamber has been discovered. Its records still need investigation.',
-      }
-    : D.currentInvestigation(state);
-  let html = `<article class="investigation"><h3>${esc(investigation.title)}</h3>${investigation.walk ? btn(investigation.title, 'walk:' + investigation.walk) : investigation.tab ? `<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>` : ''}</article>`;
+  const investigation = roomInvestigation();
+  let html = `<article class="investigation"><h3>${esc(investigation.title)}</h3><p>${esc(investigation.next || '')}</p>${investigation.walk ? btn(investigation.title, 'walk:' + investigation.walk) : investigation.tab ? `<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>` : ''}</article>`;
+  if (state.flags.searched_potions && !state.flags.awakened_maelin)
+    html += card(
+      'Free the frozen bellkeeper',
+      btn('Read the bell ward release diagram', 'bellDiagram'),
+    );
   html +=
     '<h3 class="story-section">What we have learned</h3>' +
     D.knownHistory(state)
@@ -607,23 +629,10 @@ function renderUI() {
   const portrait = (c) =>
     `<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color || '#76BDB5'}">`;
   const chamber = D.roomAt(player.floor);
-  const investigation = chamber
-    ? {
-        title: chamber.name,
-        next:
-          chamber.encounter && !state.flags['cleared_' + chamber.id]
-            ? 'Assign a clearing party in Contracts, or return through the entrance.'
-            : state.flags['searched_' + chamber.id]
-              ? 'Follow the labelled passages; keys and resident abilities open new routes.'
-              : 'Investigate the marked plinth to recover records, keys and equipment.',
-        summary: state.flags['searched_' + chamber.id]
-          ? chamber.story
-          : 'A new chamber has been discovered. Its records still need investigation.',
-      }
-    : D.currentInvestigation(state);
+  const investigation = roomInvestigation();
   $('chapter-label').textContent = '';
   $('objective').textContent = investigation.title;
-  $('story-event').textContent = '';
+  $('story-event').textContent = investigation.next || '';
   $('character-hud').innerHTML = selected
     ? `${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id === 'rowan' ? (state.flags.gateOpen ? 'Unbound · House sight' : state.flags.anchor ? 'Bound · House sight' : 'Bound') : 'Home · Level ' + selected.level}</span></div>`
     : '';
@@ -709,7 +718,18 @@ function renderUI() {
       html += card(
         'Inside this chamber',
         btn('Walk to the return passage', 'localWalk:' + 48) +
-          btn('Walk to records and treasure', 'localWalk:' + 135),
+          btn(
+            room?.encounter && !state.flags['cleared_' + room.id]
+              ? 'Treasure beyond the guardian · clear it first'
+              : 'Walk to records and treasure',
+            'localWalk:treasure',
+            !!room?.encounter && !state.flags['cleared_' + room.id],
+          ),
+      );
+    if (state.flags.searched_potions && !state.flags.awakened_maelin)
+      html += card(
+        'Recovered rescue instructions',
+        btn('Read the bell ward release diagram', 'bellDiagram'),
       );
     html += D.passages
       .filter((p) => p.from === here)
@@ -809,6 +829,10 @@ document.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (!a) return;
   const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'bellDiagram') {
+    act(() => D.showBellWardDiagram(state));
+    return;
+  }
   if (op === 'rewardStore') {
     if (!D.storeAvailable(state)) return;
     $('scene').close();
@@ -843,9 +867,13 @@ document.addEventListener('click', (e) => {
   }
   if (op === 'localWalk') {
     const room = D.roomAt(player.floor);
-    if (!room || ![48, 135].includes(Number(id))) return;
+    if (!room || !['48', '135', 'treasure'].includes(id)) return;
+    if (id !== '48' && room.encounter && !state.flags['cleared_' + room.id]) {
+      toast('Clear the room’s guardian before approaching its treasure.');
+      return;
+    }
     closePanel();
-    walkTarget = room.x + Number(id);
+    walkTarget = id === '48' ? room.x + 48 : chamberTreasureX(room);
     canvas.focus();
     return;
   }
@@ -1296,7 +1324,7 @@ function hotspots() {
       text: 'E · Return through the marked passage',
     });
     list.push({
-      x: room.x + 135,
+      x: chamberTreasureX(room),
       y: room.y,
       action: 'search:' + room.id,
       text: state.flags['searched_' + room.id]
@@ -1317,7 +1345,7 @@ function hotspots() {
       labyrinth: [730, 1020],
     };
     const location = chamber
-      ? [chamber.x + 235, chamber.y]
+      ? [chamber.encounter ? chamberTreasureX(chamber) - 65 : chamber.x + 235, chamber.y]
       : main
         ? [main.x + 225, 380]
         : locations[record.id];
@@ -1762,7 +1790,10 @@ function drawWorld(c) {
     paintResidentPrison(ctx, camera, d, graphics.reducedMotion ? 0 : last / 1000);
   }
   for (const d of D.sleepers) {
-    if (d.requires.some((f) => !state.flags[f]) || state.roster.some((c) => c.id === d.id))
+    if (
+      (d.id === 'maelin' ? !state.flags.towerCrown : d.requires.some((f) => !state.flags[f])) ||
+      state.roster.some((c) => c.id === d.id)
+    )
       continue;
     rect(
       d.x - 25,
@@ -1799,6 +1830,20 @@ function drawPassageMarkers() {
       graphics.reducedMotion ? 0 : last / 1000,
       h.action === active?.action && h.choice === active?.choice && h.x === active?.x,
     );
+    if (D.roomAt(player.floor)?.id === 'study' && /^(passage|leave):/.test(h.action || '')) {
+      const label =
+        h.action === 'passage:shelfStair'
+          ? 'Potion kitchen'
+          : h.action === 'passage:mirrorDoor'
+            ? 'Reflection stair · Echo sight'
+            : 'Return passage';
+      ctx.save();
+      ctx.font = '11px system-ui';
+      ctx.fillStyle = '#e4d7ab';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, h.x - camera, h.y + 16);
+      ctx.restore();
+    }
   }
 }
 function drawHomeAttack() {

@@ -35,9 +35,9 @@ export const sleepers = [
     location: 'Bell tower crown',
     x: 520,
     y: -100,
-    requires: ['towerCrown', 'searched_potions'],
+    requires: ['towerCrown'],
     condition: 'Frozen in blue ice',
-    method: 'Magical literacy · disable the repeating rune',
+    method: 'Bell ward release diagram · Magical literacy',
     bio: 'The tower bellkeeper sealed herself inside a frost ward when the alarm began ringing on its own.',
     story:
       'The thaw takes time. Ice drains from Maelin’s sleeves while she remains braced against the bell rope.\nHer first movement is to catch the clapper. Nobody tells her to let go yet.\n“It rang after my hand left the rope,” she says. “I could hear Vey in the wall. Vey was downstairs.”\nShe recognises Rowan and asks who relieved the watch. Rowan explains that the others left thirty years ago.\nMaelin asks for a chair without releasing the clapper. Mara wraps it in a towel and holds it while she sits. They will look for the watchkeepers’ records. Tonight the bell can remain silent.',
@@ -155,6 +155,8 @@ export function awakeningCheck(s, id, c) {
   if (s.roster.some((r) => r.id === id)) return 'Already awakened.';
   if (d.requires.some((f) => !s.flags[f])) return 'Recover access to this part of the house first.';
   if (!s.flags['found_' + id]) return 'Investigate the figure before attempting to awaken them.';
+  if (id === 'maelin' && !s.flags.searched_potions)
+    return 'Recover Maelin’s bell ward release diagram from beneath the cooling tiles in the suspended potion kitchen, then return to the tower crown.';
   if (id === 'oren' && c.str < 10) return 'Strength 10 is needed to remove Oren’s casting ring.';
   if (id !== 'oren' && !c.skills.includes('literacy') && !s.flags.archiveAssistance)
     return 'A present resident with Magical literacy must release this seal.';
@@ -196,4 +198,16 @@ export function guildStairs(player, direction, s, c) {
     return { x: 530, y: 1020 };
   }
   return null;
+}
+
+export function towerObjective(s) {
+  if (!s.roster.some((c) => c.id === 'ivo'))
+    return 'Investigate Ivo’s unfinished rune on the lower landing. Climb at the stair to inspect the frozen bell ward above.';
+  if (!s.flags.searched_study)
+    return 'Control Ivo. Enter the wizard’s study through the lower landing’s east doorway using Magical literacy, then investigate its notes and treasure.';
+  if (!s.flags.searched_potions)
+    return 'Follow the hidden shelf stair in the study with the recovered key. Search the potion kitchen for the cancellation sequence that releases the frozen bellkeeper.';
+  if (!s.flags.awakened_maelin)
+    return 'Climb to the tower crown. Investigate the frozen figure, then use Ivo’s Magical literacy to awaken Maelin. She joins with Echo sight.';
+  return 'Maelin has Echo sight. Control her to enter the study’s reflection stair or reveal the false routes in the labyrinth.';
 }

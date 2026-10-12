@@ -1,9 +1,11 @@
+import { questRewards } from './quest-rewards.js';
 import { advancementAbilities } from './advancement-abilities.js';
 import {
   chambers,
   passages,
   dungeonContracts,
   earlyDungeonBalance,
+  legacyPassagePositions,
   passageError,
   roomAt,
 } from './sprawl.js';
@@ -511,6 +513,7 @@ export function investigateChamber(s, id) {
     );
   s.flags['searched_' + id] = true;
   if (r.key) s.flags['key_' + r.key] = true;
+  if (r.id === 'potions') showBellWardDiagram(s);
   if (r.item) awardEquipment(s, r.item, r.name);
   note(
     s,
@@ -518,7 +521,10 @@ export function investigateChamber(s, id) {
       (r.item
         ? ' Recovered ' + itemDefinition(r.item).name + '; it is now in the store room.'
         : '') +
-      (r.key ? ' A labelled key or route clue opens the next passage.' : ''),
+      (r.key ? ' A labelled key or route clue opens the next passage.' : '') +
+      (r.id === 'potions'
+        ? '\nRecovered the Bell ward release diagram. Maelin is already frozen at the tower crown; use this diagram with Magical literacy to release her. She joins with Echo sight.'
+        : ''),
     'Dungeon record',
   );
   s.scenes.push({
@@ -528,7 +534,22 @@ export function investigateChamber(s, id) {
       (r.item
         ? '\nRecovered ' + itemDefinition(r.item).name + '. Visit the shared store to equip it.'
         : '') +
-      (r.key ? '\nThe recovered key or route clue now unlocks a labelled passage.' : ''),
+      (r.key ? '\nThe recovered key or route clue now unlocks a labelled passage.' : '') +
+      (r.id === 'study'
+        ? '\nNext: use the study key at the hidden shelf stair to reach the potion kitchen. Its cancellation sequence will release the bellkeeper at the tower crown.'
+        : r.id === 'potions'
+          ? '\nNext: return to the tower crown. Investigate the frozen figure and awaken Maelin using Ivo’s Magical literacy. Maelin joins with Echo sight.'
+          : ''),
+  });
+}
+export function showBellWardDiagram(s) {
+  if (!s.flags.searched_potions)
+    throw Error('Search the suspended potion kitchen’s cooling tiles first.');
+  const diagram = questRewards.bellWardDiagram;
+  s.scenes.push({
+    title: 'Quest item recovered: ' + diagram.name,
+    body: diagram.next,
+    questReward: 'bellWardDiagram',
   });
 }
 export function discoverSleeper(s, id) {
@@ -536,7 +557,11 @@ export function discoverSleeper(s, id) {
   if (!d || d.requires.some((f) => !s.flags[f])) throw Error('This discovery is not accessible.');
   if (s.flags['found_' + id]) throw Error('Already investigated.');
   s.flags['found_' + id] = true;
-  const text = `${d.name} · ${d.condition}. ${d.bio} Awakening: ${d.method}.`;
+  const text =
+    `${d.name} · ${d.condition}. ${d.bio} Awakening: ${d.method}.` +
+    (id === 'maelin'
+      ? '\nA label beside the repeating frost rune names Maelin. She has been trapped here since the evacuation. Her release diagram was stored beneath the cooling tiles in the suspended potion kitchen. Search the wizard’s study for the potion-kitchen key, recover the diagram, then return with Ivo to cancel this ward using Magical literacy.'
+      : '');
   note(s, text, 'Discovery');
   s.scenes.push({ title: 'Someone is still here: ' + d.name, body: text });
 }
@@ -1733,6 +1758,18 @@ export function interact(s, action) {
     throw Error('Rowan is recovering from the ghost attack.');
   const c = home(s).find((c) => c.id === s.selected);
   if (!c) throw Error('Select an available resident.');
+  if (action === 'bellDiagram') {
+    showBellWardDiagram(s);
+    return;
+  }
+  if (action === 'bellWard') {
+    if (!s.flags.towerCrown) throw Error('Reach the tower crown first.');
+    s.scenes.push({
+      title: 'The frozen bell ward',
+      body: 'A woman is held in blue ice beside the bell. The ward’s release instructions are missing from this landing. Use Ivo’s Magical literacy to enter the wizard’s study from the lower tower landing. Search the study for its key, follow the hidden shelf stair, and investigate the potion kitchen. Bring its cancellation sequence back here to awaken Maelin. She joins with Echo sight, which opens the reflection stair and reveals false labyrinth routes.',
+    });
+    return;
+  }
   if (action === 'drain') {
     if (!s.flags.stairs) throw Error('Repair the cellar stairs first.');
     if (s.flags.cellarDrained) throw Error('The cellar is already drained.');
@@ -1978,6 +2015,8 @@ export function load(raw) {
       (n) =>
         typeof n.title !== 'string' ||
         typeof n.body !== 'string' ||
+        (n.questReward !== undefined &&
+          (typeof n.questReward !== 'string' || !Object.hasOwn(questRewards, n.questReward))) ||
         (n.equipmentRewards !== undefined &&
           (!Array.isArray(n.equipmentRewards) ||
             n.equipmentRewards.some((id) => !itemDefinition(id)))),
@@ -2073,6 +2112,11 @@ export function load(raw) {
   )
     throw Error('Invalid room damage.');
   // Preserve the marked route for saves made before the sluice spillway moved.
+  for (const [id, oldX] of Object.entries(legacyPassagePositions)) {
+    const p = passages.find((p) => p.id === id),
+      back = s.dungeonReturns?.[p.to];
+    if (back?.x === oldX && back.y === p.y && back.floor === p.y) back.x = p.x;
+  }
   const oldSpillwayReturn = s.dungeonReturns?.ratway;
   if (
     oldSpillwayReturn?.x === 890 &&
