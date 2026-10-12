@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
+import { gainLevel } from './classes.js';
 import { journeys, records, recordBody, recordEntry, recordContextText } from './homecoming.js';
 
 test('diary content excludes editorial source and recovery context', () => {
@@ -49,6 +50,14 @@ test('a farewell requires personal evidence and preserves the departed companion
   const s = D.initial();
   D.recruit(s, 'bryn');
   s.flags.brynResolved = true;
+  D.recruit(s, 'ivo');
+  s.flags.searched_crypt = true;
+  s.flags.found_oren = true;
+  s.roster[0].str = 10;
+  s.selected = 'bryn';
+  D.awaken(s, 'oren');
+  while (s.roster[0].level < 16) gainLevel(s.roster[0]);
+  for (const stage of [1, 2, 3]) s.flags['companionStage' + stage + '_bryn'] = true;
   assert.ok(!D.availableChoices(s, 'bryn').some((n) => n.id === 'homecoming-bryn'));
   D.recoverRecord(s, 'home-bryn');
   s.flags.repaired = true;
@@ -72,6 +81,9 @@ test('away, wounded and dead companions cannot be released; spirit evidence prec
   s.flags.fenStep2 = true;
   D.recruit(s, 'lark');
   s.flags.fenStep11 = true;
+  D.recruit(s, 'ivo');
+  while (s.roster[0].level < 16) gainLevel(s.roster[0]);
+  for (const stage of [1, 2, 3]) s.flags['companionStage' + stage + '_lark'] = true;
   D.recoverRecord(s, 'home-lark');
   assert.equal(journeys.lark.kind, 'spirit');
   for (const status of ['away', 'injured', 'dead']) {

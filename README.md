@@ -18,17 +18,21 @@ Open http://127.0.0.1:4173/. Node.js 20 or newer runs the game and tests. Instal
 - Use Focus room, Wide view, +/− or the mouse wheel to adjust the camera.
 - Characters, Training and Diaries use individual pages. Stories follows the investigation; Reports records completed expeditions.
 
-Bryn is trapped beneath a workshop door in the entrance hall. Nell is inside a folded route in the quarters. Ivo is held in a protective rune in the restored service room. Later discoveries follow recovered stairs, keys, spells and returned rooms.
+Bryn is the opening companion. Ivo is discovered on the restored tower’s lower landing and starts with Magical literacy. Nell is found after investigating the holding cells; Oren waits beneath the crypt’s burial stair. Later discoveries follow recovered records, keys and regional expedition milestones.
 
-The wall survey, mason's tool recovery and another opening request can bring Bryn to Strength 10. The tools reduce service restoration to 50 gold. The cellar-timber contract repairs the stairs. The dry landing leads to Oren; Water breathing reaches the submerged wheel that drains the cellar.
+The wall survey, mason's tool recovery and another opening request can bring Bryn to Strength 10. The tools reduce service restoration to 50 gold. The cellar-timber contract repairs the stairs. The dry landing leads to the flooded cellar; Water breathing reaches the submerged wheel that drains it and opens deeper exploration.
 
 ## Current game systems
 
 Contracts identify story leads, plot rewards, companion journeys, regional work, exploration and repeatable wages. Party stats combine to determine duration. Each working day has a harm roll modified by protection, skills and equipment. Conscious survivors can retreat; home defenders remain visible beside the threat.
 
-XP requirements grow quadratically from 35, 60 and 105 XP. Each contract can grant one level and carry surplus XP forward. Each earned level gives one choice shared by stats, skills and talents. Warriors specialise as Barbarian or Paladin, Wizards as Necromancer or Healer, and Scouts as Thief or Archer.
+XP requirements grow quadratically from 35, 60 and 105 XP. Each contract can grant one level and carry surplus XP forward. Stats increase automatically with class growth. Each earned level gives one choice between skills, spells, class talents and a quartermaster equipment requisition. Equipment requisitions add a physical item to shared storage without charging gold. Warriors specialise as Barbarian or Paladin, Wizards as Necromancer or Healer, and Scouts as Thief or Archer.
 
-Equipment belongs to shared storage. Companions visit the store to equip and return items. Injuries, lethal expeditions, recovery, reanimation and permanent homecomings are saved alongside character positions, room discoveries and story decisions.
+Companion investigations start from level 4. Three later chapters open at levels 6, 10 and 14; farewell requires level 16. The last fighter cannot leave before the sewer rat and holding-cell guardian are cleared unless another fighter has joined. Early saves can invite a living companion who left below level 16 back through their character page.
+
+Equipment belongs to shared storage. Companions visit the store to equip and return items in separate weapon, shield, head, body, feet and accessory slots.
+
+Village workshop commissions spend one day earning 12 gold by repairing neighbours’ tools. Damaged guild rooms use their separate repair actions. Injuries, lethal expeditions, recovery, reanimation and permanent homecomings are saved alongside character positions, room discoveries and story decisions.
 
 ## Story and design references
 

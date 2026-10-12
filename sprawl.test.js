@@ -109,3 +109,35 @@ test('dungeon clearing resolves its own narrative and pays once, preserving prog
   assert(s.flags.key_cryptKey);
   assert.deepEqual(D.load(D.save(s)), s);
 });
+
+test('sluice doors and their interaction ranges are distinct', () => {
+  const s = guild();
+  s.flags.cellarDrained = true;
+  s.roster[0].skills.push('water');
+  enter(s, 'drainDoor');
+  const room = D.chambers.find((r) => r.id === 'sluice');
+  const entrance = room.x + 48;
+  const spillway = D.passages.find((p) => p.id === 'spillway');
+  const cells = D.passages.find((p) => p.id === 'cellDoor');
+  for (const other of [entrance, cells.x, room.x + 135]) {
+    assert(Math.abs(spillway.x - other) > 130);
+  }
+  assert.throws(() => D.enterPassage(s, 'spillway', { x: entrance, floor: room.y }), /Walk/);
+  enter(s, 'spillway');
+  const back = D.leaveChamber(s, 'ratway');
+  assert.equal(back.x, spillway.x);
+  assert.equal(back.floor, room.y);
+  assert.deepEqual(D.load(D.save(s)).dungeonReturns.ratway, s.dungeonReturns.ratway);
+});
+
+test('saved routes to the old spillway migrate to the separated door', () => {
+  const s = guild();
+  s.flags.cellarDrained = true;
+  s.roster[0].skills.push('water');
+  enter(s, 'drainDoor');
+  enter(s, 'spillway');
+  s.dungeonReturns.ratway.x = 890;
+  const restored = D.load(D.save(s));
+  assert.equal(D.leaveChamber(restored, 'ratway').x, 1130);
+  assert.equal(restored.roster.length, s.roster.length);
+});

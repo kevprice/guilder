@@ -1,5 +1,8 @@
 import * as D from './domain.js';
 import { missionCategory } from './mission-categories.js';
+function storyChoices(s) {
+  return [...D.availableChoices(s), ...s.roster.flatMap((c) => D.availableChoices(s, c.id))];
+}
 function seen(s) {
   s.navigationSeen ||= {};
   return s.navigationSeen;
@@ -20,7 +23,7 @@ export function acknowledgeNavigation(s, tab, contractTab = 'all') {
       ...new Set([...(Array.isArray(read.contracts) ? read.contracts : []), ...keys]),
     ];
   }
-  if (tab === 'Stories') read.stories = D.availableChoices(s).map((n) => n.id);
+  if (tab === 'Stories') read.stories = storyChoices(s).map((n) => n.id);
   if (tab === 'Reports') read.reports = s.reports.length;
   if (tab === 'Journal') read.journal = s.journal.length;
 }
@@ -48,7 +51,7 @@ export function navigationNotices(s) {
     },
     Stories: {
       count: unseen(
-        D.availableChoices(s).map((n) => n.id),
+        storyChoices(s).map((n) => n.id),
         read.stories,
       ),
       label: 'new story leads',

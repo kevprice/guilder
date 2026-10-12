@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Equipment reward preview</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main style="display: block; max-width: 700px; margin: 40px auto; padding: 20px">
+      <h1>Equipment recovered</h1>
+      <div id="rewards"></div>
+    </main>
+    <script type="module">
+      import { renderEquipmentRewards } from './equipment-rewards.js';
+      const esc = (s) =>
+        String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+      document.getElementById('rewards').innerHTML = renderEquipmentRewards(
+        ['thornSpear', 'oathShield'],
+        { esc },
+      );
+    </script>
+  </body>
+</html>

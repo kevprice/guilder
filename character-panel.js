@@ -40,6 +40,23 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
   let body = '';
   if (person.status === 'home')
     body += `<div class="row">${btn('Control ' + person.name, 'select:' + person.id)}${D.storeAvailable(state) ? btn('Visit store room', 'visitStore:' + person.id) : ''}</div>`;
+  if (
+    person.status === 'departed' &&
+    person.level < 16 &&
+    !person.undead &&
+    D.journeys[person.id]?.kind !== 'spirit'
+  )
+    body += `<p>This companion left before the expanded story was complete.</p>${btn('Invite ' + person.name + ' back', 'recallCompanion:' + person.id)}`;
+  if (!['dead', 'departed'].includes(person.status)) {
+    const completed = [1, 2, 3].filter(
+      (stage) => state.flags['companionStage' + stage + '_' + person.id],
+    ).length;
+    body += `<p class="stats">Personal story: first expedition from level 4 · ${completed} / 3 later chapters · chapter levels 6, 10, 14 · final farewell at level 16.</p>`;
+    if (completed === 3) {
+      const reason = D.companionDepartureReason(state, person.id);
+      if (reason) body += `<p>${esc(reason)}</p>`;
+    }
+  }
   if (person.status === 'injured') body += btn('Arrange treatment · 15 gold', 'treat:' + person.id);
   for (const node of D.availableChoices(state, person.id))
     body += `<div class="row">${btn(node.title, 'talk:' + node.id)}</div>`;

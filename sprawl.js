@@ -273,7 +273,7 @@ export const passages = [
   route(
     'spillway',
     'sluice',
-    890,
+    1130,
     1510,
     'ratway',
     { skill: 'water' },

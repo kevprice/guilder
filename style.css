@@ -1274,3 +1274,68 @@ select:focus-visible {
   font-size: 11px;
   font-weight: 700;
 }
+
+.equipment-reward {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 2px solid #c7ac72;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #443923, #202b30);
+  box-shadow: 0 0 30px #c7ac7220;
+}
+.equipment-reward-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  background: #101b25;
+  border: 1px solid #d5bb7b80;
+}
+.equipment-icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.equipment-reward-art .equipment-icon {
+  width: 96px;
+  height: 96px;
+}
+.equipment-reward h3 {
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+  color: #f5deb2;
+}
+.equipment-reward-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #d8bd7d;
+  font-size: 0.75rem;
+  margin: 0 0 8px;
+}
+.equipment-reward-bonuses {
+  font-weight: 700;
+  color: #a9dad0;
+}
+.equipment-reward-location {
+  padding: 12px;
+  background: #101b2560;
+  border-radius: 6px;
+}
+.equipment-reward-rare {
+  border-color: #b5a0e0;
+  box-shadow: 0 0 32px #b5a0e030;
+}
+@media (max-width: 550px) {
+  .equipment-reward {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .equipment-reward-art {
+    width: 100px;
+  }
+}

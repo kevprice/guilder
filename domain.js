@@ -1,3 +1,4 @@
+import { advancementAbilities } from './advancement-abilities.js';
 import { chambers, passages, dungeonContracts, passageError, roomAt } from './sprawl.js';
 import { cleanStoredCopy } from './player-copy.js';
 import { maraDialogue } from './mara.js';
@@ -16,9 +17,11 @@ import {
   recoverRecord,
   homecomingChoices,
   releaseCompanion,
+  companionDepartureReason,
+  companionStoryStages,
   journeys,
 } from './homecoming.js';
-export { records, availableRecords, recoverRecord, journeys };
+export { records, availableRecords, recoverRecord, journeys, companionDepartureReason };
 export { chambers, passages, roomAt };
 import {
   classes,
@@ -267,7 +270,13 @@ export const skills = {
     },
   ],
 };
-const choiceNodes = [...allChoiceNodes(), ...sleeperConversations, ...homecomingChoices];
+for (const [type, list] of Object.entries(advancementAbilities)) skills[type].push(...list);
+const choiceNodes = [
+  ...allChoiceNodes(),
+  ...sleeperConversations,
+  ...companionStoryStages,
+  ...homecomingChoices,
+];
 const knownFlags = new Set([
   ...records.map((r) => 'record_' + r.id),
   ...chambers.flatMap((r) => [
@@ -494,14 +503,7 @@ export function investigateChamber(s, id) {
     );
   s.flags['searched_' + id] = true;
   if (r.key) s.flags['key_' + r.key] = true;
-  if (r.item) {
-    s.inventory ||= [];
-    s.inventory.push({
-      uid: 'item-' + (s.nextItem = (s.nextItem || 0) + 1),
-      id: r.item,
-      owner: null,
-    });
-  }
+  if (r.item) awardEquipment(s, r.item, r.name);
   note(
     s,
     r.story +
@@ -620,6 +622,38 @@ export function advance(s, id, stat, chosenLevel) {
       '. Other choices for that level are closed.',
     'Training choice',
   );
+}
+export function trainingEquipment(c, level) {
+  return equipment.filter(
+    (e) => e.rarity === 'common' && e.minLevel <= level && e.cost <= 100 + level * 50,
+  );
+}
+export function chooseTrainingEquipment(s, id, itemId, chosenLevel) {
+  const c = readyResident(s, id),
+    level = Number(chosenLevel);
+  if (
+    !unspentLevels(c).includes(level) ||
+    !trainingEquipment(c, level).some((e) => e.id === itemId)
+  )
+    throw Error('Choose available equipment with an unspent level choice.');
+  spendLevel(c, level, 'equipment', itemId);
+  awardEquipment(s, itemId, c.name + '’s level ' + level + ' quartermaster requisition');
+}
+export function recallEarlyCompanion(s, id) {
+  const c = s.roster.find((c) => c.id === id);
+  if (!c || c.status !== 'departed' || c.undead || c.level >= 16 || journeys[id]?.kind === 'spirit')
+    throw Error('Only a living companion who left early can be invited back.');
+  c.status = 'home';
+  c.recovery = c.injury = 0;
+  delete s.flags['departed_' + id];
+  delete s.choices['homecoming-' + id];
+  rememberPosition(s, id, { x: 240, floor: 380 });
+  const text =
+    c.name +
+    ' returns after receiving Mara’s letter. Their plans at home can wait while the guild finishes exploring the dangerous passages. The reunion gives them time to continue their own story, without erasing what they already discovered.';
+  c.memories.push({ day: s.day, text });
+  note(s, text, 'Companion returns');
+  s.scenes.push({ title: c.name + ' returns', body: text });
 }
 export function specialise(s, id, branch) {
   const c = readyResident(s, id);
@@ -751,6 +785,28 @@ export function raiseDead(s, id, targetId) {
     'Reanimation',
   );
 }
+export function awardEquipment(s, id, source = 'An expedition') {
+  const def = itemDefinition(id);
+  if (!def) throw Error('Unknown equipment reward.');
+  s.inventory ||= [];
+  const uid = 'item-' + (s.nextItem = (s.nextItem || 0) + 1);
+  s.inventory.push({ uid, id, owner: null });
+  s.scenes.push({
+    title: 'Equipment recovered: ' + def.name,
+    body: source + ' yielded a new piece of equipment for the guild.',
+    equipmentRewards: [id],
+  });
+  note(
+    s,
+    'Recovered ' +
+      def.name +
+      ' from ' +
+      source +
+      '. Added to guild storage; it can now be equipped in the store room.',
+    'Equipment recovered',
+  );
+  return uid;
+}
 export function buyEquipment(s, gear) {
   const def = itemDefinition(gear);
   if (!def) throw Error('Unknown equipment.');
@@ -827,12 +883,21 @@ export function applyHarm(s, c, def) {
 
 function requirements(s, def) {
   if ((def.requires || []).some((f) => !s.flags[f])) return false;
+  if (def.who && def.minLevel && !s.roster.some((c) => c.id === def.who && c.level >= def.minLevel))
+    return false;
+  if (def.departure && companionDepartureReason(s, def.departure)) return false;
   if (def.any && !def.any.some((f) => s.flags[f])) return false;
   if (def.communityMin && s.community < def.communityMin) return false;
   if (def.exclusive && s.flags[def.exclusive]) return false;
   if (def.personal) {
     const c = s.roster.find((c) => c.id === def.personal);
-    if (!c || c.visits < (def.visits || 0)) return false;
+    if (
+      !c ||
+      ['dead', 'departed'].includes(c.status) ||
+      c.visits < (def.visits || 0) ||
+      c.level < (def.minLevel || 4)
+    )
+      return false;
   }
   return true;
 }
@@ -1210,6 +1275,8 @@ function resolve(s, m, choice) {
     note(s, def.result, 'Contract completed');
     s.scenes.push({ title: def.name, body: def.result });
   }
+  if (def.item) awardEquipment(s, def.item, def.name);
+  if (choice?.item) awardEquipment(s, choice.item, def.name);
   recoverFallenEquipment(s, m);
   if (reward > 0) {
     earn(s, reward, def.name);
@@ -1824,7 +1891,16 @@ Beyond the grounds, a bird calls from a hedge Rowan has never reached. They turn
 export function emergency(s) {
   if (activeMissions(s).length) throw Error('Wait for the active expedition first.');
   day(s);
-  earn(s, 12, 'Mara’s doorstep mending job');
+  earn(s, 12, 'Village workshop commission');
+  note(
+    s,
+    'Completed a village workshop commission. Earned 12 gold repairing neighbours’ tools; guild damage is handled separately.',
+    'Paid local work',
+  );
+  s.scenes.push({
+    title: 'Commission completed · +12 gold',
+    body: 'The village carpenter collects the repaired tools and pays 12 gold. The payment is recorded in the gold ledger. This was paid work for neighbours; it does not repair damaged guild rooms.',
+  });
 }
 export function treat(s, id) {
   const c = resident(s, id);
@@ -1889,7 +1965,14 @@ export function load(raw) {
     Array.isArray(s.flags) ||
     Object.values(s.flags).some((v) => typeof v !== 'boolean') ||
     !Array.isArray(s.scenes) ||
-    s.scenes.some((n) => typeof n.title !== 'string' || typeof n.body !== 'string') ||
+    s.scenes.some(
+      (n) =>
+        typeof n.title !== 'string' ||
+        typeof n.body !== 'string' ||
+        (n.equipmentRewards !== undefined &&
+          (!Array.isArray(n.equipmentRewards) ||
+            n.equipmentRewards.some((id) => !itemDefinition(id)))),
+    ) ||
     s.journal.some((n) => typeof n.kind !== 'string' || typeof n.text !== 'string') ||
     !Number.isInteger(s.community) ||
     s.community < 0 ||
@@ -1980,6 +2063,14 @@ export function load(raw) {
       ))
   )
     throw Error('Invalid room damage.');
+  // Preserve the marked route for saves made before the sluice spillway moved.
+  const oldSpillwayReturn = s.dungeonReturns?.ratway;
+  if (
+    oldSpillwayReturn?.x === 890 &&
+    oldSpillwayReturn.y === 1510 &&
+    oldSpillwayReturn.floor === 1510
+  )
+    oldSpillwayReturn.x = passages.find((p) => p.id === 'spillway').x;
   if (
     s.dungeonReturns !== undefined &&
     (!s.dungeonReturns ||
@@ -2006,7 +2097,10 @@ export function load(raw) {
           Number(level) < 2 ||
           Number(level) > c.level ||
           !v ||
-          !['legacy', 'stat', 'skill', 'talent'].includes(v.kind) ||
+          !['legacy', 'stat', 'skill', 'talent', 'equipment'].includes(v.kind) ||
+          (v.kind === 'equipment' &&
+            (!itemDefinition(v.id) ||
+              !trainingEquipment(c, Number(level)).some((e) => e.id === v.id))) ||
           (v.kind === 'stat' && !['str', 'agi', 'int', 'end'].includes(v.id)) ||
           (v.kind === 'skill' &&
             !skills[c.type].some((k) => k.id === v.id && k.level <= Number(level))) ||

@@ -1,3 +1,4 @@
+import { renderEquipmentRewards, equipmentIcon } from './equipment-rewards.js';
 import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
 import { missionTabs, missionCategory, missionImpact } from './mission-categories.js';
 import { paintChamber } from './dungeon-art.js';
@@ -101,14 +102,16 @@ window.addEventListener('pagehide', () => {
   D.rememberPosition(state, state.selected, player);
   persist();
 });
-function scene(title, body, options = [], recordId = null) {
+function scene(title, body, options = [], recordId = null, equipmentRewards = []) {
   const record = D.records.find((r) => r.id === recordId);
   $('scene-label').hidden = true;
   $('scene-label').textContent = 'THE HOUSE REMEMBERS';
   $('scene-body').classList.remove('record-page');
   $('story-event').textContent = '';
   $('scene-title').textContent = title;
-  $('scene-body').innerHTML = record ? renderRecordPage(record) : paragraphs(body);
+  $('scene-body').innerHTML =
+    renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
+    (record ? renderRecordPage(record) : paragraphs(body));
   $('scene-options').innerHTML = options
     .map((c) => `<div class="card">${btn(c.label, c.action, c.disabled)}</div>`)
     .join('');
@@ -121,7 +124,7 @@ function presentScene() {
   const next = state.scenes.shift();
   if (next) {
     persist();
-    scene(next.title, next.body, [], next.recordId);
+    scene(next.title, next.body, [], next.recordId, next.equipmentRewards);
   }
 }
 $('dismiss-scene').onclick = () => {
@@ -206,7 +209,7 @@ function renderStore() {
       owner = state.roster.find((c) => c.id === item.owner);
     html += card(
       def.name,
-      `<p>${esc(def.slot)} · ${owner ? (owner.status === 'dead' ? 'Lost with ' : 'Carried by ') + esc(owner.name) : 'Available in storage'} · ${Object.entries(
+      `${equipmentIcon(def, esc)}<p>${esc(def.slot)} · ${owner ? (owner.status === 'dead' ? 'Lost with ' : 'Carried by ') + esc(owner.name) : 'Available in storage'} · ${Object.entries(
         def.stats,
       )
         .map(([k, v]) => k.toUpperCase() + ' +' + v)
@@ -325,7 +328,7 @@ function renderContracts() {
   if (['all', 'work'].includes(contractTab))
     html += card(
       'Work at the doorstep',
-      `<p class="mission-impact">Daily work · does not advance the plot</p>${btn('Spend a day mending · +12g', 'emergency')}`,
+      `<p class="mission-impact">Paid local work · one day · earns 12 gold</p><p>Repair villagers’ tools for wages. Guild room repairs have their own repair actions.</p>${btn('Take village workshop commission · earn 12g', 'emergency')}`,
     );
   return html;
 }
@@ -387,7 +390,11 @@ function renderTraining() {
   if (trainingSection === 'choices') {
     if (pending.length) {
       const level = trainingLevels[c.id];
-      html += `<h3 class="training-choice-title">Level ${level} · Choose one</h3><div class="row">${['str', 'agi', 'int', 'end'].map((k) => btn(k.toUpperCase() + ' +1', 'advance:' + c.id + ':' + k + ':' + level, !fit)).join('')}</div>`;
+      html += `<h3 class="training-choice-title">Level ${level} · Choose an ability or equipment</h3><p class="stats">Stats increase automatically each level: ${Object.entries(
+        klass.growth,
+      )
+        .map(([stat, n]) => stat.toUpperCase() + ' +' + n)
+        .join(' · ')}.</p>`;
       if (!c.undead) {
         html +=
           '<div class="training-options">' +
@@ -409,6 +416,21 @@ function renderTraining() {
         if ([3, 6, 9, 12, 15, 18].includes(level) && !c.specialisation)
           html += '' + btn('Choose class →', 'trainingPage:path');
       }
+      html +=
+        '<h3>Quartermaster requisition · use this level choice</h3><p class="stats">Choose one physical item for guild storage instead of learning an ability. No gold cost; equip it in the store room.</p><div class="training-options">' +
+        D.trainingEquipment(c, level)
+          .map(
+            (item) =>
+              `<div class="class-node">${equipmentIcon(item, esc)}<strong>${esc(item.name)}</strong><p>${esc(item.slot)} · ${Object.entries(
+                item.stats,
+              )
+                .map(([k, v]) => k.toUpperCase() + ' +' + v)
+                .join(
+                  ' · ',
+                )}</p>${btn('Requisition ' + item.name, 'trainingGear:' + c.id + ':' + item.id + ':' + level, !fit)}</div>`,
+          )
+          .join('') +
+        '</div>';
     }
   }
   if (trainingSection === 'path') {
@@ -450,12 +472,20 @@ function renderTraining() {
       Object.entries(c.levelChoices || {})
         .map(
           ([level, v]) =>
-            `<p class="stats">Level ${level}: ${esc(D.talents.find((t) => t.id === v.id)?.name || D.skills[c.type].find((k) => k.id === v.id)?.name || (v.kind === 'legacy' ? 'Preserved earlier training' : v.id.toUpperCase() + ' +1'))}</p>`,
+            `<p class="stats">Level ${level}: ${esc((v.kind === 'equipment' ? 'Equipment: ' + D.equipment.find((item) => item.id === v.id)?.name : '') || D.talents.find((t) => t.id === v.id)?.name || D.skills[c.type].find((k) => k.id === v.id)?.name || (v.kind === 'legacy' ? 'Preserved earlier training' : v.id.toUpperCase() + ' +1'))}</p>`,
         )
         .join('') +
       '</details>';
   }
   if (trainingSection === 'spells') {
+    const prepared =
+      c.type === 'mage'
+        ? D.skills.mage.filter((skill) => c.skills.includes(skill.id) && skill.effects)
+        : [];
+    if (prepared.length)
+      html +=
+        '<h3>Prepared expedition spells</h3><p class="stats">These spells take effect automatically while the caster is conscious.</p>' +
+        prepared.map((skill) => card(skill.name, paragraphs(skill.desc))).join('');
     let actions = '';
     for (const key of ['heal', 'mend']) {
       const targets = D.spellTargets(state, c.id, key);
@@ -475,7 +505,7 @@ function renderTraining() {
     html += actions
       ? '<p class="stats">One cast per caster per day. The target must be at home with the caster or in the same adventure party.</p>' +
         actions
-      : '<p>No spells ready.</p>';
+      : '<p>No spells to cast at home. Learn class spells through Training.</p>';
   }
   return html;
 }
@@ -504,6 +534,20 @@ function renderStories() {
       .reverse()
       .map((e) => card(e.title, paragraphs(e.text)))
       .join('');
+  for (const c of state.roster) {
+    const personal = D.availableChoices(state, c.id);
+    if (personal.length)
+      html +=
+        `<h3>${esc(c.name)} · Companion story</h3>` +
+        personal
+          .map((node) =>
+            card(
+              node.title,
+              `<p>${node.minLevel ? 'Level ' + node.minLevel + ' chapter' : 'Personal conversation'}</p>${btn('Read and discuss', 'talk:' + node.id)}`,
+            ),
+          )
+          .join('');
+  }
   const discoveries = D.availableChoices(state);
   if (discoveries.length) {
     html += '<h3 class="story-section">Places to investigate</h3>';
@@ -765,6 +809,13 @@ document.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (!a) return;
   const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'rewardStore') {
+    if (!D.storeAvailable(state)) return;
+    $('scene').close();
+    tab = 'Store room';
+    renderUI();
+    return;
+  }
   if (op === 'contractTab') {
     if (!missionTabs.some(([key]) => key === id)) return;
     contractTab = id;
@@ -878,6 +929,8 @@ document.addEventListener('click', (e) => {
       D.narrativeChoice(state, id, value);
       $('scene').close();
     }
+    if (op === 'recallCompanion') D.recallEarlyCompanion(state, id);
+    if (op === 'trainingGear') D.chooseTrainingEquipment(state, id, value, choiceLevel);
     if (op === 'emergency') D.emergency(state);
     if (op === 'save') {
       localStorage.setItem('bound-house-checkpoint', D.save(state));

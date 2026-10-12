@@ -1,3 +1,4 @@
+import { advancementAbilityDefinitions } from './advancement-abilities.js';
 import { conscious, injuryLevel } from './equipment.js';
 export const classes = {
   zombie: {
@@ -460,7 +461,12 @@ export function classOf(c) {
   return c.undead ? classes.zombie : classes[c.specialisation || c.type] || classes.warrior;
 }
 export function talentEffects(c) {
-  return (c.talents || []).map((id) => talents.find((t) => t.id === id)?.effects || {});
+  return [
+    ...(c.talents || []).map((id) => talents.find((t) => t.id === id)?.effects || {}),
+    ...(c.skills || []).map(
+      (id) => advancementAbilityDefinitions.find((a) => a.id === id)?.effects || {},
+    ),
+  ];
 }
 export function talentValue(c, key) {
   return conscious(c)

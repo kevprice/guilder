@@ -478,16 +478,139 @@ export function recoverRecord(s, id) {
   s.journal.push({ kind: 'Personal record', text });
   s.scenes.push({ title: r.room + ' · ' + r.author, body: text, recordId: id });
 }
+const personalChapters = {
+  bryn: [
+    [
+      'A workshop that can wait',
+      'Bryn spreads the waystation plans across the supper table. The apprentice has written with measurements for a new workshop, but there is no roof yet and no money for its tools. She draws a training bench before she draws her own chair.\n“Finding Father was one journey,” she says. “Knowing what to do with what he left is another.” She wants to visit the apprentice again, ask what he can build himself, and keep travelling with the guild while the answer takes shape.',
+    ],
+    [
+      'The apprentice’s first wall',
+      'The apprentice’s next letter includes a crooked sketch of his first wall. Bryn marks the weak corner, then stops herself from redrawing every stone. If the workshop is to be his home too, he must be allowed to make choices.\nShe asks Rowan to read her reply. It offers a visit, a list of useful tools, and an apology for her first letter’s impossible instructions. There is still a cellar full of dangerous work at the guild. She will finish that work alongside the people who helped her find the waystation.',
+    ],
+    [
+      'Someone else can hold the lintel',
+      'The apprentice sends a photograph made with a borrowed lens. The new workshop door stands without anyone holding it up. Bryn has kept her own door-shield beside the guild stairs through every expedition; for once she leaves it there while she reads.\n“I thought leaving would mean letting something fall,” she says. They discuss who will take her place on the dangerous routes, and which work at the waystation belongs to her. There will be a farewell later. Today she wants supper and another journey with the guild.',
+    ],
+  ],
+  nell: [
+    [
+      'The addresses that changed',
+      'Nell lays her old evacuation list beside the shelter keepers’ new register. Some houses have moved. Some people use different names. A clean route on a map cannot tell her whom she failed to find.\nShe begins with three letters instead of a promise to visit every address. The guides ask her to keep travelling with the guild while they check the replies. A road home needs people at both ends.',
+    ],
+    [
+      'A guide who asks directions',
+      'A younger guide returns Nell’s map with corrections in red. The ford has shifted and the inn has closed. Nell begins to defend the old route, then remembers that she last walked it thirty years ago.\nShe writes the guide’s name beside the corrections. Her next journey will be made with local directions. She can bring what she knows without making everyone else follow it.',
+    ],
+    [
+      'Two copies of the road',
+      'Nell prepares one map for the shelter guides and another for the guild. Neither includes private household addresses. Both mark places where a traveller can ask for help.\nShe talks through the routes with Rowan and leaves time for questions. Her future work is taking shape, but it does not require a departure tonight. She wants the guild’s remaining journeys to have safe return paths too.',
+    ],
+  ],
+  ivo: [
+    [
+      'The first lesson plan',
+      'Ivo writes a lesson for the school beside Ada’s monastery. Its first exercise asks students to repeat a failed experiment and preserve the result. Ada returns it with more questions than corrections.\nHe is annoyed, then pleased. The school can wait until he has learned how to answer without pretending certainty. For now the guild’s journeys give him problems worth bringing back to the classroom.',
+    ],
+    [
+      'A classroom with an empty chair',
+      'The monastery offers Ivo a classroom. He sketches the benches, then leaves one space open for somebody who needs more room or arrives late. Ada asks whether his teaching plan has space like that too.\nThey exchange three letters before he answers. He will teach the method and let students disagree with the conclusion. He keeps copies of the guild’s reports, including the mistakes, for those lessons.',
+    ],
+    [
+      'The lesson he could not finish',
+      'Ivo takes out the notebook he carried through the protective rune. Its final line is still unfinished. He no longer wants to complete it exactly as Ada intended.\nHe writes an account of the failed test beside it, naming the people whose warnings were omitted. The school now has books, an opening window and an agreement to review its teaching. He will leave when the guild is ready to share the dangerous work he has been doing here.',
+    ],
+  ],
+};
+export const companionStoryStages = Object.entries(journeys).flatMap(([id, j]) => {
+  const name =
+    [
+      ...expansionRecruits,
+      ...residentDiscoveries.map((d) => ({
+        id: d.id,
+        name: d.id === 'bryn' ? 'Bryn' : d.id === 'nell' ? 'Nell' : 'Ivo',
+      })),
+    ].find((c) => c.id === id)?.name || id[0].toUpperCase() + id.slice(1);
+  const fallback = [
+    [
+      'The reply from home',
+      `${name} receives a reply from ${j.home}. The people there have changed while the guild’s wards held the old rooms still. Some want answers; others want time before a meeting.\n${j.record}\nThey choose one question to send back and leave the rest for a later journey. Finding a destination does not mean being ready to leave the companions who helped them find it.`,
+    ],
+    [
+      'A place in the present',
+      `${name} brings the latest correspondence to supper. The people at ${j.home} have their own plans, and a homecoming must make room for those plans too.\nThey discuss what they can offer without taking over. The guild records a practical next step and a person who can help carry it out. There will be another reply before any farewell.`,
+    ],
+    [
+      'Time to make arrangements',
+      `${name} lays out the letters and the record of their journeys. The destination at ${j.home} is now a place with named people and agreed arrangements, rather than an answer the guild can supply alone.\nThey discuss what should be taken, what should remain, and who will share their duties here. ${j.kind === 'spirit' ? 'The people preserving their memory will decide together how to mark the parting.' : 'They want time for an ordinary meal with their companions before setting out.'} The departure remains a separate decision after further adventures.`,
+    ],
+  ];
+  return (personalChapters[id] || fallback).map(([title, body], i) => ({
+    id: 'companion-stage-' + id + '-' + (i + 1),
+    who: id,
+    minLevel: [6, 10, 14][i],
+    visits: [3, 6, 10][i],
+    requires: i ? ['companionStage' + i + '_' + id] : [...j.requires, 'record_home-' + id],
+    sets: ['companionStage' + (i + 1) + '_' + id],
+    title,
+    body,
+    choices: [
+      {
+        id: 'together',
+        label: 'Make the next arrangements together',
+        preview: 'Continue their story and gain trust. They remain with the guild.',
+        bond: { [id]: 1 },
+        community: 1,
+        result:
+          body +
+          '\nTogether they make the next arrangements and leave the unfinished questions open. Another chapter will follow after more experience.',
+      },
+      {
+        id: 'listen',
+        label: 'Let them set the pace; preserve their account',
+        preview: 'Continue their story and gain research. They remain with the guild.',
+        bond: { [id]: 1 },
+        knowledge: 1,
+        result:
+          body +
+          '\nTheir account is copied with their own wording intact. They decide what to ask next, and return to the guild’s shared work.',
+      },
+    ],
+  }));
+});
+export function companionDepartureReason(s, id) {
+  const c = s.roster.find((c) => c.id === id);
+  if (!c || c.status !== 'home') return 'The companion must be fit and at home.';
+  if (journeys[id].requires.some((flag) => !s.flags[flag]) || !s.flags['record_home-' + id])
+    return 'Complete their personal investigation and read their homecoming record first.';
+  if (c.level < 16) return 'Their final farewell requires level 16.';
+  if (![1, 2, 3].every((stage) => s.flags['companionStage' + stage + '_' + id]))
+    return 'Complete their three later story chapters first.';
+  const remaining = s.roster.filter(
+    (other) => other.id !== id && !['dead', 'departed'].includes(other.status),
+  );
+  if (!remaining.length) return 'Another companion must remain to continue the guild’s journeys.';
+  if (
+    c.type === 'warrior' &&
+    !s.flags.free &&
+    !(s.flags.cleared_cells && s.flags.cleared_ratway) &&
+    !remaining.some((other) => other.type === 'warrior')
+  )
+    return 'Recruit another fighter before your last fighter leaves.';
+  return null;
+}
 export const homecomingChoices = Object.entries(journeys).map(([id, j]) => ({
   id: 'homecoming-' + id,
   who: id,
-  requires: [...j.requires, 'record_home-' + id],
+  minLevel: 16,
+  requires: [...j.requires, 'record_home-' + id, 'companionStage3_' + id],
   title: 'A road home',
   until: ['departed_' + id],
   body: j.record,
   choices: [
     {
       id: 'release',
+      departure: id,
       label: j.kind === 'spirit' ? 'Help them pass on' : 'Wish them well and let them leave',
       preview:
         'They leave the guild permanently. Their equipment returns to the store room, and their story remains in the journal.',
@@ -498,7 +621,8 @@ export const homecomingChoices = Object.entries(journeys).map(([id, j]) => ({
 }));
 export function releaseCompanion(s, id) {
   const c = s.roster.find((c) => c.id === id);
-  if (!c || c.status !== 'home') throw Error('The companion must return home before departure.');
+  const reason = companionDepartureReason(s, id);
+  if (reason) throw Error(reason);
   for (const item of s.inventory || []) if (item.owner === id) item.owner = null;
   c.equipmentSlots = {};
   c.gear = null;

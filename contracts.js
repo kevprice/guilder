@@ -1,3 +1,4 @@
+import { advancementAbilityDefinitions } from './advancement-abilities.js';
 import { dungeonProfiles } from './sprawl.js';
 import { openingProfiles } from './opening-contracts.js';
 import { damageType, personalProtection, talentValue, classWorkFactor } from './classes.js';
@@ -5,6 +6,7 @@ import { conscious } from './equipment.js';
 import { expansionProfiles } from './expansion.js';
 import { equipmentBonus, workFactor } from './equipment.js';
 export const abilityNames = {
+  ...Object.fromEntries(advancementAbilityDefinitions.map((a) => [a.id, a.name])),
   guard: 'Guard',
   tracking: 'Tracking',
   literacy: 'Magical literacy',
