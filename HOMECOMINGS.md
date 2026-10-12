@@ -4,45 +4,57 @@ Current authored content, with spoilers. Correspondence unlocks after personal o
 
 ## Bryn
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-A mason’s daughter who carries a shield made from a door. She came to repair the guild’s reputation, one paid job at a time.
+The workshop door is balanced across Bryn’s shoulder. Dust hangs motionless around its latch. Rowan remembers her carrying it toward the failing stair.
+Lifting the latch breaks the ward. Bryn catches the door, curses its weight and asks Rowan to take one end.
+She thinks the alarm has only just stopped. Rowan tells her the year. She looks toward the stair, then back at them.
+“Father was meant to come on Friday,” she says.
+Mara helps them lower the door. Bryn runs her hand over its familiar chisel mark. Later she will fit straps to it. For now she asks whether there are any letters.
 
 **Destination:** the rebuilt waystation.
 
 **Personal record:**
 
-> I thought finding Father would tell me where to go next. His name is on the stone. The apprentice is still here. I want to build a workshop where someone can learn without inheriting a debt.
+> Father's name is in front of me now. I still turn when someone knocks. The apprentice wants to learn masonry once he's well enough. I could teach him. I think I'd like a workshop where the work ends before supper.
 
-**Farewell:** Bryn takes her shield and leaves to build the waystation workshop. She promises letters, not a term of service.
+**Farewell:** Bryn leaves for the waystation with her shield, tools and plans for the workshop. Before going she checks the new beds one last time. Mara promises to write if a leg breaks. Bryn says somebody else can learn to fix it.
 
 ## Nell
 
-Living companion · Scout
+Survivor preserved through magic · Scout
 
-A local guide who remembers paths that the maps have forgotten. Her grandmother once sheltered a returning guild party.
+The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.
+Nell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.
+She opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.
+“Did they get there?” she asks. Nobody can answer yet.
+She had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.
 
 **Destination:** the shelter roads.
 
 **Personal record:**
 
-> Grandmother kept the addresses private because people needed somewhere safe, not because she wanted them to belong to her. I want to work those roads again. Rowan can come as a traveller.
+> I've written to the shelter keepers. They need guides, and I know the roads badly enough to keep checking them. Rowan can come as a traveller. I would like to see them arrive with nothing they have to deliver.
 
-**Farewell:** Nell returns to the shelter keepers. She leaves Rowan a map with room for another route.
+**Farewell:** Nell takes the shelter road with two maps: one for the keepers and one for Rowan. She leaves the second on their table. At the gate she waves, then turns to watch where she is walking.
 
 ## Ivo
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-An apprentice archivist searching for a missing teacher. He suspects the house’s silence is a language.
+Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
+Rowan follows Ada’s margin diagram and closes the line. Ivo lands badly, still trying to save the book. Mara helps him up.
+“Is the joining over?” he asks. Then, seeing Rowan’s face: “What happened?”
+His last memory is Ada sending him to fetch the test records. Thirty years have passed since then.
+He sits with the notebook on his knees. After a while he asks where his teacher is. Rowan remembers the records in the service room. They can start there.
 
 **Destination:** an independent school beside Ada’s monastery.
 
 **Personal record:**
 
-> I used to want Ada to say I was right. Now I want students who can tell me I am wrong. I have asked the monastery for a room. The first lesson will be how to refuse an experiment.
+> The monastery has offered a room for a school. Ada thinks it's too small. I told her that gives us something to agree on later. I want students who will ask the questions I used to swallow. I also want a window that opens.
 
-**Farewell:** Ivo leaves to establish the school. His calculations remain available to the guild; his life is his own.
+**Farewell:** Ivo packs the school books badly. Ada has sent a list of supplies longer than his original request. He leaves copies of his calculations at the guild and takes the unfinished lesson page with him.
 
 ## Oren
 
@@ -54,9 +66,9 @@ A guild mason trapped in his own stone-skin spell while bracing the collapsing c
 
 **Personal record:**
 
-> Mara found my daughter. She is older than I am. She does not need the father I remember being. She asked if I would like to learn the work she does now. I do not know how to arrive without offering to repair something.
+> My daughter is older than I am. Mara's letter says she has a workshop by the river. She asked whether I'd like to see it. I spent an hour drafting a list of repairs I could do and then threw it away. I don't know how to go there with empty hands.
 
-**Farewell:** Oren goes to his daughter. Before leaving, he lets the empty commemorative arch be dismantled. Nobody is beneath it. Its stone becomes steps in the garden.
+**Farewell:** Oren allows the empty commemorative arch to be dismantled before leaving. Its sound stones will make garden steps. He sets out for his daughter’s workshop carrying a small bag and no timber order.
 
 ## Maelin
 
@@ -68,9 +80,9 @@ The tower bellkeeper sealed herself inside a frost ward when the alarm began rin
 
 **Personal record:**
 
-> The names include people who lived twenty years after the evacuation. I saved time for them, not a promise of happiness. Their families have invited me to the coast. Tonight I rang the bell for dinner. Everyone came because they wanted to.
+> Some of the watch lived twenty years after the evacuation. There are children and grandchildren who want to meet me. I keep trying to work out whether they had good lives. The records cannot tell me all of that. Tonight I rang for supper. I managed to let go of the rope.
 
-**Farewell:** Maelin leaves to meet the watchkeepers’ families and decide where to live. The guild keeps an ordinary, hand-rung dinner bell.
+**Farewell:** Maelin leaves to meet the watchkeepers’ families. She checks that the dinner bell works by hand before going. That evening somebody else rings it.
 
 ## Ysra
 
@@ -82,342 +94,342 @@ A cartographer trapped in a live map she used to guide people through the shifti
 
 **Personal record:**
 
-> My old map was used to move families. Their children have asked me to come and listen before drawing anything. I will leave private places blank. A map can be useful without claiming to contain everyone.
+> The families have read my survey. Their children want me to see where the line went. I've agreed to go without a finished map. I'll need to listen first. I don't know whether they will want me to draw anything afterward.
 
-**Farewell:** Ysra leaves with an unfinished map. She has agreed to listen to the displaced families before deciding what to draw.
+**Farewell:** Ysra leaves with blank paper and the families’ invitation. The map she leaves at the guild still has an unfinished edge. She asks them not to fill it in for her.
 
 ## Tamsin
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Pump keeper who stayed to measure the rising water.
+Tamsin wears the old guild’s spellkeeper insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Tamsin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the fen relief camp.
 
 **Personal record:**
 
-> I measured the rising water because a number seemed easier to face than leaving. The families are moving with their grave markers. I want to help them build somewhere the children can stay dry.
+> Hesta put the water mark above the door. I measured it three more times because I didn't want it to mean what it meant. The families are moving until the pump is safe. I want to help with the dry camp. We can measure again tomorrow.
 
-**Farewell:** Tamsin leaves for the fen relief camp. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Tamsin leaves for the fen relief camp. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Rufus
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Ferryman who carried the school to high ground.
+Rufus wears the old guild’s watch insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Rufus asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** his sister’s ferry landing.
 
 **Personal record:**
 
-> My sister has kept my boat tied up. I kept rescuing people because asking whether she still wanted me home frightened me more than the river. She sent a key, not a summons.
+> My sister kept the boat tied up for years. Then she gave it to someone who needed it. I was angry when I read that. Her second letter says there's a room if I want one. I think I will go. I can ask about the boat when I get there.
 
-**Farewell:** Rufus leaves for his sister’s ferry landing. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Rufus leaves for his sister’s ferry landing. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Lark
 
 Spirit held by the house · Scout
 
-Diver searching for the colleague lost in the culvert.
+Lark wears the old guild’s pathfinder insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Lark asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the culvert memorial.
 
 **Personal record:**
 
-> The recovered dive log ends with my name. I was the colleague who did not return. My partner has waited for an answer, not for another search party. Let me bring the log to them.
+> The log gives the time they cut my air hose. The colleague I kept searching for was me. My partner needs the log, not another promise to dive. I want to tell them I didn't turn back because I stopped caring.
 
-**Farewell:** Lark meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Lark meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.
 
 ## Kest
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Firewatch captain who wants the furnace shut down safely.
+Kest wears the old guild’s watch insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Kest asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the firewatch settlement.
 
 **Personal record:**
 
-> Closing the furnace has ended the watch that shaped my life. My crew wants to learn another trade together. I want to be there without pretending there is still a fire.
+> The furnace is out. I woke expecting the watch horn and couldn't decide what to do when it didn't sound. My crew wants to learn another trade. I'd like to join them. I don't know if I'll be any good at starting again.
 
-**Farewell:** Kest leaves for the firewatch settlement. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Kest leaves for the firewatch settlement. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Ves
 
 Spirit held by the house · Wizard
 
-Kiln apprentice carrying the last watch order.
+Ves wears the old guild’s spellkeeper insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Ves asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the kiln workers’ burial ground.
 
 **Personal record:**
 
-> The final order names me among the dead. I kept carrying it because nobody acknowledged receiving it. The workers have made a place for my name. I would like to stop delivering the same message.
+> The watch order lists me among the dead. The kiln keepers had it all along; I kept delivering an instruction they couldn't obey. They've asked for my name at the burial ground. I would like to go without the order in my hand.
 
-**Farewell:** Ves meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Ves meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.
 
 ## Dara
 
-Living companion · Scout
+Survivor preserved through magic · Scout
 
-Farm runner who knows the underground fuel routes.
+Dara wears the old guild’s pathfinder insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Dara asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** her family’s farm.
 
 **Personal record:**
 
-> My brother planted without asking when I would return. I was angry, then relieved. There is work I can join, and a life that did not have to wait for me.
+> My brother planted the field without me. In my head it was still waiting for seed. He says there's work if I come, and a bed whether I work or not. I folded that letter so often it split along the crease.
 
-**Farewell:** Dara leaves for her family’s farm. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Dara leaves for her family’s farm. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Corin
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Lens maker determined to restore one truthful beacon.
+Corin wears the old guild’s spellkeeper insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Corin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the coastal lens workshop.
 
 **Personal record:**
 
-> My daughter can make a better lens than mine. I kept correcting her because being needed felt safer than being welcome. She has offered me the bench by the window.
+> My daughter showed me a lens she made. It's better than mine. I began telling her how to improve it before I'd even thanked her. She's offered me the bench by the window. I will try to sit there before reaching for her tools.
 
-**Farewell:** Corin leaves for the coastal lens workshop. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Corin leaves for the coastal lens workshop. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Fenn
 
 Spirit held by the house · Scout
 
-Rescue sailor who has followed too many false lights.
+Fenn wears the old guild’s pathfinder insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Fenn asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the harbour where their partner lives.
 
 **Personal record:**
 
-> The true register says my rescue boat sank. The false light kept showing our kitchen. I want to hear what my partner actually says, even if they have learned to live without me.
+> The register says our rescue boat sank. I knew the kitchen in the false light. I didn't know it was the one my partner had moved out of. I want to hear what happened afterward from them, if they'll tell me.
 
-**Farewell:** Fenn meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Fenn meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.
 
 ## Mira
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Harbour guard protecting the lighthouse workers.
+Mira wears the old guild’s watch insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Mira asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the harbour watch.
 
 **Personal record:**
 
-> The workers want a guard who answers to them. I have been offered the post. I want a duty I can put down at the end of a shift.
+> The lighthouse workers have asked me to join their watch. We argued about who gives the orders and how long a shift lasts. They argued back. I rather liked that. They've sent the rota for me to look at.
 
-**Farewell:** Mira leaves for the harbour watch. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Mira leaves for the harbour watch. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Asha
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Seed keeper who knows how to pause the growth spell.
+Asha wears the old guild’s spellkeeper insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Asha asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the village seed house.
 
 **Personal record:**
 
-> I grew the old garden until it swallowed other people’s doors. The children need seeds for their gardens now. I will go back and learn their names.
+> The old planting notes have Mother's handwriting beside mine. I followed them after the village grew around the garden, as though nothing else could change. The new seed house wants help. I will ask what they want to grow before I bring anything.
 
-**Farewell:** Asha leaves for the village seed house. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Asha leaves for the village seed house. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Bram
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Village carpenter protecting the food carriers.
+Bram wears the old guild’s watch insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Bram asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the village carpenters’ yard.
 
 **Personal record:**
 
-> My son has become a carpenter while I was away. He asked me to work beside him, not to take the yard back. I am trying to believe that is enough.
+> My son has his own yard. He says I can work beside him. I keep thinking of the boy who held my nails, and he keeps describing someone I haven't met. I want to meet him before asking to change the workshop.
 
-**Farewell:** Bram leaves for the village carpenters’ yard. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Bram leaves for the village carpenters’ yard. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Sorrel
 
 Spirit held by the house · Scout
 
-Herbalist reaching sick families through the canopy.
+Sorrel wears the old guild’s pathfinder insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Sorrel asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the canopy hospice.
 
 **Personal record:**
 
-> The medicine book records my last delivery and my death. The nurse who received it is still alive. I want to know whether it helped, then let her close the book.
+> The medicine book records my last delivery and my death. The nurse who received it is still alive. She wrote that the children recovered. I have carried the basket long enough. I'd like to hear her say it once.
 
-**Farewell:** Sorrel meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Sorrel meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.
 
 ## Neris
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Weather keeper stranded by her own station’s broken ward.
+Neris wears the old guild’s spellkeeper insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Neris asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the mountain weather station.
 
 **Personal record:**
 
-> I kept the storm running because the next morning meant admitting who we lost. The watch needs current measurements. I need to see a morning I did not arrange.
+> We lost people in the first avalanche. I kept restarting the ward when the safety readings failed. I wanted another morning to try. The cylinder records all of them. I will go back and help take today's measurements, even if they say the pass must stay closed.
 
-**Farewell:** Neris leaves for the mountain weather station. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Neris leaves for the mountain weather station. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Tor
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Mountain porter who refuses to leave travellers behind.
+Tor wears the old guild’s watch insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Tor asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the mountain porters’ lodge.
 
 **Personal record:**
 
-> The travellers are down. My family has asked me to come home. There will be other travellers, but there are other porters too.
+> The travellers are down. There will be others. There are other porters too. My family asked if I can come for a week without bringing a party. I said yes before I could turn it into another job.
 
-**Farewell:** Tor leaves for the mountain porters’ lodge. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Tor leaves for the mountain porters’ lodge. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Eda
 
 Survivor preserved through magic · Scout
 
-Avalanche surveyor with a record of every broken pole.
+Eda wears the old guild’s pathfinder insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Eda asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** her grown apprentice’s survey hut.
 
 **Personal record:**
 
-> My apprentice is the senior surveyor now. She kept my broken measuring pole. I want to meet the person she became, rather than ask her to be my apprentice again.
+> My apprentice is the senior surveyor. She still has my broken measuring pole. She asked me to visit, and I nearly sent instructions instead. I have bought a new notebook. I want to find out what she knows now.
 
-**Farewell:** Eda leaves for her grown apprentice’s survey hut. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Eda leaves for her grown apprentice’s survey hut. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Perrin
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Clockmaker trying to end the expired emergency charter.
+Perrin wears the old guild’s spellkeeper insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Perrin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the town’s public workshop.
 
 **Personal record:**
 
-> The emergency is over. I want the clock where anyone can inspect it. If I return, it will be as a clockmaker, not the keeper of everybody’s hours.
+> The court clock is moving. I want it in the public workshop where someone can open the case if it goes wrong. I used to hate people touching it. I would like to teach an apprentice who isn't afraid to do that.
 
-**Farewell:** Perrin leaves for the town’s public workshop. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Perrin leaves for the town’s public workshop. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Joss
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Former court guard who now escorts released prisoners.
+Joss wears the old guild’s watch insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Joss asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the prisoners’ public hearing.
 
 **Personal record:**
 
-> I opened cells I once guarded. Some people will not forgive me. They have asked me to testify. Returning means accepting their questions, not earning a clean record.
+> Some of the cells I opened were ones I'd guarded. The people inside remember me. They've asked me to testify. I am afraid of what they will ask, and more afraid of deciding that means I shouldn't go.
 
-**Farewell:** Joss leaves for the prisoners’ public hearing. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Joss leaves for the prisoners’ public hearing. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Pip
 
-Living companion · Scout
+Survivor preserved through magic · Scout
 
-Apprentice who mapped the courthouse service passages.
+Pip wears the old guild’s pathfinder insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Pip asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** their mother’s bakery.
 
 **Personal record:**
 
-> Mother was among the detained bakers. I mapped every passage except the one home because I feared she would ask why I took so long. Her letter asks whether I have eaten.
+> Mother was among the detained bakers. I found every service passage except the road to her shop. I thought she'd ask why it took so long. Her letter asks whether I've eaten. I don't know why that made me cry.
 
-**Farewell:** Pip leaves for their mother’s bakery. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Pip leaves for their mother’s bakery. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Liora
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Treasury diver determined to return every recovered deposit.
+Liora wears the old guild’s spellkeeper insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Liora asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the quay deposit office.
 
 **Personal record:**
 
-> Returning a chest does not return the years someone spent without it. The owners want help following the accounts. I want to stay for the difficult part after the treasure is gone.
+> The chests are back, but some owners died before we reached them. Their families need help with the accounts. Returning the treasure was the easy part. I'd like to stay for the claims nobody can settle with a key.
 
-**Farewell:** Liora leaves for the quay deposit office. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Liora leaves for the quay deposit office. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Maro
 
 Survivor preserved through magic · Warrior
 
-Quay worker who braces the flooded vault roof.
+Maro wears the old guild’s watch insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Maro asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** his grandchildren’s quay house.
 
 **Personal record:**
 
-> The roof held. My children grew up. Their children have invited me to dinner. I will go without a plan for what they ought to remember.
+> My children have children. They've invited me to dinner. I have written their names on a card because I'm frightened of mixing them up. I hope they'll laugh if I do. I don't know what else to bring.
 
-**Farewell:** Maro leaves for his grandchildren’s quay house. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Maro leaves for his grandchildren’s quay house. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Sal
 
 Spirit held by the house · Scout
 
-Deep-water courier guiding trapped divers home.
+Sal wears the old guild’s pathfinder insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Sal asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the divers’ shore vigil.
 
 **Personal record:**
 
-> The pressure ledger records my final dive. My crew recovered everyone but me. They are bringing my name to the shore. I want them to know they may stop searching.
+> The crew recovered everyone but me. They searched the wrong pressure chamber for years. I want to bring them the ledger. They can know where I was. They don't have to keep going down.
 
-**Farewell:** Sal meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Sal meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.
 
 ## Sable
 
-Living companion · Wizard
+Survivor preserved through magic · Wizard
 
-Signal engineer carrying the plans for manual road lamps.
+Sable wears the old guild’s spellkeeper insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Sable asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the roadkeepers’ signal school.
 
 **Personal record:**
 
-> The beacon called for people who will not return. We have turned it off. I want to teach lamps that someone can choose to extinguish.
+> The beacon was built to call people home. Some couldn't come, and it kept calling. I have plans for lamps a person can put out. I want to teach the keepers how to tell when the last light has done its work.
 
-**Farewell:** Sable leaves for the roadkeepers’ signal school. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Sable leaves for the roadkeepers’ signal school. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Wynn
 
-Living companion · Warrior
+Survivor preserved through magic · Warrior
 
-Roadkeeper who held the camp against the beacon’s predators.
+Wynn wears the old guild’s watch insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Wynn asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the surviving road camp.
 
 **Personal record:**
 
-> My family has built a new camp. I kept defending the old one after they left. I want to ask where they would like the next fence, if they want one at all.
+> My family moved the camp after the first attack. I kept defending the old fence. I know why I did it, but I can't explain it without sounding foolish. They've sent directions to the new place. I'll take them.
 
-**Farewell:** Wynn leaves for the surviving road camp. Their room is left available for a visitor; nobody promises on their behalf that they will return.
+**Farewell:** Wynn leaves for the surviving road camp. Mara keeps their address, and the room is prepared for the next visitor. Their letters and the work they did remain in the guild records.
 
 ## Tavi
 
 Spirit held by the house · Scout
 
-Hill runner who counts travellers before closing a road.
+Tavi wears the old guild’s pathfinder insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Tavi asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
 
 **Destination:** the hill travellers’ memorial.
 
 **Personal record:**
 
-> I counted everyone through except myself. The return register has my name in its missing column. My sister has kept the last lamp lit. I want to tell her she can put it out.
+> The register puts my name in the missing column. I counted everyone through except myself. My sister has kept a lamp in the window. I'd like her to know I saw it. Then she can sleep without checking the wick.
 
-**Farewell:** Tavi meets the people keeping their memory. They hear the answer they came for and pass on. Their name remains in the guild register.
+**Farewell:** Tavi meets the people who have kept their memory. They can finally speak about the last journey and hear what happened afterward. When it is time to part, the guild records the farewell beside their name. Their place in its history remains.

@@ -1,363 +1,2025 @@
-import {paintChamber} from './dungeon-art.js';
-import {paintInterior,paintAffordance} from './room-personality.js';
-import {GraphicsEngine,screenToWorld,visibleBounds,paintEquipment,paintSpell,paintCreature,paintRoomIdentity,glow} from './graphics-engine.js';
-import {currentSource} from './sprawl.js';
-import {paintSky,paintGuildRoof,paintMagicMotes} from './scenery.js';
-import {abilityNames} from './contracts.js';
-import {paintRoom,paintCharacter} from './artwork.js';
-import {portraits} from './portraits.js';
-import {guildStairs} from './exploration.js';
+import { paintChamber } from './dungeon-art.js';
+import { playerCopy, rewardSummary } from './player-copy.js';
+import { renderCharacterPanel } from './character-panel.js';
+import { paintInterior, paintAffordance } from './room-personality.js';
+import {
+  GraphicsEngine,
+  screenToWorld,
+  visibleBounds,
+  paintEquipment,
+  paintSpell,
+  paintCreature,
+  paintRoomIdentity,
+  paintResidentPrison,
+  glow,
+} from './graphics-engine.js';
+import { currentSource } from './sprawl.js';
+import { paintSky, paintGuildRoof, paintMagicMotes } from './scenery.js';
+import { abilityNames } from './contracts.js';
+import { paintRoom, paintCharacter } from './artwork.js';
+import { portraits } from './portraits.js';
+import { guildStairs } from './exploration.js';
 import * as D from './domain.js';
-import {houseChoices} from './narrative.js';
-import {useStairs} from './movement.js';
+import { houseChoices } from './narrative.js';
+import { useStairs } from './movement.js';
 
-const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');
-const graphics=new GraphicsEngine(canvas);graphics.resize(window.devicePixelRatio||1);graphics.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-window.addEventListener('resize',()=>graphics.resize(window.devicePixelRatio||1));
-let state=D.initial(),tab=null,keys={},player=spawn(),camera=0,cameraY=0,last=0,grounded=true,walkTarget=null;
-let trainingResident=null,trainingSection='choices',trainingLevels={},trainingTargets={};
-let hoveredObject=null;
-let selectedRecord=null;
-function renderRecords(){
- const available=D.availableRecords(state),pages=D.records.filter(r=>state.flags['record_'+r.id]||available.some(a=>a.id===r.id));
- const current=pages.find(r=>r.id===selectedRecord)||pages[0];selectedRecord=current?.id;
- return card('Personal records · diaries and letters',`<p>Read one page at a time. Restored and investigated rooms reveal records; correspondence opens roads home.</p><label for="personal-record">Room or correspondence</label><select id="personal-record">${pages.map(r=>`<option value="${r.id}" ${r.id===selectedRecord?'selected':''}>${esc(r.room+' · '+r.author)}${state.flags['record_'+r.id]?' · collected':' · unread'}</option>`).join('')}</select>${current?state.flags['record_'+current.id]?paragraphs(current.text):'<p>This record is ready to recover.</p>'+btn('Read '+current.room,'record:'+current.id):'<p>No records are accessible yet.</p>'}`);
+const $ = (id) => document.getElementById(id),
+  canvas = $('game'),
+  ctx = canvas.getContext('2d');
+const graphics = new GraphicsEngine(canvas);
+graphics.resize(window.devicePixelRatio || 1);
+graphics.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+window.addEventListener('resize', () => graphics.resize(window.devicePixelRatio || 1));
+let state = D.initial(),
+  tab = null,
+  keys = {},
+  player = spawn(),
+  camera = 0,
+  cameraY = 0,
+  last = 0,
+  grounded = true,
+  walkTarget = null;
+let trainingResident = null,
+  trainingSection = 'choices',
+  trainingLevels = {},
+  trainingTargets = {};
+let hoveredObject = null;
+let characterPage = null;
+let selectedRecord = null;
+function renderRecords() {
+  const available = D.availableRecords(state),
+    pages = D.records.filter(
+      (r) => state.flags['record_' + r.id] || available.some((a) => a.id === r.id),
+    );
+  const current = pages.find((r) => r.id === selectedRecord) || pages[0];
+  selectedRecord = current?.id;
+  const recordText = current
+    ? (current.provenance ? current.provenance + '\n' : '') + current.text
+    : '';
+  return card(
+    'Personal records · diaries and letters',
+    `<p>Read one page at a time. Restored and investigated rooms reveal records; correspondence opens roads home.</p><label for="personal-record">Room or correspondence</label><select id="personal-record">${pages.map((r) => `<option value="${r.id}" ${r.id === selectedRecord ? 'selected' : ''}>${esc(r.room + ' · ' + r.author)}${state.flags['record_' + r.id] ? ' · collected' : ' · unread'}</option>`).join('')}</select>${current ? (state.flags['record_' + current.id] ? paragraphs(recordText) : '<p>This record is ready to recover.</p>' + btn('Read ' + current.room, 'record:' + current.id)) : '<p>No records are accessible yet.</p>'}`,
+  );
 }
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function spawn(){return {x:160,y:380,vy:0,floor:380};}
-function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',5500);}
-function paragraphs(text){return text.split('\n').filter(Boolean).map(p=>`<p>${esc(p)}</p>`).join('');}
-function btn(text,action,disabled=false){return `<button data-action="${action}" ${disabled?'disabled':''}>${esc(text)}</button>`;}
-function persist(){try{localStorage.setItem('bound-house-auto',D.save(state));}catch{toast('Browser storage unavailable. Export a save from Journal.');}}
-function scene(title,body,options=[]){
-  $('story-event').textContent=body;$('scene-title').textContent=title;$('scene-body').innerHTML=paragraphs(body);
-  $('scene-options').innerHTML=options.map(c=>`<div class="card"><p>${esc(c.preview)}</p>${btn(c.label,c.action,c.disabled)}</div>`).join('');
-  $('close-scene').textContent=options.length?'Think about it':'Continue →';
-  if(!$('scene').open)$('scene').showModal();keys={};walkTarget=null;
+const esc = (s) =>
+  playerCopy(s).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+function spawn() {
+  return { x: 160, y: 380, vy: 0, floor: 380 };
 }
-function presentScene(){const next=state.scenes.shift();if(next){persist();scene(next.title,next.body);}}
-$('dismiss-scene').onclick=()=>{$('scene').close();};
-$('close-scene').onclick=()=>{$('scene').close();if(state.scenes.length)presentScene();};
-function act(fn){try{const selectedBefore=state.selected;fn();if(selectedBefore!==state.selected){player=spawn();walkTarget=null;}persist();renderUI();presentScene();}catch(e){toast(e.message);}}
-function openChoice(id){const node=D.choiceNode(state,id);if(!node){toast('That discovery has already been answered or is not yet available.');return;}
-  scene(node.title,node.body,node.choices.map(c=>({...c,action:`story:${id}:${c.id}`,disabled:!D.optionAvailable(state,c)})));
+function toast(t) {
+  $('toast').textContent = t;
+  $('toast').style.display = 'block';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => ($('toast').style.display = 'none'), 5500);
 }
-function openMission(uid){const m=state.missions.find(m=>m.uid===uid&&m.status==='decision');if(!m)return;const def=D.contracts.find(d=>d.id===m.id);
-  scene(def.name,D.missionLetter(state,m.id),def.choices.map(c=>({...c,action:`decide:${uid}:${c.id}`})));
+function paragraphs(text) {
+  return playerCopy(text)
+    .split('\n')
+    .filter(Boolean)
+    .map((p) => `<p>${esc(p)}</p>`)
+    .join('');
 }
-function card(title,body){return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`;}
-
-function renderGuild(){
-  let html='<p>People join for a wage. Shared work and the choices you make give them reasons to stay.</p>';
-  html+=card('Rowan',`<img class="roster-portrait" src="${portraits.rowan}" alt="Rowan portrait"><span class="tag">${state.flags.free?'Free to leave':state.flags.gateOpen?'Unbound survivor':'Bound survivor'}</span><p>${state.flags.free?'The house is now a place you may return to.':state.flags.gateOpen?'The binding is gone. Walk left through the entrance gate when you are ready.':state.flags.observatoryRead?'You can read inscriptions and perceive the rooms’ small anchors.':state.flags.anchor?'Each returned room expands your boundary. You can read the house’s inscriptions.':state.flags.repaired?'The restored service room is open to you. Recover the missing landing to explore further.':'Your life holds the entrance together. Restore the service room to explore its records.'}</p>${state.rowanRecovery>0?`<p class="stats">Recovering from a ghost attack · ${state.rowanRecovery} days. Investigation and story decisions are paused.</p>`:''}${btn('Control','select:rowan')}`);
-  for(const r of D.recruits.filter(r=>(r.requires||[]).every(f=>state.flags[f]))){const c=state.roster.find(c=>c.id===r.id);let body=`<span class="tag">${r.type}</span><p>${r.bio}</p>`;
-    if(c){body+=`<div class="stats">Level ${c.level} · ${D.classOf(c).name} · ${c.status}${c.status==='injured'?` (${c.recovery} days recovery)`:['away','assigned'].includes(c.status)?` (${D.activeMissions(state).find(m=>m.party.includes(c.id))?.remaining||0} days remaining)`:''}<br>STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}<br>${c.visits} expeditions · Trust ${c.bond} · Condition: ${D.injuryNames[D.injuryLevel(c)]} · Equipment: ${D.equipment.find(e=>e.id===c.gear)?.name||'none'}<br>${c.traits.length?esc(c.traits.join(' · ')):''}</div><p>${D.characterArc(state,c)}</p><div class="row">${c.status==='home'?btn('Control','select:'+c.id):''}${c.status==='injured'?btn('Treat · 15g','treat:'+c.id):''}${c.status==='home'?btn('Visit store room','visitStore:'+c.id):''}</div>`;
-      for(const n of D.availableChoices(state,c.id))body+=`<div class="row">${btn('Talk: '+n.title,'talk:'+n.id)}</div>`;
-      if(c.memories.length)body+=`<p class="stats">Last shared memory · Day ${c.memories.at(-1).day}<br>${esc(c.memories.at(-1).text)}</p>`;
-    }else body+=btn(`Recruit · ${r.cost}g`,'recruit:'+r.id);
-    html+=card(r.name,`<img class="roster-portrait" src="${portraits[r.id]}" alt="${r.name} portrait">`+body);
+function btn(text, action, disabled = false) {
+  return `<button data-action="${action}" ${disabled ? 'disabled' : ''}>${esc(text)}</button>`;
+}
+function persist() {
+  try {
+    localStorage.setItem('bound-house-auto', D.save(state));
+  } catch {
+    toast('Browser storage unavailable. Export a save from Journal.');
   }
-  for(const d of D.sleepers){const c=state.roster.find(c=>c.id===d.id);html+=card(d.name,`<div class="resident-card"><img class="roster-portrait" src="${portraits[d.id]}" alt="${d.name} portrait"><div><span class="tag">${c?c.status:state.flags['found_'+d.id]?d.condition:'Undiscovered resident'}</span><p>${state.flags['found_'+d.id]?esc(d.bio):'A former guild member waits somewhere inside the house.'}</p></div></div>${c?`<div class="stats">Level ${c.level} · STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}<br>${c.status==='injured'?c.recovery+' days recovery':c.status==='assigned'?'Clearing the furnace':c.status==='away'?'On expedition':'At home'}<br>${esc(d.ability)}</div><div class="row">${c.status==='home'?btn('Control','select:'+c.id):''}${c.status==='injured'?btn('Treat · 15g','treat:'+c.id):''}</div>${D.availableChoices(state,c.id).map(n=>btn('Talk: '+n.title,'talk:'+n.id)).join('')}`:state.flags['found_'+d.id]?`<p>${d.location} · ${d.method}</p>`:''}`);}
-  return html+'<p>Equipment belongs to the guild. Buy it in Store room, then control a resident and enter the store above the service room to equip or return an item.</p>';
 }
-function renderStore(){
- const visitor=state.roster.find(c=>c.id===state.storeVisitor&&c.status==='home');
- let html='<p>Purchases are delivered to shared storage. Each resident carries one item. Return it here before another resident can use it.</p>';
- html+=visitor?card(visitor.name+' · in the store',`<p>Equipped: ${esc(D.equipment.find(e=>e.id===visitor.gear)?.name||'nothing')}</p>${visitor.gear?btn('Return equipment to storage','unequip:'+visitor.id):''}`):card('Visit the store to equip items',`<p>Control a fit resident, walk to the service room’s labelled STORE door, and press E. Rowan cannot carry expedition equipment.</p>${btn('Walk to store door','walk:790')}`);
- html+='<h3>Guild inventory</h3>';
- for(const item of state.inventory||[]){const def=D.equipment.find(e=>e.id===item.id),owner=state.roster.find(c=>c.id===item.owner);html+=card(def.name,`<p>${owner?(owner.status==='dead'?'Lost with ':'Carried by ')+esc(owner.name):'Available in storage'} · ${Object.entries(def.stats).map(([k,v])=>k.toUpperCase()+' +'+v).join(' · ')}${def.protection?' · '+def.protection+' threat reduction':''}</p>${visitor&&!owner?btn('Equip on '+visitor.name,'equipItem:'+visitor.id+':'+item.uid,!!visitor.gear):''}`);}
- html+='<h3>Quartermaster catalogue</h3>'+D.equipment.map(e=>card(e.name,`<p>${esc(e.desc)}</p><p class="stats">${Object.entries(e.stats).map(([k,v])=>k.toUpperCase()+' +'+v).join(' · ')}${e.protection?' · '+e.protection+' percentage points less daily threat':''}</p>${btn('Buy into storage · '+e.cost+'g','buy:'+e.id,state.gold<e.cost)}`)).join('');return html;
+window.addEventListener('pagehide', () => {
+  D.rememberPosition(state, state.selected, player);
+  persist();
+});
+function scene(title, body, options = []) {
+  $('story-event').textContent = playerCopy(body);
+  $('scene-title').textContent = title;
+  $('scene-body').innerHTML = paragraphs(body);
+  $('scene-options').innerHTML = options
+    .map(
+      (c) =>
+        `<div class="card"><p>${esc(c.preview)}</p>${btn(c.label, c.action, c.disabled)}</div>`,
+    )
+    .join('');
+  $('close-scene').textContent = options.length ? 'Think about it' : 'Continue →';
+  if (!$('scene').open) $('scene').showModal();
+  keys = {};
+  walkTarget = null;
 }
-function renderContracts(){
- let html='<p>Party stats add together. Below the target, a contract takes longer. Every working day has a fresh chance of harm to one party member. Defensive stats and relevant abilities reduce that chance.</p>';
- html+='<p class="stats">Every day has an 8% chance of a home attack. Keep some residents at home. Story and plot-item missions appear first. One-time requests disappear permanently when finished; repeatable work is labelled and returns the next day.</p><button data-tab="Journal">Completed contracts in Journal</button>';
- if(state.flags.truth)html+=`<p class="stats">Preparation resources: ${state.community} community contacts; ${state.knowledge} research findings.</p>`;
- for(const id of D.damagedRooms(state))html+=card((id==='service'?'Service room':id==='quarters'?'Quarters':D.rooms.find(r=>r.id===id).name)+' · DAMAGED',`<p>Story work is blocked until this room is repaired. Clearing the attacker does not restore it.</p>${btn('Repair room · 30g','repairDamage:'+id)}`);
- if(D.homeDanger(state))html+=card('HOME UNDER ATTACK',`<p class="threat-badge">${esc(D.homeDanger(state).name)} · ${D.homeDanger(state).id!=='monster'?'Attacks residents first, then damages rooms. Each damaged room needs a 30g repair.':state.threats[D.homeDanger(state).id].damage+' gold lost to damage. Undefended days cost up to 8 gold.'} Only fit residents at home can help.</p>`);
- for(const m of D.activeMissions(state).sort((a,b)=>Number(D.contracts.find(d=>d.id===b.id).homeEvent||false)-Number(D.contracts.find(d=>d.id===a.id).homeEvent||false))){const def=D.contracts.find(d=>d.id===m.id),assessment=D.risk(state,m.id,m.party),total=def.days*D.profiles[m.id].amount,progress=m.simulation==='daily'?Math.floor(m.progress/total*100):null;
-  html+=card(def.name,`<span class="tag">${def.internal?'GUILD THREAT · PARTY AT HOME':def.lethal?'LETHAL EXPEDITION':'EXPEDITION'}</span><p>${m.party.map(id=>{const c=state.roster.find(c=>c.id===id);return esc(c.name)+' ('+D.injuryNames[D.injuryLevel(c)]+')';}).join(', ')} · ${m.status==='decision'?'Report waiting':m.status==='returning'?'Retreat · home tomorrow':m.stalled?'No conscious workers · stranded':m.remaining+' days remaining'}</p>${progress!==null?`<label class="stats">${def.internal?'Clearing progress':'Work'} · ${progress}%<progress value="${m.progress}" max="${total}"></progress></label><p class="stats">${m.elapsed} days worked · ${m.harm.length} harm events · ${m.kits} medical kits remaining${m.harm.length?'<br>Latest: '+m.harm.slice(-3).map(h=>`Day ${h.day}: ${esc(state.roster.find(c=>c.id===h.id).name)}${h.treated?' · kit used':h.warded?' · death ward used':' · '+(D.injuryNames[h.level]||'hurt')+' · +'+h.injuryDays+' recovery days'}`).join('<br>'):''}</p>`:'<p class="stats">This expedition was dispatched under the previous rules; its committed timing is preserved.</p>'}${m.status==='travelling'&&m.simulation==='daily'?`<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>`:''}${m.status==='decision'?btn('Read the expedition letter','letter:'+m.uid):''}${['travelling','decision'].includes(m.status)?`<div class="row">${def.internal?btn('Watch fight','watch:'+m.uid):''}${btn(def.internal?'Withdraw entire party':'Retreat · return tomorrow','withdraw:'+m.uid,!def.internal&&!D.canWithdraw(state,m))}${(def.internal?m.party:[]).map(id=>btn('Withdraw '+state.roster.find(c=>c.id===id).name,'withdraw:'+m.uid+':'+id)).join('')}</div><p class="stats">${def.internal?'Withdrawal is immediate. Clearing progress stays.':'A conscious survivor must lead the retreat. The party returns tomorrow with its wounded and receives no reward.'} Injuries need recovery. ${def.homeEvent?'Home defence pays no gold.':'The hoard is paid only after clearing the threat.'}</p>`:''}`);
- }
- for(const def of D.availableContracts(state).sort((a,b)=>D.contractLabel(a).priority-D.contractLabel(b).priority)){const profile=D.profiles[def.id],cost=D.missionCost(state,def),saved=def.internal?state.threats?.[def.id]?.progress||0:0,total=def.days*profile.amount;
-  html+=card(def.name,`<span class="tag">${esc(D.contractLabel(def).kind)}</span><p><strong>${esc(D.contractLabel(def).detail)}</strong></p><p>${esc(def.desc)}</p>${def.lethal?'<p class="threat-badge">LETHAL · repeated harm can kill. Retreat before everyone loses consciousness.</p>':''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state,def.id,[]).damageType} harm</span></div><p class="stats">${def.homeEvent?'No gold reward · '+def.xp+' defence XP per resident':def.hiddenReward?'Reward and XP unknown until cleared':def.reward+' gold · '+def.xp+' XP per resident'}${cost?' · '+cost+'g preparation':''} · Up to ${def.capacity} residents</p>${saved?`<label class="stats">Damage preserved · ${Math.floor(saved/total*100)}%<progress value="${saved}" max="${total}"></progress></label>`:''}${def.personal?`<p>${D.recruits.find(c=>c.id===def.personal).name} must join.</p>`:''}<div class="party-picker">${state.roster.filter(c=>c.status==='home').map(c=>`<label><input type="checkbox" data-party="${def.id}" value="${c.id}"><span><strong>${esc(c.name)}</strong><small>STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}${c.skills.length?' · '+c.skills.map(k=>esc(abilityNames[k]||k)).join(', '):''}</small></span></label>`).join('')}</div><div class="party-preview" data-risk="${def.id}">Select residents to calculate time and daily threat.</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> One medical kit · 10g · treats the first harm event; later harm still causes injury</label>${btn(def.internal?'Assign clearing party':'Dispatch party','dispatch:'+def.id,true)}`);
- }
- html+=card('Work at the doorstep',`<p>Mara pays 12 gold for a day of mending. Available with no active assignment. Time passes and injured residents recover.</p>${btn('Spend a day mending · +12g','emergency')}`);return html;
+function presentScene() {
+  const next = state.scenes.shift();
+  if (next) {
+    persist();
+    scene(next.title, next.body);
+  }
 }
-function updatePartyPreview(id){const ids=[...document.querySelectorAll(`[data-party="${id}"]:checked`)].map(x=>x.value),target=document.querySelector(`[data-risk="${id}"]`),button=document.querySelector(`[data-action="dispatch:${id}"]`);if(!ids.length){target.textContent='Select residents to calculate time and daily threat.';button.disabled=true;return;}const r=D.risk(state,id,ids),def=D.contracts.find(d=>d.id===id);target.innerHTML=`<strong>Combined ${r.requirement.stat.toUpperCase()} ${r.combined} / ${r.requirement.amount}</strong><p>${r.days===null?'No progress':r.days+' days'}${r.combined<r.requirement.amount?' · below target; longer exposure':''} · <strong>${r.threat}% chance of harm each day</strong></p><p class="stats">${r.damageType} harm · ${r.workBonus}% class work bonus<br>${r.baseThreat}% base threat${r.reductions.length?' − '+r.reductions.map(x=>esc(x.label)+' ('+(x.amount<0?'adds '+Math.abs(Math.round(x.amount*10)/10)+' risk points':Math.round(x.amount*10)/10+' points')+')').join(' − '):''}<br>Approximately ${r.exposure}% chance of at least one harm event over this assignment. A kit treats one event; it does not prevent the roll.</p>`;button.disabled=!r.rate||ids.length>def.capacity||def.personal&&!ids.includes(def.personal);}
-function renderTraining(){
- if(!state.roster.length)return '<p>Recruit a resident from Characters to begin training.</p>';
- const c=state.roster.find(c=>c.id===trainingResident)||state.roster.find(c=>c.id===state.selected)||state.roster[0];trainingResident=c.id;
- const klass=D.classOf(c),fit=c.status==='home',pending=D.unspentLevels(c);if(!pending.includes(trainingLevels[c.id]))trainingLevels[c.id]=pending[0];
- const levelPicker=trainingSection==='choices'&&pending.length?`<div class="training-level-picker"><label for="training-level">Level to train</label><select id="training-level">${pending.map(l=>`<option value="${l}" ${l===trainingLevels[c.id]?'selected':''}>Level ${l} · one choice</option>`).join('')}</select></div>`:'';
- let html=`<div class="training-toolbar"><label for="training-character">Character</label><select id="training-character">${state.roster.map(r=>`<option value="${r.id}" ${r.id===c.id?'selected':''}>${esc(r.name)} · Level ${r.level} · ${esc(D.classOf(r).name)}</option>`).join('')}</select><div class="training-tabs" role="group" aria-label="Training pages">${[['choices','Training'],['path','Class'],['abilities','Abilities'],['spells','Spells']].map(([id,name])=>`<button data-action="trainingPage:${id}" aria-pressed="${trainingSection===id}">${name}</button>`).join('')}</div>${levelPicker}</div>`;
- html+=`<div class="training-profile"><img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait"><div><h3>${esc(c.name)}</h3><span class="tag">${klass.name} · Level ${c.level} · ${D.injuryNames[D.injuryLevel(c)]}</span></div></div><p class="stats">STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}<br>${c.level>=20?'Maximum level':c.xp+' / '+D.xpRequired(c.level)+' XP to next level'} · ${pending.length} unspent ${pending.length===1?'choice':'choices'} · ${c.status}</p>`;
- if(trainingSection==='choices'){
-  if(pending.length){const level=trainingLevels[c.id];html+=`<h3 class="training-choice-title">Level ${level} · Choose one</h3><p class="stats">Choosing closes every other option for this level.</p><div class="row">${['str','agi','int','end'].map(k=>btn(k.toUpperCase()+' +1','advance:'+c.id+':'+k+':'+level,!fit)).join('')}</div>`;
-   if(!c.undead){html+='<div class="training-options">'+D.skills[c.type].filter(k=>k.level<=level&&!c.skills.includes(k.id)).map(k=>`<div class="class-node"><strong>${k.name}</strong><p>${k.desc}</p>${btn('Choose '+k.name,'advance:'+c.id+':'+k.id+':'+level,!fit)}</div>`).join('')+D.availableTalents(c).filter(t=>t.level===level).map(t=>`<div class="class-node"><strong>${t.name}</strong><p>${t.desc}</p>${btn('Choose '+t.name,'talent:'+c.id+':'+t.id,!fit)}</div>`).join('')+'</div>';if([3,6,9,12,15,18].includes(level)&&!c.specialisation)html+='<p>Choose a class first to see its talent alternatives.</p>'+btn('Choose class →','trainingPage:path');}
-  }else html+='<p>No training choices waiting. Complete contracts to earn your next level.</p>';
-  html+='<details class="training-help"><summary>How progression works</summary><p>Level 2 needs 120 XP; each later level costs 80 more. One contract grants at most one level. Each earned level gives one shared choice: stat, skill or talent. Talents appear at levels 3, 6, 9, 12, 15 and 18. Choices are permanent.</p><p>If nobody learns Magical literacy, escort the independent archivist after recovering Sera’s archive seal.</p></details>';
- }
- if(trainingSection==='path'){
-  if(!c.undead&&!c.specialisation&&c.level>=3)html+='<h3>Choose a permanent class</h3><div class="training-options">'+D.classes[c.type].branches.map(id=>`<div class="class-node"><strong>${D.classes[id].name}</strong><p>${D.classes[id].desc}</p>${btn('Become '+D.classes[id].name,'specialise:'+c.id+':'+id,!fit)}</div>`).join('')+'</div>';
-  if(c.specialisation||c.undead)html+=`<h3>${klass.name}</h3><p>${klass.desc}</p><p class="stats">Growth each level: ${Object.entries(klass.growth).map(([k,v])=>k.toUpperCase()+' +'+v).join(' · ')}. This class is permanent.</p>`;else if(c.level<3)html+='<p>Class specialisation unlocks at level 3.</p>';
- }
- if(trainingSection==='abilities'){
-  html+=`<p>${klass.desc}</p><h3>Learned abilities</h3>`;
-  html+=(c.skills||[]).map(id=>`<div class="class-node"><strong>${esc(abilityNames[id]||id)}</strong><p>${esc(D.skills[c.type].find(k=>k.id===id)?.desc||'Innate ability used in exploration and contract assessments.')}</p></div>`).join('');
-  html+=(c.talents||[]).map(id=>{const t=D.talents.find(t=>t.id===id);return `<div class="class-node learned"><strong>${t.name}</strong><p>${t.desc}</p></div>`;}).join('');if(!c.skills.length&&!c.talents?.length)html+='<p>No abilities learned yet.</p>';
-  html+='<details><summary>Choices by level</summary>'+Object.entries(c.levelChoices||{}).map(([level,v])=>`<p class="stats">Level ${level}: ${esc(D.talents.find(t=>t.id===v.id)?.name||D.skills[c.type].find(k=>k.id===v.id)?.name||(v.kind==='legacy'?'Preserved earlier training':v.id.toUpperCase()+' +1'))}</p>`).join('')+'</details>';
- }
- if(trainingSection==='spells'){
-  let actions='';for(const key of ['heal','mend']){const targets=D.spellTargets(state,c.id,key);if(!targets.length)continue;const target=targets.find(t=>t.id===trainingTargets[key])||targets[0];trainingTargets[key]=target.id;actions+=`<h3>${key==='heal'?'Heal a companion':'Repair a zombie'}</h3><label for="training-target-${key}">Target</label><select id="training-target-${key}" data-training-target="${key}">${targets.map(p=>`<option value="${p.id}" ${p.id===target.id?'selected':''}>${esc(p.name)} · ${D.injuryNames[D.injuryLevel(p)]}</option>`).join('')}</select>${btn((key==='heal'?'Heal ':'Mend ')+target.name,key+':'+c.id+':'+target.id,c.lastCastDay===state.day)}`;}
-  if(fit&&(c.talents||[]).includes('raiseDead')){const targets=state.roster.filter(p=>p.status==='dead'&&!p.undead);if(targets.length){const target=targets.find(t=>t.id===trainingTargets.raise)||targets[0];trainingTargets.raise=target.id;actions+=`<h3>Raise dead</h3><p class="stats">Recovered remains become a zombie with different abilities.</p><label for="training-target-raise">Fallen resident</label><select id="training-target-raise" data-training-target="raise">${targets.map(p=>`<option value="${p.id}" ${p.id===target.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>${target.bodyRecovered?btn('Raise '+target.name+' · 80g','raise:'+c.id+':'+target.id,c.lastCastDay===state.day||state.gold<80):btn('Recover '+target.name+' · 60g · one day','remains:'+target.id)}`;}}
-  html+=actions?'<p class="stats">One cast per caster per day. The target must be at home with the caster or in the same adventure party.</p>'+actions:'<p>No spell actions available. Learn a healing, repair or reanimation talent; wounded companions must be within reach.</p>';
- }
- return html;
+$('dismiss-scene').onclick = () => {
+  $('scene').close();
+};
+$('close-scene').onclick = () => {
+  $('scene').close();
+  if (state.scenes.length) presentScene();
+};
+function act(fn) {
+  try {
+    const selectedBefore = state.selected;
+    D.rememberPosition(state, selectedBefore, player);
+    fn();
+    if (selectedBefore !== state.selected) {
+      player = D.residentPosition(state, state.selected);
+      walkTarget = null;
+    }
+    persist();
+    renderUI();
+    presentScene();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+function openChoice(id) {
+  const node = D.choiceNode(state, id);
+  if (!node) {
+    toast('That discovery has already been answered or is not yet available.');
+    return;
+  }
+  scene(
+    node.title,
+    node.body,
+    node.choices.map((c) => ({
+      ...c,
+      action: `story:${id}:${c.id}`,
+      disabled: !D.optionAvailable(state, c),
+    })),
+  );
+}
+function openMission(uid) {
+  const m = state.missions.find((m) => m.uid === uid && m.status === 'decision');
+  if (!m) return;
+  const def = D.contracts.find((d) => d.id === m.id);
+  scene(
+    def.name,
+    D.missionLetter(state, m.id),
+    def.choices.map((c) => ({ ...c, action: `decide:${uid}:${c.id}` })),
+  );
+}
+function card(title, body) {
+  return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`;
 }
 
-function renderStories(){
- // Recovered records are browsable individually; unopened rooms reveal no text.
- const chamber=D.roomAt(player.floor);const investigation=chamber?{title:chamber.name,next:chamber.encounter&&!state.flags['cleared_'+chamber.id]?'Assign a clearing party in Contracts, or return through the entrance.':state.flags['searched_'+chamber.id]?'Follow the labelled passages; keys and resident abilities open new routes.':'Investigate the marked plinth to recover records, keys and equipment.',summary:state.flags['searched_'+chamber.id]?chamber.story:'A new chamber has been discovered. Its records still need investigation.'}:D.currentInvestigation(state);
- let html=`<article class="investigation"><small>CURRENT INVESTIGATION</small><h3>${esc(investigation.title)}</h3><p>${esc(investigation.summary)}</p><p class="story-next">${esc(investigation.next)}</p>${investigation.walk?btn('Walk to the next step','walk:'+investigation.walk):investigation.tab?`<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>`:''}</article>`;
- html+='<h3 class="story-section">What we have learned</h3>'+D.knownHistory(state).reverse().map(e=>card(e.title,paragraphs(e.text))).join('');
- const discoveries=D.availableChoices(state);if(discoveries.length){html+='<h3 class="story-section">Places to investigate</h3>';for(const n of discoveries){const x=choiceLocation(n.id);html+=card(n.title,`<p>There is more to inspect in ${locationName(n.id)}.</p>${btn('Walk there','walk:'+x)}`);}}
- if(state.flags.free){html+='<h3>Roads beyond the guild</h3>'+D.regions.map(r=>{const completed=Array.from({length:12},(_,i)=>state.flags[r.id+'Step'+i]).filter(Boolean).length;return card(r.name,`<p>${esc(r.problem)}</p><label class="stats">${completed}/12 story contracts completed<progress value="${completed}" max="12"></progress></label>${completed===12?paragraphs(r.ending):''}`);}).join('');}
- if(state.roster.length)html+='<h3 class="story-section">People and their leads</h3>';
- for(const c of state.roster){let body=paragraphs(D.characterArc(state,c));const active=D.activeMissions(state).find(m=>m.party.includes(c.id));if(active){const def=D.contracts.find(m=>m.id===active.id);body+=`<p class="stats">${def.internal?'Assigned to':'Away on'} ${esc(def.name)} · ${active.status==='decision'?'Report waiting in Contracts':active.remaining+(def.internal?' days to clear':' days until return')}</p>`;}else if(c.status==='injured')body+=`<p class="stats">Recovering · ${c.recovery} days remaining.</p>`;const recap=D.characterRecap(state,c.id);if(recap)body+=`<details><summary>Last conversation: ${esc(recap.title)}</summary>${paragraphs(recap.text)}</details>`;for(const n of D.availableChoices(state,c.id))body+=btn('Talk: '+n.title,'talk:'+n.id);const returned=[...state.missions].reverse().find(m=>m.status==='resolved'&&m.party.includes(c.id));if(returned)body+=`<p class="stats">Last expedition: ${esc(D.contracts.find(m=>m.id===returned.id).name)}. The report is in Reports.</p>`;html+=card(c.name,body);}
- const leads=D.optionalHouseLeads(state);if(leads.length)html+='<h3 class="story-section">Other leads inside the house</h3>'+leads.map(l=>card(l.title,paragraphs(l.text))).join('');
- return html;
+function renderGuild() {
+  return renderCharacterPanel(state, characterPage || state.selected, {
+    esc,
+    card,
+    btn,
+    paragraphs,
+  });
 }
-function renderUI(){
-  $('status').textContent=`Day ${state.day} · ${state.gold} gold`;
-  const selected=D.home(state).find(c=>c.id===state.selected);
-  const portrait=c=>`<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color||'#76BDB5'}">`;
-  const chamber=D.roomAt(player.floor);const investigation=chamber?{title:chamber.name,next:chamber.encounter&&!state.flags['cleared_'+chamber.id]?'Assign a clearing party in Contracts, or return through the entrance.':state.flags['searched_'+chamber.id]?'Follow the labelled passages; keys and resident abilities open new routes.':'Investigate the marked plinth to recover records, keys and equipment.',summary:state.flags['searched_'+chamber.id]?chamber.story:'A new chamber has been discovered. Its records still need investigation.'}:D.currentInvestigation(state);$('chapter-label').textContent=investigation.title;$('objective').textContent=investigation.next;$('story-event').textContent=investigation.summary;
-  $('character-hud').innerHTML=selected?`${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id==='rowan'?(state.flags.gateOpen?'Unbound · House sight':state.flags.anchor?'Bound protagonist · House sight':'Bound protagonist · Entrance'):'Home · Level '+selected.level}</span></div>`:'';
-  $('home-strip').innerHTML=D.home(state).map(c=>`<button data-action="select:${c.id}" class="${c.id===state.selected?'active':''}" aria-pressed="${c.id===state.selected}">${portrait(c)}${esc(c.name)}${c.points?' · ↑':''}</button>`).join('');
-  $('expeditions').innerHTML=(D.homeDanger(state)?`<button class="threat-badge" data-tab="Contracts"><strong>HOME UNDER ATTACK</strong>${esc(D.homeDanger(state).name)}<br>${D.activeMissions(state).some(m=>m.id===D.homeDanger(state).id)?'Defence in progress':'Assign defenders'} · no gold reward</button>`:'')+D.activeMissions(state).map(m=>`<button data-tab="Contracts"><strong>${esc(D.contracts.find(d=>d.id===m.id).name)}</strong>${m.party.map(id=>esc(state.roster.find(c=>c.id===id).name)).join(', ')}<br>${m.status==='decision'?'Decision due':m.remaining+' days remaining'}</button>`).join('');
-  $('panel').hidden=!tab;
-  $('resident').textContent=`Controlling ${D.home(state).find(c=>c.id===state.selected)?.name||'Rowan'}`;
-  $('nav').innerHTML=['Exploration','Characters','Contracts','Store room','Training','Stories','Diaries','Reports','Journal'].map(t=>`<button class="${t===tab?'active':''}" data-tab="${t}">${t}</button>`).join('');
-  let html=`<div class="panel-header"><div><small>GUILD LEDGER</small><h2>${tab||''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
-  if(tab==='Options')html+='<p>Camera: mouse wheel or + / − zooms. Focus room fits the current room; Wide view shows the surrounding guild. <a href="/graphics-preview.html" target="_blank" rel="noopener">Open the graphics workshop</a>.</p><p>A / D or arrows walks. Space jumps; W / S uses stairs; E investigates; Tab switches home residents.</p><p>Management pauses exploration. Close the ledger or press Escape to return.</p>';
-  if(tab==='Overview'){html+='<p><a href="/guild-sprawl.html" target="_blank" rel="noopener">View the full tower and underworld map →</a></p>';html+=card('Routes and unlocks',`<p>Every route has a visible stair or door. Walk directly to its entrance using these buttons.</p>${btn('Tower stair · '+(state.flags.tower?'open':state.flags.anchor?'Wren’s key recovered · repair required':'key from Wren’s Crossing contract'),'walk:350')}<p>Wren’s keeper returns the tower key with the landing fitting. Repair the supports, then use W to climb.</p>${btn('Cellar stair · '+(state.flags.stairs?'open':'repair required'),'walk:505')}<p>Restore the service room to recover the cellar access key. The dry landing needs no water magic; a resident with Water breathing must open the submerged drain wheel. Once drained, everyone can enter.</p><p>Labyrinth gate: the second key from Wren’s Crossing opens it from the dry cellar landing. Tracking or Echo sight reveals the stair to its lower floor.</p><p>Archive: Sera’s quest returns its door seal; Magical literacy or the escorted independent archivist opens it. Greenhouse: Edda’s quest returns its fitting. Observatory: Elian’s quest returns its lens. Threshold: the infirmary recording reveals its location; a completed safety-plan contract unlocks restoration.</p>`);html+='<p>Known rooms of the estate. Unreturned interiors remain concealed.</p>';const known=[{name:'Entrance',x:160},{name:'Quarters',x:340},{name:'Service corridor',x:505},{name:state.flags.repaired?'Service room':'Service wall',x:state.flags.repaired?870:680},...(state.flags.anchor?[{name:'Returned landing',x:1100}]:[]),...D.rooms.filter(r=>state.flags[r.anchor]).map(r=>({name:r.name,x:r.x+50}))];html+=known.map(r=>card(r.name,btn('Walk to room →','walk:'+r.x))).join('');if(state.flags.stairs)html+=card(state.flags.cellarDrained?'Drained cellar':'Flooded cellar',state.flags.cellarDrained?'<p>The drain is locked open. All residents can use the cellar.</p>':'<p>S reaches the dry landing. A Water breather can dive, walk to the labelled drain wheel and press E. Draining permanently opens the cellar to everyone.</p>');if(state.flags.tower)html+=card('Bell tower · 2 floors','<p>W at the quarters stair climbs to the lower landing, then the crown. S returns.</p>');if(state.flags.labyrinth)html+=card('Labyrinth · 2 floors','<p>E at the dry landing enters the upper maze. Tracking or Echo sight reveals the stair to its heart.</p>');}
-  if(tab==='Exploration'){html+='<p>The old cellar leads into drains and prison tunnels. The lower labyrinth branches into caverns and crypts. The bell tower opens into the wizard’s rooms. E uses labelled passages; every chamber keeps a return route.</p>';const here=currentSource(player.floor),room=D.roomAt(player.floor);if(room)html+=card('Inside this chamber',btn('Walk to the return passage','localWalk:'+48)+btn('Walk to records and treasure','localWalk:'+135));html+=D.passages.filter(p=>p.from===here).map(p=>card(p.label,btn('Walk to this passage','routeWalk:'+p.id))).join('');html+=D.chambers.filter(r=>state.flags['discovered_'+r.id]).map(r=>card(r.name,`<p>${state.flags['searched_'+r.id]?esc(r.story):'Records not yet recovered.'}</p><span class="stats">${r.encounter&&!state.flags['cleared_'+r.id]?'Creature guards this room':state.flags['searched_'+r.id]?'Investigated · treasure in shared store':'Investigate the marked plinth'}</span>`)).join('');}
-  if(tab==='Store room')html+=renderStore();if(tab==='Guild'||tab==='Characters')html+=renderGuild();if(tab==='Contracts')html+=renderContracts();if(tab==='Training')html+=renderTraining();if(tab==='Stories')html+=renderStories();
-  if(tab==='Diaries')html+=renderRecords();
-  if(tab==='Reports')html+='<p>Every report is paid once. Letters remember both the journey and your decision.</p>'+(state.reports.length?state.reports.map(r=>card(r.title,`<span class="tag">Day ${r.day} · +${r.reward}g</span>${paragraphs(r.text)}<div class="stats">${r.party.join(', ')}: +${r.xp} XP each. Preparation expense: ${r.cost||0}g.</div>`)).join(''):'<p>No expedition has returned yet.</p>');
-  if(tab==='Journal')html+=`<details><summary>Completed contracts · ${state.missions.filter(m=>m.status==='resolved').length}</summary>${state.missions.filter(m=>m.status==='resolved').reverse().map(m=>`<p>${esc(D.contracts.find(d=>d.id===m.id).name)} · completed${m.completedDay?' Day '+m.completedDay:''}</p>`).join('')}</details><div class="card"><h3>Recovered keys</h3><p>${state.flags.repaired?'Cellar hatch key · recovered from the restored service room.<br>':''}${state.flags.anchor?'Bell-tower key and labyrinth-gate key · returned by Wren’s keeper.':'Complete The bell at Wren’s Crossing to recover the tower and labyrinth keys.'}</p></div><p>Next: ${esc(D.nextSteps(state))}</p><div class="row">${btn('Save checkpoint','save')}${btn('Load checkpoint','load')}${btn('Export save','export')}${btn('Import save','import')}${btn('New guild','new')}</div><input hidden type="file" id="save-file" accept="application/json">${[...state.journal].reverse().map(j=>card(j.kind,paragraphs(j.text))).join('')}<h3>Gold ledger</h3>${state.transactions.slice(0,40).map(t=>`<p>Day ${t.day} · ${t.amount>0?'+':''}${t.amount}g · ${esc(t.text)}</p>`).join('')}`;
-  const scroll=$('panel-content')?.scrollTop||0,oldTab=$('panel').dataset.section;$('panel').dataset.section=tab||'';$('panel').innerHTML=html+'</div>';if(oldTab===tab)$('panel-content').scrollTop=scroll;
+function renderStore() {
+  const visitor = state.roster.find((c) => c.id === state.storeVisitor && c.status === 'home');
+  let html =
+    '<p>Purchases are delivered to shared storage. Each resident carries one item. Return it here before another resident can use it.</p>';
+  html += visitor
+    ? card(
+        visitor.name + ' · in the store',
+        `<p>Equipped: ${esc(D.equipment.find((e) => e.id === visitor.gear)?.name || 'nothing')}</p>${visitor.gear ? btn('Return equipment to storage', 'unequip:' + visitor.id) : ''}`,
+      )
+    : card(
+        'Visit the store to equip items',
+        `<p>Control a fit resident, walk to the service room’s labelled STORE door, and press E. Rowan cannot carry expedition equipment.</p>${btn('Walk to store door', 'walk:790')}`,
+      );
+  html += '<h3>Guild inventory</h3>';
+  for (const item of state.inventory || []) {
+    const def = D.equipment.find((e) => e.id === item.id),
+      owner = state.roster.find((c) => c.id === item.owner);
+    html += card(
+      def.name,
+      `<p>${owner ? (owner.status === 'dead' ? 'Lost with ' : 'Carried by ') + esc(owner.name) : 'Available in storage'} · ${Object.entries(
+        def.stats,
+      )
+        .map(([k, v]) => k.toUpperCase() + ' +' + v)
+        .join(
+          ' · ',
+        )}${def.protection ? ' · ' + def.protection + ' threat reduction' : ''}</p>${visitor && !owner ? btn('Equip on ' + visitor.name, 'equipItem:' + visitor.id + ':' + item.uid, !!visitor.gear) : ''}`,
+    );
+  }
+  html +=
+    '<h3>Quartermaster catalogue</h3>' +
+    D.equipment
+      .map((e) =>
+        card(
+          e.name,
+          `<p>${esc(e.desc)}</p><p class="stats">${Object.entries(e.stats)
+            .map(([k, v]) => k.toUpperCase() + ' +' + v)
+            .join(
+              ' · ',
+            )}${e.protection ? ' · ' + e.protection + ' percentage points less daily threat' : ''}</p>${btn('Buy into storage · ' + e.cost + 'g', 'buy:' + e.id, state.gold < e.cost)}`,
+        ),
+      )
+      .join('');
+  return html;
 }
-function closePanel(){D.leaveStore(state);tab=null;keys={};renderUI();canvas.focus();}
-$('status').onclick=()=>{tab='Journal';keys={};walkTarget=null;renderUI();};
-function chooseResident(id){D.leaveStore(state);if(!D.home(state).some(c=>c.id===id))throw Error('Resident unavailable.');state.selected=id;player=spawn();walkTarget=null;}
-document.addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.close){closePanel();return;}
-  if(b.dataset.tab){tab=tab===b.dataset.tab?null:b.dataset.tab;keys={};walkTarget=null;renderUI();return;}
-  const a=b.dataset.action;if(!a)return;const [op,id,value,choiceLevel]=a.split(':');
-  if(op==='trainingPage'){trainingSection=id;renderUI();$('panel-content').scrollTop=0;return;}if(op==='import'){$('save-file').click();return;}
-  if(op==='talk'){openChoice(id);return;}if(op==='letter'){openMission(id);return;}
-  if(op==='localWalk'){const room=D.roomAt(player.floor);if(!room||![48,135].includes(Number(id)))return;closePanel();walkTarget=room.x+Number(id);canvas.focus();return;}if(op==='routeWalk'){const p=D.passages.find(p=>p.id===id);if(!p||p.from!==currentSource(player.floor)){toast('Reach the source room first.');return;}closePanel();walkTarget=p.x;canvas.focus();return;}if(op==='visitStore'){chooseResident(id);closePanel();walkTarget=790;canvas.focus();return;}
-  if(op==='walk'){if(player.floor!==380){toast('Return to the ground floor using W / S first.');return;}closePanel();walkTarget=Number(id);canvas.focus();toast('Walking toward the discovery. Use E when you arrive.');return;}
-  act(()=>{
-    if(op==='record')D.recoverRecord(state,id);
-    if(op==='new'){if(!confirm('Start a new guild? Export your current save first to keep it.'))return;state=D.initial();state.flags.opening=true;player=spawn();walkTarget=null;toast('A new guild begins. Recruit Bryn to get started.');}
-    if(op==='select')chooseResident(id);
-    if(op==='recruit')D.recruit(state,id);if(op==='gear')D.equip(state,id,value);if(op==='treat')D.treat(state,id);if(op==='advance')D.advance(state,id,value,choiceLevel);
-    if(op==='buy')D.buyEquipment(state,id);if(op==='equipItem')D.equipItem(state,id,value);if(op==='unequip')D.unequip(state,id);
-    if(op==='watch'){const m=state.missions.find(m=>m.uid===id),def=D.contracts.find(d=>d.id===m.id),loc=def.homeEvent?{x:640,y:380,...state.threats[m.id]}:def.location||{x:760,y:1250};player={x:loc.x-170,y:loc.y,floor:loc.y,vy:0};tab=null;walkTarget=null;}
-    if(op==='specialise')D.specialise(state,id,value);if(op==='talent')D.learnTalent(state,id,value);if(op==='heal'||op==='mend')D.castRestoration(state,id,value,op);if(op==='raise')D.raiseDead(state,id,value);if(op==='remains')D.recoverRemains(state,id);
-    if(op==='repairDamage')D.repairDamage(state,id);
-    if(op==='withdraw')D.withdraw(state,id,value?[value]:null);
-    if(op==='dispatch')D.dispatch(state,id,[...document.querySelectorAll(`[data-party="${id}"]:checked`)].map(x=>x.value),$('supply-'+id).checked);
-    if(op==='decide'){D.decide(state,id,value);$('scene').close();}
-    if(op==='story'){D.narrativeChoice(state,id,value);$('scene').close();}
-    if(op==='emergency')D.emergency(state);
-    if(op==='save'){localStorage.setItem('bound-house-checkpoint',D.save(state));toast('Checkpoint saved.');}
-    if(op==='load'){const raw=localStorage.getItem('bound-house-checkpoint');if(!raw)throw Error('No checkpoint yet.');state=D.load(raw);player=spawn();walkTarget=null;toast('Checkpoint restored.');}
-    if(op==='export'){const url=URL.createObjectURL(new Blob([D.save(state)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='bound-house-save.json';link.click();URL.revokeObjectURL(url);}
-    if(op==='import')$('save-file').click();
+function renderContracts() {
+  let html =
+    '<p>Party stats add together. Below the target, a contract takes longer. Every working day has a fresh chance of harm to one party member. Defensive stats and relevant abilities reduce that chance.</p>';
+  html +=
+    '<p class="stats">Every day has an 8% chance of a home attack. Keep some residents at home. Story and plot-item missions appear first. One-time requests disappear permanently when finished; repeatable work is labelled and returns the next day.</p><button data-tab="Journal">Completed contracts in Journal</button>';
+  if (state.flags.truth)
+    html += `<p class="stats">Preparation resources: ${state.community} community contacts; ${state.knowledge} research findings.</p>`;
+  for (const id of D.damagedRooms(state))
+    html += card(
+      (id === 'service'
+        ? 'Service room'
+        : id === 'quarters'
+          ? 'Quarters'
+          : D.rooms.find((r) => r.id === id).name) + ' · DAMAGED',
+      `<p>Story work is blocked until this room is repaired. Clearing the attacker does not restore it.</p>${btn('Repair room · 30g', 'repairDamage:' + id)}`,
+    );
+  if (D.homeDanger(state))
+    html += card(
+      'HOME UNDER ATTACK',
+      `<p class="threat-badge">${esc(D.homeDanger(state).name)} · ${D.homeDanger(state).id !== 'monster' ? 'Attacks residents first, then damages rooms. Each damaged room needs a 30g repair.' : state.threats[D.homeDanger(state).id].damage + ' gold lost to damage. Undefended days cost up to 8 gold.'} Only fit residents at home can help.</p>`,
+    );
+  for (const m of D.activeMissions(state).sort(
+    (a, b) =>
+      Number(D.contracts.find((d) => d.id === b.id).homeEvent || false) -
+      Number(D.contracts.find((d) => d.id === a.id).homeEvent || false),
+  )) {
+    const def = D.contracts.find((d) => d.id === m.id),
+      assessment = D.risk(state, m.id, m.party),
+      total = def.days * D.profiles[m.id].amount,
+      progress = m.simulation === 'daily' ? Math.floor((m.progress / total) * 100) : null;
+    html += card(
+      def.name,
+      `<span class="tag">${def.internal ? 'GUILD THREAT · PARTY AT HOME' : def.lethal ? 'LETHAL EXPEDITION' : 'EXPEDITION'}</span><p>${m.party
+        .map((id) => {
+          const c = state.roster.find((c) => c.id === id);
+          return esc(c.name) + ' (' + D.injuryNames[D.injuryLevel(c)] + ')';
+        })
+        .join(
+          ', ',
+        )} · ${m.status === 'decision' ? 'Report waiting' : m.status === 'returning' ? 'Retreat · home tomorrow' : m.stalled ? 'No conscious workers · stranded' : m.remaining + ' days remaining'}</p>${
+        progress !== null
+          ? `<label class="stats">${def.internal ? 'Clearing progress' : 'Work'} · ${progress}%<progress value="${m.progress}" max="${total}"></progress></label><p class="stats">${m.elapsed} days worked · ${m.harm.length} harm events · ${m.kits} medical kits remaining${
+              m.harm.length
+                ? '<br>Latest: ' +
+                  m.harm
+                    .slice(-3)
+                    .map(
+                      (h) =>
+                        `Day ${h.day}: ${esc(state.roster.find((c) => c.id === h.id).name)}${h.treated ? ' · kit used' : h.warded ? ' · death ward used' : ' · ' + (D.injuryNames[h.level] || 'hurt') + ' · +' + h.injuryDays + ' recovery days'}`,
+                    )
+                    .join('<br>')
+                : ''
+            }</p>`
+          : '<p class="stats">The expedition is underway.</p>'
+      }${m.status === 'travelling' && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div><p class="stats">${def.internal ? 'Withdrawal is immediate. Clearing progress stays.' : 'A conscious survivor must lead the retreat. The party returns tomorrow with its wounded.'} Injuries need recovery. ${def.homeEvent ? 'Defenders protect the guild.' : 'The hoard is paid only after clearing the threat.'}</p>` : ''}`,
+    );
+  }
+  for (const def of D.availableContracts(state).sort(
+    (a, b) => D.contractLabel(a).priority - D.contractLabel(b).priority,
+  )) {
+    const profile = D.profiles[def.id],
+      cost = D.missionCost(state, def),
+      saved = def.internal ? state.threats?.[def.id]?.progress || 0 : 0,
+      total = def.days * profile.amount;
+    html += card(
+      def.name,
+      `<span class="tag">${esc(D.contractLabel(def).kind)}</span><p><strong>${esc(D.contractLabel(def).detail)}</strong></p><p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL · repeated harm can kill. Retreat before everyone loses consciousness.</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
+        .filter((c) => c.status === 'home')
+        .map(
+          (c) =>
+            `<label><input type="checkbox" data-party="${def.id}" value="${c.id}"><span><strong>${esc(c.name)}</strong><small>STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}${c.skills.length ? ' · ' + c.skills.map((k) => esc(abilityNames[k] || k)).join(', ') : ''}</small></span></label>`,
+        )
+        .join(
+          '',
+        )}</div><div class="party-preview" data-risk="${def.id}">Select residents to calculate time and daily threat.</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> One medical kit · 10g · treats the first harm event; later harm still causes injury</label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
+    );
+  }
+  html += card(
+    'Work at the doorstep',
+    `<p>Mara pays 12 gold for a day of mending. Available with no active assignment. Time passes and injured residents recover.</p>${btn('Spend a day mending · +12g', 'emergency')}`,
+  );
+  return html;
+}
+function updatePartyPreview(id) {
+  const ids = [...document.querySelectorAll(`[data-party="${id}"]:checked`)].map((x) => x.value),
+    target = document.querySelector(`[data-risk="${id}"]`),
+    button = document.querySelector(`[data-action="dispatch:${id}"]`);
+  if (!ids.length) {
+    target.textContent = 'Select residents to calculate time and daily threat.';
+    button.disabled = true;
+    return;
+  }
+  const r = D.risk(state, id, ids),
+    def = D.contracts.find((d) => d.id === id);
+  target.innerHTML = `<strong>Combined ${r.requirement.stat.toUpperCase()} ${r.combined} / ${r.requirement.amount}</strong><p>${r.days === null ? 'No progress' : r.days + ' days'}${r.combined < r.requirement.amount ? ' · below target; longer exposure' : ''} · <strong>${r.threat}% chance of harm each day</strong></p><p class="stats">${r.damageType} harm · ${r.workBonus}% class work bonus<br>${r.baseThreat}% base threat${r.reductions.length ? ' − ' + r.reductions.map((x) => esc(x.label) + ' (' + (x.amount < 0 ? 'adds ' + Math.abs(Math.round(x.amount * 10) / 10) + ' risk points' : Math.round(x.amount * 10) / 10 + ' points') + ')').join(' − ') : ''}<br>Approximately ${r.exposure}% chance of at least one harm event over this assignment. A kit treats one event; it does not prevent the roll.</p>`;
+  button.disabled =
+    !r.rate || ids.length > def.capacity || (def.personal && !ids.includes(def.personal));
+}
+function renderTraining() {
+  if (!state.roster.length)
+    return '<p>Find the trapped mason in the entrance hall to begin training.</p>';
+  const c =
+    state.roster.find((c) => c.id === trainingResident) ||
+    state.roster.find((c) => c.id === state.selected) ||
+    state.roster[0];
+  trainingResident = c.id;
+  const klass = D.classOf(c),
+    fit = c.status === 'home',
+    pending = D.unspentLevels(c);
+  if (!pending.includes(trainingLevels[c.id])) trainingLevels[c.id] = pending[0];
+  const levelPicker =
+    trainingSection === 'choices' && pending.length
+      ? `<div class="training-level-picker"><label for="training-level">Level to train</label><select id="training-level">${pending.map((l) => `<option value="${l}" ${l === trainingLevels[c.id] ? 'selected' : ''}>Level ${l} · one choice</option>`).join('')}</select></div>`
+      : '';
+  let html = `<div class="training-toolbar"><label for="training-character">Character</label><select id="training-character">${state.roster.map((r) => `<option value="${r.id}" ${r.id === c.id ? 'selected' : ''}>${esc(r.name)} · Level ${r.level} · ${esc(D.classOf(r).name)}</option>`).join('')}</select><div class="training-tabs" role="group" aria-label="Training pages">${[
+    ['choices', 'Training'],
+    ['path', 'Class'],
+    ['abilities', 'Abilities'],
+    ['spells', 'Spells'],
+  ]
+    .map(
+      ([id, name]) =>
+        `<button data-action="trainingPage:${id}" aria-pressed="${trainingSection === id}">${name}</button>`,
+    )
+    .join('')}</div>${levelPicker}</div>`;
+  html += `<div class="training-profile"><img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait"><div><h3>${esc(c.name)}</h3><span class="tag">${klass.name} · Level ${c.level} · ${D.injuryNames[D.injuryLevel(c)]}</span></div></div><p class="stats">STR ${c.str} · AGI ${c.agi} · INT ${c.int} · END ${c.end}<br>${c.level >= 20 ? 'Maximum level' : c.xp + ' / ' + D.xpRequired(c.level) + ' XP to next level'} · ${pending.length} unspent ${pending.length === 1 ? 'choice' : 'choices'} · ${c.status}</p>`;
+  if (trainingSection === 'choices') {
+    if (pending.length) {
+      const level = trainingLevels[c.id];
+      html += `<h3 class="training-choice-title">Level ${level} · Choose one</h3><p class="stats">Choosing closes every other option for this level.</p><div class="row">${['str', 'agi', 'int', 'end'].map((k) => btn(k.toUpperCase() + ' +1', 'advance:' + c.id + ':' + k + ':' + level, !fit)).join('')}</div>`;
+      if (!c.undead) {
+        html +=
+          '<div class="training-options">' +
+          D.skills[c.type]
+            .filter((k) => k.level <= level && !c.skills.includes(k.id))
+            .map(
+              (k) =>
+                `<div class="class-node"><strong>${k.name}</strong><p>${k.desc}</p>${btn('Choose ' + k.name, 'advance:' + c.id + ':' + k.id + ':' + level, !fit)}</div>`,
+            )
+            .join('') +
+          D.availableTalents(c)
+            .filter((t) => t.level === level)
+            .map(
+              (t) =>
+                `<div class="class-node"><strong>${t.name}</strong><p>${t.desc}</p>${btn('Choose ' + t.name, 'talent:' + c.id + ':' + t.id, !fit)}</div>`,
+            )
+            .join('') +
+          '</div>';
+        if ([3, 6, 9, 12, 15, 18].includes(level) && !c.specialisation)
+          html +=
+            '<p>Choose a class first to see its talent alternatives.</p>' +
+            btn('Choose class →', 'trainingPage:path');
+      }
+    } else html += '<p>Complete contracts to earn your next level and its training choice.</p>';
+    html += `<details class="training-help"><summary>How progression works</summary><p>The first level costs ${D.xpRequired(1)} XP. The next two cost ${D.xpRequired(2)} and ${D.xpRequired(3)} XP; later requirements grow progressively. Each contract can grant one level, with surplus XP carried forward. Each earned level gives one choice: stat, skill or talent. Talents appear at levels 3, 6, 9, 12, 15 and 18.</p><p>The independent archivist can supply seal diagrams after Sera’s archive seal is recovered.</p></details>`;
+  }
+  if (trainingSection === 'path') {
+    if (!c.undead && !c.specialisation && c.level >= 3)
+      html +=
+        '<h3>Choose a permanent class</h3><div class="training-options">' +
+        D.classes[c.type].branches
+          .map(
+            (id) =>
+              `<div class="class-node"><strong>${D.classes[id].name}</strong><p>${D.classes[id].desc}</p>${btn('Become ' + D.classes[id].name, 'specialise:' + c.id + ':' + id, !fit)}</div>`,
+          )
+          .join('') +
+        '</div>';
+    if (c.specialisation || c.undead)
+      html += `<h3>${klass.name}</h3><p>${klass.desc}</p><p class="stats">Growth each level: ${Object.entries(
+        klass.growth,
+      )
+        .map(([k, v]) => k.toUpperCase() + ' +' + v)
+        .join(' · ')}. This class is permanent.</p>`;
+    else if (c.level < 3) html += '<p>Class specialisation unlocks at level 3.</p>';
+  }
+  if (trainingSection === 'abilities') {
+    html += `<p>${klass.desc}</p><h3>Learned abilities</h3>`;
+    html += (c.skills || [])
+      .map(
+        (id) =>
+          `<div class="class-node"><strong>${esc(abilityNames[id] || id)}</strong><p>${esc(D.skills[c.type].find((k) => k.id === id)?.desc || 'Innate ability used in exploration and contract assessments.')}</p></div>`,
+      )
+      .join('');
+    html += (c.talents || [])
+      .map((id) => {
+        const t = D.talents.find((t) => t.id === id);
+        return `<div class="class-node learned"><strong>${t.name}</strong><p>${t.desc}</p></div>`;
+      })
+      .join('');
+    if (!c.skills.length && !c.talents?.length) html += '<p>No abilities learned yet.</p>';
+    html +=
+      '<details><summary>Choices by level</summary>' +
+      Object.entries(c.levelChoices || {})
+        .map(
+          ([level, v]) =>
+            `<p class="stats">Level ${level}: ${esc(D.talents.find((t) => t.id === v.id)?.name || D.skills[c.type].find((k) => k.id === v.id)?.name || (v.kind === 'legacy' ? 'Preserved earlier training' : v.id.toUpperCase() + ' +1'))}</p>`,
+        )
+        .join('') +
+      '</details>';
+  }
+  if (trainingSection === 'spells') {
+    let actions = '';
+    for (const key of ['heal', 'mend']) {
+      const targets = D.spellTargets(state, c.id, key);
+      if (!targets.length) continue;
+      const target = targets.find((t) => t.id === trainingTargets[key]) || targets[0];
+      trainingTargets[key] = target.id;
+      actions += `<h3>${key === 'heal' ? 'Heal a companion' : 'Repair a zombie'}</h3><label for="training-target-${key}">Target</label><select id="training-target-${key}" data-training-target="${key}">${targets.map((p) => `<option value="${p.id}" ${p.id === target.id ? 'selected' : ''}>${esc(p.name)} · ${D.injuryNames[D.injuryLevel(p)]}</option>`).join('')}</select>${btn((key === 'heal' ? 'Heal ' : 'Mend ') + target.name, key + ':' + c.id + ':' + target.id, c.lastCastDay === state.day)}`;
+    }
+    if (fit && (c.talents || []).includes('raiseDead')) {
+      const targets = state.roster.filter((p) => p.status === 'dead' && !p.undead);
+      if (targets.length) {
+        const target = targets.find((t) => t.id === trainingTargets.raise) || targets[0];
+        trainingTargets.raise = target.id;
+        actions += `<h3>Raise dead</h3><p class="stats">Recovered remains become a zombie with different abilities.</p><label for="training-target-raise">Fallen resident</label><select id="training-target-raise" data-training-target="raise">${targets.map((p) => `<option value="${p.id}" ${p.id === target.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>${target.bodyRecovered ? btn('Raise ' + target.name + ' · 80g', 'raise:' + c.id + ':' + target.id, c.lastCastDay === state.day || state.gold < 80) : btn('Recover ' + target.name + ' · 60g · one day', 'remains:' + target.id)}`;
+      }
+    }
+    html += actions
+      ? '<p class="stats">One cast per caster per day. The target must be at home with the caster or in the same adventure party.</p>' +
+        actions
+      : '<p>No spell actions available. Learn a healing, repair or reanimation talent; wounded companions must be within reach.</p>';
+  }
+  return html;
+}
+
+function renderStories() {
+  // Recovered records are browsable individually; unopened rooms reveal no text.
+  const chamber = D.roomAt(player.floor);
+  const investigation = chamber
+    ? {
+        title: chamber.name,
+        next:
+          chamber.encounter && !state.flags['cleared_' + chamber.id]
+            ? 'Assign a clearing party in Contracts, or return through the entrance.'
+            : state.flags['searched_' + chamber.id]
+              ? 'Follow the labelled passages; keys and resident abilities open new routes.'
+              : 'Investigate the marked plinth to recover records, keys and equipment.',
+        summary: state.flags['searched_' + chamber.id]
+          ? chamber.story
+          : 'A new chamber has been discovered. Its records still need investigation.',
+      }
+    : D.currentInvestigation(state);
+  let html = `<article class="investigation"><small>CURRENT INVESTIGATION</small><h3>${esc(investigation.title)}</h3><p>${esc(investigation.summary)}</p><p class="story-next">${esc(investigation.next)}</p>${investigation.walk ? btn('Walk to the next step', 'walk:' + investigation.walk) : investigation.tab ? `<button data-tab="${investigation.tab}">Open ${investigation.tab} →</button>` : ''}</article>`;
+  html +=
+    '<h3 class="story-section">What we have learned</h3>' +
+    D.knownHistory(state)
+      .reverse()
+      .map((e) => card(e.title, paragraphs(e.text)))
+      .join('');
+  const discoveries = D.availableChoices(state);
+  if (discoveries.length) {
+    html += '<h3 class="story-section">Places to investigate</h3>';
+    for (const n of discoveries) {
+      const x = choiceLocation(n.id);
+      html += card(
+        n.title,
+        `<p>There is more to inspect in ${locationName(n.id)}.</p>${btn('Walk there', 'walk:' + x)}`,
+      );
+    }
+  }
+  if (state.flags.free) {
+    html +=
+      '<h3>Roads beyond the guild</h3>' +
+      D.regions
+        .map((r) => {
+          const completed = Array.from(
+            { length: 12 },
+            (_, i) => state.flags[r.id + 'Step' + i],
+          ).filter(Boolean).length;
+          return card(
+            r.name,
+            `<p>${esc(r.problem)}</p><label class="stats">${completed}/12 story contracts completed<progress value="${completed}" max="12"></progress></label>${completed === 12 ? paragraphs(r.ending) : ''}`,
+          );
+        })
+        .join('');
+  }
+  if (state.roster.length) html += '<h3 class="story-section">People and their leads</h3>';
+  for (const c of state.roster) {
+    let body = paragraphs(D.characterArc(state, c));
+    const active = D.activeMissions(state).find((m) => m.party.includes(c.id));
+    if (active) {
+      const def = D.contracts.find((m) => m.id === active.id);
+      body += `<p class="stats">${def.internal ? 'Assigned to' : 'Away on'} ${esc(def.name)} · ${active.status === 'decision' ? 'Report waiting in Contracts' : active.remaining + (def.internal ? ' days to clear' : ' days until return')}</p>`;
+    } else if (c.status === 'injured')
+      body += `<p class="stats">Recovering · ${c.recovery} days remaining.</p>`;
+    const recap = D.characterRecap(state, c.id);
+    if (recap)
+      body += `<details><summary>Last conversation: ${esc(recap.title)}</summary>${paragraphs(recap.text)}</details>`;
+    for (const n of D.availableChoices(state, c.id))
+      body += btn('Talk: ' + n.title, 'talk:' + n.id);
+    const returned = [...state.missions]
+      .reverse()
+      .find((m) => m.status === 'resolved' && m.party.includes(c.id));
+    if (returned)
+      body += `<p class="stats">Last expedition: ${esc(D.contracts.find((m) => m.id === returned.id).name)}. The report is in Reports.</p>`;
+    html += card(c.name, body);
+  }
+  const leads = D.optionalHouseLeads(state);
+  if (leads.length)
+    html +=
+      '<h3 class="story-section">Other leads inside the house</h3>' +
+      leads.map((l) => card(l.title, paragraphs(l.text))).join('');
+  return html;
+}
+function renderUI() {
+  $('status').textContent = `Day ${state.day} · ${state.gold} gold`;
+  const selected = D.home(state).find((c) => c.id === state.selected);
+  const portrait = (c) =>
+    `<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color || '#76BDB5'}">`;
+  const chamber = D.roomAt(player.floor);
+  const investigation = chamber
+    ? {
+        title: chamber.name,
+        next:
+          chamber.encounter && !state.flags['cleared_' + chamber.id]
+            ? 'Assign a clearing party in Contracts, or return through the entrance.'
+            : state.flags['searched_' + chamber.id]
+              ? 'Follow the labelled passages; keys and resident abilities open new routes.'
+              : 'Investigate the marked plinth to recover records, keys and equipment.',
+        summary: state.flags['searched_' + chamber.id]
+          ? chamber.story
+          : 'A new chamber has been discovered. Its records still need investigation.',
+      }
+    : D.currentInvestigation(state);
+  $('chapter-label').textContent = investigation.title;
+  $('objective').textContent = investigation.next;
+  $('story-event').textContent = investigation.summary;
+  $('character-hud').innerHTML = selected
+    ? `${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id === 'rowan' ? (state.flags.gateOpen ? 'Unbound · House sight' : state.flags.anchor ? 'Bound protagonist · House sight' : 'Bound protagonist · Entrance') : 'Home · Level ' + selected.level}</span></div>`
+    : '';
+  $('home-strip').innerHTML = D.home(state)
+    .map(
+      (c) =>
+        `<button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}">${portrait(c)}${esc(c.name)}${c.points ? ' · ↑' : ''}</button>`,
+    )
+    .join('');
+  $('expeditions').innerHTML =
+    (D.homeDanger(state)
+      ? `<button class="threat-badge" data-tab="Contracts"><strong>HOME UNDER ATTACK</strong>${esc(D.homeDanger(state).name)}<br>${D.activeMissions(state).some((m) => m.id === D.homeDanger(state).id) ? 'Defence in progress' : 'Assign defenders'}</button>`
+      : '') +
+    D.activeMissions(state)
+      .map(
+        (m) =>
+          `<button data-tab="Contracts"><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
+      )
+      .join('');
+  $('panel').hidden = !tab;
+  $('resident').textContent =
+    `Controlling ${D.home(state).find((c) => c.id === state.selected)?.name || 'Rowan'}`;
+  $('nav').innerHTML = [
+    'Exploration',
+    'Characters',
+    'Contracts',
+    'Store room',
+    'Training',
+    'Stories',
+    'Diaries',
+    'Reports',
+    'Journal',
+  ]
+    .map((t) => `<button class="${t === tab ? 'active' : ''}" data-tab="${t}">${t}</button>`)
+    .join('');
+  let html = `<div class="panel-header"><div><small>GUILD LEDGER</small><h2>${tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
+  if (tab === 'Options')
+    html +=
+      '<p>Camera: mouse wheel or + / − zooms. Focus room fits the current room; Wide view shows the surrounding guild. <a href="/graphics-preview.html" target="_blank" rel="noopener">Open the graphics workshop</a>.</p><p>A / D or arrows walks. Space jumps; W / S uses stairs; E investigates; Tab switches home residents.</p><p>Management pauses exploration. Close the ledger or press Escape to return.</p>';
+  if (tab === 'Overview') {
+    html +=
+      '<p><a href="/guild-sprawl.html" target="_blank" rel="noopener">View the full tower and underworld map →</a></p>';
+    html += card(
+      'Routes and unlocks',
+      `<p>Every route has a visible stair or door. Walk directly to its entrance using these buttons.</p>${btn('Tower stair · ' + (state.flags.tower ? 'open' : state.flags.anchor ? 'Wren’s key recovered · repair required' : 'key from Wren’s Crossing contract'), 'walk:350')}<p>Wren’s keeper returns the tower key with the landing fitting. Repair the supports, then use W to climb.</p>${btn('Cellar stair · ' + (state.flags.stairs ? 'open' : 'repair required'), 'walk:505')}<p>Restore the service room to recover the cellar access key. The dry landing needs no water magic; a resident with Water breathing must open the submerged drain wheel. Once drained, everyone can enter.</p><p>Labyrinth gate: the second key from Wren’s Crossing opens it from the dry cellar landing. Tracking or Echo sight reveals the stair to its lower floor.</p><p>Archive: Sera’s quest returns its door seal; Magical literacy or the escorted independent archivist opens it. Greenhouse: Edda’s quest returns its fitting. Observatory: Elian’s quest returns its lens. Threshold: the infirmary recording reveals its location; a completed safety-plan contract unlocks restoration.</p>`,
+    );
+    html += '<p>Known rooms of the estate. Unreturned interiors remain concealed.</p>';
+    const known = [
+      { name: 'Entrance', x: 160 },
+      { name: 'Quarters', x: 340 },
+      { name: 'Service corridor', x: 505 },
+      {
+        name: state.flags.repaired ? 'Service room' : 'Service wall',
+        x: state.flags.repaired ? 870 : 680,
+      },
+      ...(state.flags.anchor ? [{ name: 'Returned landing', x: 1100 }] : []),
+      ...D.rooms.filter((r) => state.flags[r.anchor]).map((r) => ({ name: r.name, x: r.x + 50 })),
+    ];
+    html += known.map((r) => card(r.name, btn('Walk to room →', 'walk:' + r.x))).join('');
+    if (state.flags.stairs)
+      html += card(
+        state.flags.cellarDrained ? 'Drained cellar' : 'Flooded cellar',
+        state.flags.cellarDrained
+          ? '<p>The drain is locked open. All residents can use the cellar.</p>'
+          : '<p>S reaches the dry landing. A Water breather can dive, walk to the labelled drain wheel and press E. Draining permanently opens the cellar to everyone.</p>',
+      );
+    if (state.flags.tower)
+      html += card(
+        'Bell tower · 2 floors',
+        '<p>W at the quarters stair climbs to the lower landing, then the crown. S returns.</p>',
+      );
+    if (state.flags.labyrinth)
+      html += card(
+        'Labyrinth · 2 floors',
+        '<p>E at the dry landing enters the upper maze. Tracking or Echo sight reveals the stair to its heart.</p>',
+      );
+  }
+  if (tab === 'Exploration') {
+    html +=
+      '<p>The old cellar leads into drains and prison tunnels. The lower labyrinth branches into caverns and crypts. The bell tower opens into the wizard’s rooms. E uses labelled passages; every chamber keeps a return route.</p>';
+    const here = currentSource(player.floor),
+      room = D.roomAt(player.floor);
+    if (room)
+      html += card(
+        'Inside this chamber',
+        btn('Walk to the return passage', 'localWalk:' + 48) +
+          btn('Walk to records and treasure', 'localWalk:' + 135),
+      );
+    html += D.passages
+      .filter((p) => p.from === here)
+      .map((p) => card(p.label, btn('Walk to this passage', 'routeWalk:' + p.id)))
+      .join('');
+    html += D.chambers
+      .filter((r) => state.flags['discovered_' + r.id])
+      .map((r) =>
+        card(
+          r.name,
+          `<p>${state.flags['searched_' + r.id] ? esc(r.story) : 'Records not yet recovered.'}</p><span class="stats">${r.encounter && !state.flags['cleared_' + r.id] ? 'Creature guards this room' : state.flags['searched_' + r.id] ? 'Investigated · treasure in shared store' : 'Investigate the marked plinth'}</span>`,
+        ),
+      )
+      .join('');
+  }
+  if (tab === 'Store room') html += renderStore();
+  if (tab === 'Guild' || tab === 'Characters') html += renderGuild();
+  if (tab === 'Contracts') html += renderContracts();
+  if (tab === 'Training') html += renderTraining();
+  if (tab === 'Stories') html += renderStories();
+  if (tab === 'Diaries') html += renderRecords();
+  if (tab === 'Reports')
+    html +=
+      '<p>Reports record journeys, discoveries and rewards.</p>' +
+      (state.reports.length
+        ? state.reports
+            .map((r) =>
+              card(
+                r.title,
+                `<span class="tag">Day ${r.day}${rewardSummary(r.reward, r.xp) ? ' · ' + rewardSummary(r.reward, r.xp) : ''}</span>${paragraphs(r.text)}<div class="stats">${esc(r.party.join(', '))}${r.cost > 0 ? ' · Preparation expense: ' + r.cost + 'g' : ''}</div>`,
+              ),
+            )
+            .join('')
+        : '<p>Expedition reports will appear here when your parties return.</p>');
+  if (tab === 'Journal')
+    html += `<details><summary>Completed contracts · ${state.missions.filter((m) => m.status === 'resolved').length}</summary>${state.missions
+      .filter((m) => m.status === 'resolved')
+      .reverse()
+      .map(
+        (m) =>
+          `<p>${esc(D.contracts.find((d) => d.id === m.id).name)} · completed${m.completedDay ? ' Day ' + m.completedDay : ''}</p>`,
+      )
+      .join(
+        '',
+      )}</details><div class="card"><h3>Recovered keys</h3><p>${state.flags.repaired ? 'Cellar hatch key · recovered from the restored service room.<br>' : ''}${state.flags.anchor ? 'Bell-tower key and labyrinth-gate key · returned by Wren’s keeper.' : 'Complete The bell at Wren’s Crossing to recover the tower and labyrinth keys.'}</p></div><p>Next: ${esc(D.nextSteps(state))}</p><div class="row">${btn('Save checkpoint', 'save')}${btn('Load checkpoint', 'load')}${btn('Export save', 'export')}${btn('Import save', 'import')}${btn('New guild', 'new')}</div><input hidden type="file" id="save-file" accept="application/json">${[
+      ...state.journal,
+    ]
+      .reverse()
+      .map((j) => card(j.kind, paragraphs(j.text)))
+      .join('')}<h3>Gold ledger</h3>${state.transactions
+      .filter((t) => t.amount !== 0)
+      .slice(0, 40)
+      .map((t) => `<p>Day ${t.day} · ${t.amount > 0 ? '+' : ''}${t.amount}g · ${esc(t.text)}</p>`)
+      .join('')}`;
+  const scroll = $('panel-content')?.scrollTop || 0,
+    oldTab = $('panel').dataset.section;
+  $('panel').dataset.section = tab || '';
+  $('panel').innerHTML = html + '</div>';
+  if (oldTab === tab) $('panel-content').scrollTop = scroll;
+}
+function closePanel() {
+  D.leaveStore(state);
+  tab = null;
+  keys = {};
+  renderUI();
+  canvas.focus();
+}
+$('status').onclick = () => {
+  tab = 'Journal';
+  keys = {};
+  walkTarget = null;
+  renderUI();
+};
+function chooseResident(id) {
+  D.leaveStore(state);
+  if (!D.home(state).some((c) => c.id === id)) throw Error('Resident unavailable.');
+  D.rememberPosition(state, state.selected, player);
+  state.selected = id;
+  player = D.residentPosition(state, id);
+  keys = {};
+  hoveredObject = null;
+  walkTarget = null;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.close) {
+    closePanel();
+    return;
+  }
+  if (b.dataset.tab) {
+    tab = tab === b.dataset.tab ? null : b.dataset.tab;
+    keys = {};
+    walkTarget = null;
+    renderUI();
+    return;
+  }
+  const a = b.dataset.action;
+  if (!a) return;
+  const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'trainingPage') {
+    trainingSection = id;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'import') {
+    $('save-file').click();
+    return;
+  }
+  if (op === 'talk') {
+    openChoice(id);
+    return;
+  }
+  if (op === 'letter') {
+    openMission(id);
+    return;
+  }
+  if (op === 'localWalk') {
+    const room = D.roomAt(player.floor);
+    if (!room || ![48, 135].includes(Number(id))) return;
+    closePanel();
+    walkTarget = room.x + Number(id);
+    canvas.focus();
+    return;
+  }
+  if (op === 'routeWalk') {
+    const p = D.passages.find((p) => p.id === id);
+    if (!p || p.from !== currentSource(player.floor)) {
+      toast('Reach the source room first.');
+      return;
+    }
+    closePanel();
+    walkTarget = p.x;
+    canvas.focus();
+    return;
+  }
+  if (op === 'visitStore') {
+    chooseResident(id);
+    closePanel();
+    walkTarget = 790;
+    canvas.focus();
+    return;
+  }
+  if (op === 'walk') {
+    if (player.floor !== 380) {
+      toast('Return to the ground floor using W / S first.');
+      return;
+    }
+    closePanel();
+    walkTarget = Number(id);
+    canvas.focus();
+    toast('Walking toward the discovery. Use E when you arrive.');
+    return;
+  }
+  act(() => {
+    if (op === 'record') D.recoverRecord(state, id);
+    if (op === 'new') {
+      if (!confirm('Start a new guild? Export your current save first to keep it.')) return;
+      state = D.initial();
+      state.flags.opening = true;
+      player = spawn();
+      walkTarget = null;
+      toast('A new guild begins. Find Bryn in the entrance hall.');
+    }
+    if (op === 'select') chooseResident(id);
+    if (op === 'gear') D.equip(state, id, value);
+    if (op === 'treat') D.treat(state, id);
+    if (op === 'advance') D.advance(state, id, value, choiceLevel);
+    if (op === 'buy') D.buyEquipment(state, id);
+    if (op === 'equipItem') D.equipItem(state, id, value);
+    if (op === 'unequip') D.unequip(state, id);
+    if (op === 'watch') {
+      const m = state.missions.find((m) => m.uid === id),
+        def = D.contracts.find((d) => d.id === m.id),
+        loc = def.homeEvent
+          ? { x: 640, y: 380, ...state.threats[m.id] }
+          : def.location || { x: 760, y: 1250 };
+      player = { x: loc.x - 170, y: loc.y, floor: loc.y, vy: 0 };
+      tab = null;
+      walkTarget = null;
+    }
+    if (op === 'specialise') D.specialise(state, id, value);
+    if (op === 'talent') D.learnTalent(state, id, value);
+    if (op === 'heal' || op === 'mend') D.castRestoration(state, id, value, op);
+    if (op === 'raise') D.raiseDead(state, id, value);
+    if (op === 'remains') D.recoverRemains(state, id);
+    if (op === 'repairDamage') D.repairDamage(state, id);
+    if (op === 'withdraw') D.withdraw(state, id, value ? [value] : null);
+    if (op === 'dispatch')
+      D.dispatch(
+        state,
+        id,
+        [...document.querySelectorAll(`[data-party="${id}"]:checked`)].map((x) => x.value),
+        $('supply-' + id).checked,
+      );
+    if (op === 'decide') {
+      D.decide(state, id, value);
+      $('scene').close();
+    }
+    if (op === 'story') {
+      D.narrativeChoice(state, id, value);
+      $('scene').close();
+    }
+    if (op === 'emergency') D.emergency(state);
+    if (op === 'save') {
+      localStorage.setItem('bound-house-checkpoint', D.save(state));
+      toast('Checkpoint saved.');
+    }
+    if (op === 'load') {
+      const raw = localStorage.getItem('bound-house-checkpoint');
+      if (!raw) throw Error('No checkpoint yet.');
+      state = D.load(raw);
+      player = D.residentPosition(state, state.selected);
+      walkTarget = null;
+      toast('Checkpoint restored.');
+    }
+    if (op === 'export') {
+      const url = URL.createObjectURL(new Blob([D.save(state)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bound-house-save.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+    if (op === 'import') $('save-file').click();
   });
 });
-document.addEventListener('change',async e=>{
-  if(e.target.id==='personal-record'){selectedRecord=e.target.value;renderUI();return;}if(e.target.id==='training-character'){trainingResident=e.target.value;renderUI();$('panel-content').scrollTop=0;return;}if(e.target.id==='training-level'){trainingLevels[trainingResident]=Number(e.target.value);renderUI();$('panel-content').scrollTop=0;return;}if(e.target.dataset.trainingTarget){trainingTargets[e.target.dataset.trainingTarget]=e.target.value;renderUI();return;}
-  if(e.target.dataset.party)updatePartyPreview(e.target.dataset.party);
-  if(e.target.id==='save-file'&&e.target.files[0]){try{state=D.load(await e.target.files[0].text());player=spawn();walkTarget=null;persist();renderUI();presentScene();toast('Save imported.');}catch(err){toast(err.message);}}
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'personal-record') {
+    selectedRecord = e.target.value;
+    renderUI();
+    return;
+  }
+  if (e.target.id === 'character-page') {
+    characterPage = e.target.value;
+    renderUI();
+    return;
+  }
+  if (e.target.id === 'training-character') {
+    trainingResident = e.target.value;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (e.target.id === 'training-level') {
+    trainingLevels[trainingResident] = Number(e.target.value);
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (e.target.dataset.trainingTarget) {
+    trainingTargets[e.target.dataset.trainingTarget] = e.target.value;
+    renderUI();
+    return;
+  }
+  if (e.target.dataset.party) updatePartyPreview(e.target.dataset.party);
+  if (e.target.id === 'save-file' && e.target.files[0]) {
+    try {
+      state = D.load(await e.target.files[0].text());
+      player = D.residentPosition(state, state.selected);
+      walkTarget = null;
+      persist();
+      renderUI();
+      presentScene();
+      toast('Save imported.');
+    } catch (err) {
+      toast(err.message);
+    }
+  }
 });
-$('day').onclick=()=>act(()=>{D.day(state);const m=state.missions.find(m=>m.status==='decision');if(m)toast('An expedition letter is waiting in Contracts.');});
+$('day').onclick = () =>
+  act(() => {
+    D.day(state);
+    const m = state.missions.find((m) => m.status === 'decision');
+    if (m) toast('An expedition letter is waiting in Contracts.');
+  });
 
-function choiceLocation(id){if(id==='landingPurpose')return 1185;const r=D.rooms.find(r=>r.discovery?.id===id||r.read===id);return r?r.x+145:160;}
-function locationName(id){if(id==='landingPurpose')return 'the returned landing';return D.rooms.find(r=>r.discovery?.id===id||r.read===id)?.name.toLowerCase()||'the quarters';}
-function residentPosition(c){const i=state.roster.findIndex(r=>r.id===c.id);return c.id==='rowan'?175:235+i*60;}
-function visualRoom(){
- const dungeon=D.roomAt(player.floor);if(dungeon)return dungeon;
- if(player.floor===380)return [{x:55,w:230,name:'Entrance'}, {x:285,w:190,name:'Quarters'}, {x:475,w:230,name:'Service corridor'}, {x:705,w:270,name:'Service room'}, {x:975,w:290,name:'Returned landing'},...D.rooms].find(r=>player.x>=r.x&&player.x<r.x+r.w);
- if(player.floor===555)return {x:430,w:390,name:'Cellar'};
- if(player.floor===510)return {x:450,w:330,name:'Dry landing'};
- if(player.floor===140&&player.x>700)return {x:705,w:270,name:'Store room'};
- return {x:300,w:600,name:player.floor<380?'Bell tower':'Labyrinth'};
+function choiceLocation(id) {
+  if (id === 'landingPurpose') return 1185;
+  const r = D.rooms.find((r) => r.discovery?.id === id || r.read === id);
+  return r ? r.x + 145 : 160;
 }
-const zoomControls=document.createElement('div');zoomControls.className='zoom-controls';zoomControls.setAttribute('aria-label','Room camera');zoomControls.innerHTML='<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-room">Focus room</button><button id="wide-view">Wide view</button>'; $('world').append(zoomControls);
-function setZoom(value){graphics.setZoom(value);$('zoom-level').textContent=Math.round(graphics.targetZoom*100)+'%';}
-$('zoom-in').onclick=()=>{graphics.focus=false;setZoom(graphics.targetZoom+.25);};
-$('zoom-out').onclick=()=>{graphics.focus=false;setZoom(graphics.targetZoom-.25);};
-$('wide-view').onclick=()=>{graphics.focus=false;setZoom(.85);};
-$('focus-room').onclick=()=>{graphics.focus=true;const room=visualRoom();setZoom(Math.min(2.5,960/(room?.w||500)));};
-canvas.addEventListener('wheel',e=>{if(tab||$('scene').open)return;e.preventDefault();graphics.focus=false;setZoom(graphics.targetZoom+(e.deltaY<0?.15:-.15));},{passive:false});
-canvas.addEventListener('mousemove',e=>{if(tab||$('scene').open){hoveredObject=null;return;}const b=canvas.getBoundingClientRect(),scale=Math.min(b.width/1200,b.height/650);const point=screenToWorld((e.clientX-b.left-(b.width-1200*scale)/2)/scale,(e.clientY-b.top-(b.height-650*scale)/2)/scale,camera,cameraY,graphics.zoom);hoveredObject=hotspots().find(h=>!h.done&&(h.action||h.choice)&&h.y===player.floor&&Math.abs(h.x-point.x)<22&&Math.abs(h.y-37-point.y)<27)||null;canvas.style.cursor=hoveredObject?'pointer':'default';});
-canvas.addEventListener('mouseleave',()=>{hoveredObject=null;canvas.style.cursor='default';});
-function hotspots(){
-  const list=[
-    {x:790,y:380,action:'storeEnter',text:'E · Enter STORE ROOM · shared equipment',show:state.flags.repaired},
-    {x:865,y:140,action:'storeOpen',text:'E · Open equipment shelves'},
-    {x:750,y:140,action:'storeExit',text:'E · Leave store room'},
-    {x:880,y:1020,action:'furnace',text:state.flags.dragonFound?'E · Enter the furnace room':'E · Open the warm iron door',show:state.flags.labyrinthHeart},
-    {x:350,y:1250,action:'leaveFurnace',text:'E / W · Return to the labyrinth',done:false},
-    {x:350,y:380,action:'tower',text:state.flags.tower?'W · Climb the bell tower':`E · Reconnect tower stairs · ${state.roster.some(c=>c.skills.includes('stoneSong')&&c.status==='home')?40:80}g · Wren’s key`,done:state.flags.tower},
-    {x:350,y:140,text:'W · Tower crown / S · Ground floor',done:true},
-    {x:350,y:-100,text:'S · Lower tower landing',done:true},
-    {x:530,y:790,text:'W · Cellar / S · Labyrinth heart · Tracking or Echo sight',done:true},
-    {x:530,y:1020,text:'W · Upper labyrinth',done:true},
-    {x:555,y:510,action:state.flags.labyrinth?'enterLabyrinth':'labyrinth',text:state.flags.labyrinth?'E · Enter the labyrinth':'E · Follow the brass thread · Wren’s key',show:state.flags.anchor},
-    {x:705,y:380,action:state.flags.breach?'repair':'wall',text:state.flags.breach?state.flags.repaired?'Service room restored':'E · Restore service room · '+D.serviceRepairCost(state)+'g':'E · Breach sealed wall · Strength 10',done:state.flags.repaired},
-    {x:870,y:380,action:'ledger',text:state.flags.ledger?'Ledger recorded':'E · Read concealed ledger',done:state.flags.ledger,show:state.flags.repaired},
-    {x:505,y:380,action:'stairs',text:state.flags.stairs?'S · Descend to the dry cellar landing':'E · Repair cellar stairs · 45g',done:state.flags.stairs},
-    {x:535,y:510,action:'stairsHelp',text:state.flags.cellarDrained?'W · Upstairs · S · Enter drained cellar':'W · Upstairs · S · Dive to drain wheel (Water breathing)',done:true,show:state.flags.stairs},
-    {x:715,y:555,action:'drain',text:state.flags.cellarDrained?'Drain locked open':'E · Open drain wheel · Water breathing',done:state.flags.cellarDrained,show:state.flags.stairs},
-    {x:580,y:555,action:'cellar',text:state.flags.cellar?'Ship chart recorded · W near stairs to return':state.flags.cellarDrained?'E · Investigate exposed ship fragment':'E · Investigate ship fragment · Water breathing',done:state.flags.cellar},
-    {x:1100,y:380,action:'inscription',text:state.flags.inscription?'The house inscription is recorded':'E · Read inscription · Rowan’s house sight',show:state.flags.anchor,done:state.flags.inscription},
+function locationName(id) {
+  if (id === 'landingPurpose') return 'the returned landing';
+  return (
+    D.rooms.find((r) => r.discovery?.id === id || r.read === id)?.name.toLowerCase() ||
+    'the quarters'
+  );
+}
+function residentPosition(c) {
+  return D.residentPosition(state, c.id).x;
+}
+function visualRoom() {
+  const dungeon = D.roomAt(player.floor);
+  if (dungeon) return dungeon;
+  if (player.floor === 380)
+    return [
+      { x: 55, w: 230, name: 'Entrance' },
+      { x: 285, w: 190, name: 'Quarters' },
+      { x: 475, w: 230, name: 'Service corridor' },
+      { x: 705, w: 270, name: 'Service room' },
+      { x: 975, w: 290, name: 'Returned landing' },
+      ...D.rooms,
+    ].find((r) => player.x >= r.x && player.x < r.x + r.w);
+  if (player.floor === 555) return { x: 430, w: 390, name: 'Cellar' };
+  if (player.floor === 510) return { x: 450, w: 330, name: 'Dry landing' };
+  if (player.floor === 140 && player.x > 700) return { x: 705, w: 270, name: 'Store room' };
+  return { x: 300, w: 600, name: player.floor < 380 ? 'Bell tower' : 'Labyrinth' };
+}
+const zoomControls = document.createElement('div');
+zoomControls.className = 'zoom-controls';
+zoomControls.setAttribute('aria-label', 'Room camera');
+zoomControls.innerHTML =
+  '<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-room">Focus room</button><button id="wide-view">Wide view</button>';
+$('world').append(zoomControls);
+function setZoom(value) {
+  graphics.setZoom(value);
+  $('zoom-level').textContent = Math.round(graphics.targetZoom * 100) + '%';
+}
+$('zoom-in').onclick = () => {
+  graphics.focus = false;
+  setZoom(graphics.targetZoom + 0.25);
+};
+$('zoom-out').onclick = () => {
+  graphics.focus = false;
+  setZoom(graphics.targetZoom - 0.25);
+};
+$('wide-view').onclick = () => {
+  graphics.focus = false;
+  setZoom(0.85);
+};
+$('focus-room').onclick = () => {
+  graphics.focus = true;
+  const room = visualRoom();
+  setZoom(Math.min(2.5, 960 / (room?.w || 500)));
+};
+canvas.addEventListener(
+  'wheel',
+  (e) => {
+    if (tab || $('scene').open) return;
+    e.preventDefault();
+    graphics.focus = false;
+    setZoom(graphics.targetZoom + (e.deltaY < 0 ? 0.15 : -0.15));
+  },
+  { passive: false },
+);
+canvas.addEventListener('mousemove', (e) => {
+  if (tab || $('scene').open) {
+    hoveredObject = null;
+    return;
+  }
+  const b = canvas.getBoundingClientRect(),
+    scale = Math.min(b.width / 1200, b.height / 650);
+  const point = screenToWorld(
+    (e.clientX - b.left - (b.width - 1200 * scale) / 2) / scale,
+    (e.clientY - b.top - (b.height - 650 * scale) / 2) / scale,
+    camera,
+    cameraY,
+    graphics.zoom,
+  );
+  hoveredObject =
+    hotspots().find(
+      (h) =>
+        !h.done &&
+        (h.action || h.choice) &&
+        h.y === player.floor &&
+        Math.abs(h.x - point.x) < 22 &&
+        Math.abs(h.y - 37 - point.y) < 27,
+    ) || null;
+  canvas.style.cursor = hoveredObject ? 'pointer' : 'default';
+});
+canvas.addEventListener('mouseleave', () => {
+  hoveredObject = null;
+  canvas.style.cursor = 'default';
+});
+function hotspots() {
+  const list = [
+    {
+      x: 790,
+      y: 380,
+      action: 'storeEnter',
+      text: 'E · Enter STORE ROOM · shared equipment',
+      show: state.flags.repaired,
+    },
+    { x: 865, y: 140, action: 'storeOpen', text: 'E · Open equipment shelves' },
+    { x: 750, y: 140, action: 'storeExit', text: 'E · Leave store room' },
+    {
+      x: 880,
+      y: 1020,
+      action: 'furnace',
+      text: state.flags.dragonFound ? 'E · Enter the furnace room' : 'E · Open the warm iron door',
+      show: state.flags.labyrinthHeart,
+    },
+    {
+      x: 350,
+      y: 1250,
+      action: 'leaveFurnace',
+      text: 'E / W · Return to the labyrinth',
+      done: false,
+    },
+    {
+      x: 350,
+      y: 380,
+      action: 'tower',
+      text: state.flags.tower
+        ? 'W · Climb the bell tower'
+        : `E · Reconnect tower stairs · ${state.roster.some((c) => c.skills.includes('stoneSong') && c.status === 'home') ? 40 : 80}g · Wren’s key`,
+      done: state.flags.tower,
+    },
+    { x: 350, y: 140, text: 'W · Tower crown / S · Ground floor', done: true },
+    { x: 350, y: -100, text: 'S · Lower tower landing', done: true },
+    {
+      x: 530,
+      y: 790,
+      text: 'W · Cellar / S · Labyrinth heart · Tracking or Echo sight',
+      done: true,
+    },
+    { x: 530, y: 1020, text: 'W · Upper labyrinth', done: true },
+    {
+      x: 555,
+      y: 510,
+      action: state.flags.labyrinth ? 'enterLabyrinth' : 'labyrinth',
+      text: state.flags.labyrinth
+        ? 'E · Enter the labyrinth'
+        : 'E · Follow the brass thread · Wren’s key',
+      show: state.flags.anchor,
+    },
+    {
+      x: 705,
+      y: 380,
+      action: state.flags.breach ? 'repair' : 'wall',
+      text: state.flags.breach
+        ? state.flags.repaired
+          ? 'Service room restored'
+          : 'E · Restore service room · ' + D.serviceRepairCost(state) + 'g'
+        : 'E · Breach sealed wall · Strength 10',
+      done: state.flags.repaired,
+    },
+    {
+      x: 870,
+      y: 380,
+      action: 'ledger',
+      text: state.flags.ledger ? 'Ledger recorded' : 'E · Read concealed ledger',
+      done: state.flags.ledger,
+      show: state.flags.repaired,
+    },
+    {
+      x: 505,
+      y: 380,
+      action: 'stairs',
+      text: state.flags.stairs
+        ? 'S · Descend to the dry cellar landing'
+        : 'E · Repair cellar stairs · 45g',
+      done: state.flags.stairs,
+    },
+    {
+      x: 535,
+      y: 510,
+      action: 'stairsHelp',
+      text: state.flags.cellarDrained
+        ? 'W · Upstairs · S · Enter drained cellar'
+        : 'W · Upstairs · S · Dive to drain wheel (Water breathing)',
+      done: true,
+      show: state.flags.stairs,
+    },
+    {
+      x: 715,
+      y: 555,
+      action: 'drain',
+      text: state.flags.cellarDrained
+        ? 'Drain locked open'
+        : 'E · Open drain wheel · Water breathing',
+      done: state.flags.cellarDrained,
+      show: state.flags.stairs,
+    },
+    {
+      x: 580,
+      y: 555,
+      action: 'cellar',
+      text: state.flags.cellar
+        ? 'Ship chart recorded · W near stairs to return'
+        : state.flags.cellarDrained
+          ? 'E · Investigate exposed ship fragment'
+          : 'E · Investigate ship fragment · Water breathing',
+      done: state.flags.cellar,
+    },
+    {
+      x: 1100,
+      y: 380,
+      action: 'inscription',
+      text: state.flags.inscription
+        ? 'The house inscription is recorded'
+        : 'E · Read inscription · Rowan’s house sight',
+      show: state.flags.anchor,
+      done: state.flags.inscription,
+    },
   ];
-  for(const n of D.availableChoices(state)){list.push({x:choiceLocation(n.id),y:380,choice:n.id,text:'E · '+n.title});}
-  for(const r of D.rooms.filter(r=>state.flags[r.anchor])){
-    if(!state.flags[r.operational])list.push({x:r.id==='library'&&!state.flags.libraryOpened?1260:r.x+65,y:380,action:'room:'+r.id,text:`E · Restore ${r.name.toLowerCase()} · ${r.cost}g${r.requiresSkill?' · Magical literacy':''}${r.id==='threshold'?' · Safe preparation':''}`});
+  for (const n of D.availableChoices(state)) {
+    list.push({ x: choiceLocation(n.id), y: 380, choice: n.id, text: 'E · ' + n.title });
   }
-  for(const c of D.home(state).filter(c=>c.id!==state.selected)){const n=D.availableChoices(state,c.id)[0];if(n)list.push({x:residentPosition(c),y:380,choice:n.id,text:`E · Speak with ${c.name}: ${n.title}`});}
-  for(const d of D.sleepers){if(d.requires.every(f=>state.flags[f])&&!state.roster.some(c=>c.id===d.id))list.push({x:d.x,y:d.y,action:(state.flags['found_'+d.id]?'awaken:':'discover:')+d.id,text:'E · '+(state.flags['found_'+d.id]?'Awaken '+d.name+' · '+d.method:'Investigate '+d.condition.toLowerCase()+' figure'),done:false});}
-  for(const p of D.passages.filter(p=>p.from===currentSource(player.floor))){if(p.from==='tower'&&!state.flags.tower||p.from==='labyrinth'&&!state.flags.labyrinthHeart)continue;list.push({x:p.x,y:p.y,action:'passage:'+p.id,text:'E · '+p.label});}
-  const room=D.roomAt(player.floor);if(room){list.push({x:room.x+48,y:room.y,action:'leave:'+room.id,text:'E · Return through the marked passage'});list.push({x:room.x+135,y:room.y,action:'search:'+room.id,text:state.flags['searched_'+room.id]?'Records and treasure recovered':'E · Investigate the room’s records and treasure',done:state.flags['searched_'+room.id]});}
-  for(const record of D.availableRecords(state).filter(r=>!r.who)){
-    const chamber=D.chambers.find(r=>r.id===record.id),main=D.rooms.find(r=>r.id===record.id);
-    const locations={entrance:[185,380],service:[920,380],quarters:[440,380],cellar:[850,555],tower:[620,-100],labyrinth:[730,1020]};
-    const location=chamber?[chamber.x+235,chamber.y]:main?[main.x+225,380]:locations[record.id];
-    if(location)list.push({x:location[0],y:location[1],action:'record:'+record.id,text:'E · Personal record · '+record.author});
+  for (const r of D.rooms.filter((r) => state.flags[r.anchor])) {
+    if (!state.flags[r.operational])
+      list.push({
+        x: r.id === 'library' && !state.flags.libraryOpened ? 1260 : r.x + 65,
+        y: 380,
+        action: 'room:' + r.id,
+        text: `E · Restore ${r.name.toLowerCase()} · ${r.cost}g${r.requiresSkill ? ' · Magical literacy' : ''}${r.id === 'threshold' ? ' · Safe preparation' : ''}`,
+      });
   }
-  return list.filter(h=>h.show!==false);
+  for (const c of D.home(state).filter((c) => c.id !== state.selected)) {
+    const n = D.availableChoices(state, c.id)[0];
+    if (n)
+      list.push({
+        x: residentPosition(c),
+        y: D.residentPosition(state, c.id).floor,
+        choice: n.id,
+        text: `E · Speak with ${c.name}: ${n.title}`,
+      });
+  }
+  for (const d of D.sleepers) {
+    if (d.requires.every((f) => state.flags[f]) && !state.roster.some((c) => c.id === d.id))
+      list.push({
+        x: d.x,
+        y: d.y,
+        action: (state.flags['found_' + d.id] ? 'awaken:' : 'discover:') + d.id,
+        text:
+          'E · ' +
+          (state.flags['found_' + d.id]
+            ? 'Awaken ' + d.name + ' · ' + d.method
+            : 'Investigate ' + d.condition.toLowerCase() + ' figure'),
+        done: false,
+      });
+  }
+  for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d)))
+    list.push({
+      x: d.x,
+      y: d.y,
+      action: 'recover:' + d.id,
+      text: 'E · ' + d.condition + ' · ' + d.method,
+    });
+  for (const p of D.passages.filter((p) => p.from === currentSource(player.floor))) {
+    if (
+      (p.from === 'tower' && !state.flags.tower) ||
+      (p.from === 'labyrinth' && !state.flags.labyrinthHeart)
+    )
+      continue;
+    list.push({ x: p.x, y: p.y, action: 'passage:' + p.id, text: 'E · ' + p.label });
+  }
+  const room = D.roomAt(player.floor);
+  if (room) {
+    list.push({
+      x: room.x + 48,
+      y: room.y,
+      action: 'leave:' + room.id,
+      text: 'E · Return through the marked passage',
+    });
+    list.push({
+      x: room.x + 135,
+      y: room.y,
+      action: 'search:' + room.id,
+      text: state.flags['searched_' + room.id]
+        ? 'Records and treasure recovered'
+        : 'E · Investigate the room’s records and treasure',
+      done: state.flags['searched_' + room.id],
+    });
+  }
+  for (const record of D.availableRecords(state).filter((r) => !r.who)) {
+    const chamber = D.chambers.find((r) => r.id === record.id),
+      main = D.rooms.find((r) => r.id === record.id);
+    const locations = {
+      entrance: [185, 380],
+      service: [920, 380],
+      quarters: [440, 380],
+      cellar: [850, 555],
+      tower: [620, -100],
+      labyrinth: [730, 1020],
+    };
+    const location = chamber
+      ? [chamber.x + 235, chamber.y]
+      : main
+        ? [main.x + 225, 380]
+        : locations[record.id];
+    if (location)
+      list.push({
+        x: location[0],
+        y: location[1],
+        action: 'record:' + record.id,
+        text: 'E · Personal record · ' + record.author,
+      });
+  }
+  return list.filter((h) => h.show !== false);
 }
-function nearest(){return hotspots().filter(h=>Math.abs(h.x-player.x)<58&&Math.abs(h.y-player.y)<45).sort((a,b)=>(a.action?.includes(':')?0:a.done?2:1)-(b.action?.includes(':')?0:b.done?2:1)||Math.abs(a.x-player.x)-Math.abs(b.x-player.x))[0];}
-function stair(direction){const c=D.home(state).find(c=>c.id===state.selected);const dest=guildStairs(player,direction,state,c)||useStairs(player,direction,{repaired:state.flags.stairs,water:c.skills.includes('water'),selected:c.id,anchor:state.flags.anchor,drained:state.flags.cellarDrained});if(dest.error){toast(dest.error);return;}player={...dest,vy:0,floor:dest.y};grounded=true;walkTarget=null;D.visitFloor(state,dest.y);persist();renderUI();}
-canvas.tabIndex=0;canvas.addEventListener('click',e=>{if(tab)return;const bounds=canvas.getBoundingClientRect();const scale=Math.min(bounds.width/1200,bounds.height/650);const inset=(bounds.width-1200*scale)/2;const insetY=(bounds.height-650*scale)/2;const point=screenToWorld((e.clientX-bounds.left-inset)/scale,(e.clientY-bounds.top-insetY)/scale,camera,cameraY,graphics.zoom),wx=point.x,wy=point.y;const route=[{x:400,y:380,to:350},{x:505,y:380,to:505},{x:600,y:510,to:555},{x:530,y:790,to:530}].find(r=>Math.abs(wx-r.x)<45&&wy>r.y-95&&wy<r.y-15&&player.floor===r.y);walkTarget=hoveredObject?hoveredObject.x+Math.sign(player.x-hoveredObject.x||-1)*30:route?route.to:wx;canvas.focus();});
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&tab){closePanel();return;}
-  if(tab||$('scene').open||['INPUT','TEXTAREA'].includes(e.target.tagName))return;
-  if(['Tab',' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault();
-  const key=e.key.toLowerCase();
-  if(!e.repeat&&!keys[key]){
-    if(e.key==='Tab'){const list=D.home(state);act(()=>chooseResident(list[(list.findIndex(c=>c.id===state.selected)+1)%list.length].id));}
-    if(key==='e'){const h=nearest();if(h&&!h.done){if(h.action?.startsWith('passage:')){act(()=>{player=D.enterPassage(state,h.action.split(':')[1],{x:player.x,floor:player.floor});walkTarget=null;grounded=true;});return;}if(h.action?.startsWith('leave:')){act(()=>{player=D.leaveChamber(state,h.action.split(':')[1]);walkTarget=null;grounded=true;});return;}if(h.action?.startsWith('record:')){act(()=>D.recoverRecord(state,h.action.slice(7)));return;}if(h.action?.startsWith('search:')){act(()=>D.investigateChamber(state,h.action.split(':')[1]));return;}if(h.action==='storeEnter'){if(state.selected==='rowan'){toast('Control a fit recruit to visit the store.');return;}act(()=>D.enterStore(state,state.selected));if(state.storeVisitor){player={x:865,y:140,floor:140,vy:0};tab='Store room';renderUI();}return;}if(h.action==='storeOpen'){act(()=>{D.enterStore(state,state.selected);tab='Store room';});return;}if(h.action==='storeExit'){D.leaveStore(state);player={x:865,y:380,floor:380,vy:0};return;}if(h.action==='furnace'){act(()=>D.interact(state,'dragon'));player={x:350,y:1250,floor:1250,vy:0};keys={};walkTarget=null;return;}if(h.action==='leaveFurnace'){player={x:875,y:1020,floor:1020,vy:0};keys={};walkTarget=null;return;}if(h.action==='enterLabyrinth'){player={x:530,y:790,vy:0,floor:790};keys={};walkTarget=null;return;}if(h.choice)openChoice(h.choice);else act(()=>{D.interact(state,h.action);toast(h.action==='wall'?'The wall opens. Restoration is a separate job.':h.action==='ledger'?'A new expedition lead is in Contracts.':'The house has changed.');});}}
-    if(key==='w'||key==='arrowup')stair('up');if(key==='s'||key==='arrowdown')stair('down');
-    if(e.key===' '&&grounded){player.vy=-440;grounded=false;}
+function nearest() {
+  return hotspots()
+    .filter((h) => Math.abs(h.x - player.x) < 58 && Math.abs(h.y - player.y) < 45)
+    .sort(
+      (a, b) =>
+        (a.action?.includes(':') ? 0 : a.done ? 2 : 1) -
+          (b.action?.includes(':') ? 0 : b.done ? 2 : 1) ||
+        Math.abs(a.x - player.x) - Math.abs(b.x - player.x),
+    )[0];
+}
+function stair(direction) {
+  const c = D.home(state).find((c) => c.id === state.selected);
+  const dest =
+    guildStairs(player, direction, state, c) ||
+    useStairs(player, direction, {
+      repaired: state.flags.stairs,
+      water: c.skills.includes('water'),
+      selected: c.id,
+      anchor: state.flags.anchor,
+      drained: state.flags.cellarDrained,
+    });
+  if (dest.error) {
+    toast(dest.error);
+    return;
   }
-  keys[key]=true;
+  player = { ...dest, vy: 0, floor: dest.y };
+  grounded = true;
+  walkTarget = null;
+  D.visitFloor(state, dest.y);
+  persist();
+  renderUI();
+}
+canvas.tabIndex = 0;
+canvas.addEventListener('click', (e) => {
+  if (tab) return;
+  const bounds = canvas.getBoundingClientRect();
+  const scale = Math.min(bounds.width / 1200, bounds.height / 650);
+  const inset = (bounds.width - 1200 * scale) / 2;
+  const insetY = (bounds.height - 650 * scale) / 2;
+  const point = screenToWorld(
+      (e.clientX - bounds.left - inset) / scale,
+      (e.clientY - bounds.top - insetY) / scale,
+      camera,
+      cameraY,
+      graphics.zoom,
+    ),
+    wx = point.x,
+    wy = point.y;
+  const route = [
+    { x: 400, y: 380, to: 350 },
+    { x: 505, y: 380, to: 505 },
+    { x: 600, y: 510, to: 555 },
+    { x: 530, y: 790, to: 530 },
+  ].find((r) => Math.abs(wx - r.x) < 45 && wy > r.y - 95 && wy < r.y - 15 && player.floor === r.y);
+  walkTarget = hoveredObject
+    ? hoveredObject.x + Math.sign(player.x - hoveredObject.x || -1) * 30
+    : route
+      ? route.to
+      : wx;
+  canvas.focus();
 });
-document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);window.addEventListener('blur',()=>keys={});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && tab) {
+    closePanel();
+    return;
+  }
+  if (tab || $('scene').open || ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (['Tab', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key))
+    e.preventDefault();
+  const key = e.key.toLowerCase();
+  if (!e.repeat && !keys[key]) {
+    if (e.key === 'Tab') {
+      const list = D.home(state);
+      act(() =>
+        chooseResident(list[(list.findIndex((c) => c.id === state.selected) + 1) % list.length].id),
+      );
+    }
+    if (key === 'e') {
+      const h = nearest();
+      if (h && !h.done) {
+        if (h.action?.startsWith('recover:')) {
+          act(() =>
+            D.recoverResident(state, h.action.slice(8), { x: player.x, floor: player.floor }),
+          );
+          return;
+        }
+        if (h.action?.startsWith('passage:')) {
+          act(() => {
+            player = D.enterPassage(state, h.action.split(':')[1], {
+              x: player.x,
+              floor: player.floor,
+            });
+            walkTarget = null;
+            grounded = true;
+          });
+          return;
+        }
+        if (h.action?.startsWith('leave:')) {
+          act(() => {
+            player = D.leaveChamber(state, h.action.split(':')[1]);
+            walkTarget = null;
+            grounded = true;
+          });
+          return;
+        }
+        if (h.action?.startsWith('record:')) {
+          act(() => D.recoverRecord(state, h.action.slice(7)));
+          return;
+        }
+        if (h.action?.startsWith('search:')) {
+          act(() => D.investigateChamber(state, h.action.split(':')[1]));
+          return;
+        }
+        if (h.action === 'storeEnter') {
+          if (state.selected === 'rowan') {
+            toast('Control a fit recruit to visit the store.');
+            return;
+          }
+          act(() => D.enterStore(state, state.selected));
+          if (state.storeVisitor) {
+            player = { x: 865, y: 140, floor: 140, vy: 0 };
+            tab = 'Store room';
+            renderUI();
+          }
+          return;
+        }
+        if (h.action === 'storeOpen') {
+          act(() => {
+            D.enterStore(state, state.selected);
+            tab = 'Store room';
+          });
+          return;
+        }
+        if (h.action === 'storeExit') {
+          D.leaveStore(state);
+          player = { x: 865, y: 380, floor: 380, vy: 0 };
+          return;
+        }
+        if (h.action === 'furnace') {
+          act(() => D.interact(state, 'dragon'));
+          player = { x: 350, y: 1250, floor: 1250, vy: 0 };
+          keys = {};
+          walkTarget = null;
+          return;
+        }
+        if (h.action === 'leaveFurnace') {
+          player = { x: 875, y: 1020, floor: 1020, vy: 0 };
+          keys = {};
+          walkTarget = null;
+          return;
+        }
+        if (h.action === 'enterLabyrinth') {
+          player = { x: 530, y: 790, vy: 0, floor: 790 };
+          keys = {};
+          walkTarget = null;
+          return;
+        }
+        if (h.choice) openChoice(h.choice);
+        else
+          act(() => {
+            D.interact(state, h.action);
+            toast(
+              h.action === 'wall'
+                ? 'The wall opens. Restoration is a separate job.'
+                : h.action === 'ledger'
+                  ? 'A new expedition lead is in Contracts.'
+                  : 'The house has changed.',
+            );
+          });
+      }
+    }
+    if (key === 'w' || key === 'arrowup') stair('up');
+    if (key === 's' || key === 'arrowdown') stair('down');
+    if (e.key === ' ' && grounded) {
+      player.vy = -440;
+      grounded = false;
+    }
+  }
+  keys[key] = true;
+});
+document.addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
+window.addEventListener('blur', () => (keys = {}));
 
-function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x-camera,y,w,h);}
-function text(t,x,y,size=14,color='#adbaab'){ctx.fillStyle=color;ctx.font=`${size}px Georgia`;ctx.fillText(t,x-camera,y);}
-function drawRoom(x,w,name,restored,details){const view=visibleBounds(camera,cameraY,graphics.zoom);if(x+w<view.left-50||x>view.right+50)return;paintInterior(ctx,camera,x,w,name,restored,graphics.reducedMotion?0:last/1000);paintRoomIdentity(ctx,camera,x,w,name,restored,graphics.reducedMotion?0:last/1000);}
-function missingRoom(x,w,name,lead){
-  rect(x,204,w,200,'#0d111a');for(let i=0;i<9;i++)rect(x+(i%2)*9,205+i*21,13,15,'#535048');rect(x,395,40,12,'#796348');text(name,x+20,275,15,'#708d7b');text(lead,x+20,300,12,'#708d7b');
+function rect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x - camera, y, w, h);
 }
-function drawResident(c,x,y,controlled=false){paintCharacter(ctx,camera,c,x,y,controlled,player.facing||1);paintEquipment(ctx,camera,c,x,y,graphics.reducedMotion?0:last/1000,controlled?player.facing||1:1);if(c.specialisation||c.undead)text(D.classOf(c).name,x-30,y-78,9,c.undead?'#99c58e':'#d8bc82');if(!controlled&&D.availableChoices(state,c.id).length)text('…',x-5,y-75,20,'#c5a268');}
-function drawWorld(c){
-  const activeRoom=visualRoom();if(graphics.focus&&activeRoom){const key=player.floor+':'+activeRoom.x;if(graphics.focusKey!==key){graphics.focusKey=key;setZoom(Math.min(2.5,960/activeRoom.w));}}const target=graphics.focus&&activeRoom?activeRoom.x+activeRoom.w/2-600:player.x-600;camera+=(target-camera)*.08;cameraY+=((player.floor-380-(graphics.focus?55:0))-cameraY)*.09;graphics.begin(ctx);
-  const ambience={camera,cameraY,floor:player.floor,time:graphics.reducedMotion?0:last/1000};paintSky(ctx,ambience);graphics.world(ctx,cameraY);
-  paintGuildRoof(ctx,camera,last/1000);drawRoom(55,230,'ENTRANCE',true,'The token keeps the road open');drawRoom(285,190,'QUARTERS',true,'Beds for those who return');drawRoom(475,230,'SERVICE CORRIDOR',true,'Stairs reach a dry landing');drawRoom(705,270,'SERVICE ROOM',state.flags.repaired,state.flags.repaired?'The ledger found a shore':'Bricked shut from within');
-  if(!state.flags.breach){for(let y=240;y<395;y+=20)for(let x=698;x<728;x+=16)rect(x+(y%40?0:6),y,14,18,'#877b65');text('STR 10',686,330,12,'#e8be82');}else{rect(698,236,30,7,'#a59874');}
-  if(state.flags.repaired){rect(780,319,22,61,'#283c44');text('STORE ↑ · E',758,305,10,'#b9d8d2');rect(850,350,50,14,'#ae8958');rect(870,338,20,12,'#e0cb91');rect(935,312,8,62,'#cead5e');rect(930,331,18,18,'#18202a');if(state.flags.anchor)rect(934,335,10,10,'#d3ad61');text(state.flags.anchor?'BRASS FITTING':'EMPTY SOCKET',904,300,9,'#cead5e');}
-  if(state.flags.anchor){drawRoom(975,290,'THE RETURNED LANDING',true,state.flags.welcomeLanding?'A chair for visitors':state.flags.memorialLanding?'An oath worth reading':'Rain falls from a distant shore');rect(1090,323,28,44,'#4d7a69');text('◇',1098,350,22,'#d8d197');rect(1175,360,16,22,'#a78a61');rect(1175,348,5,20,'#a78a61');}
-  else missingRoom(975,290,'A MISSING LANDING','An anchor might bring it home');
-  const view=visibleBounds(camera,cameraY,graphics.zoom);for(const r of D.rooms){if(r.x+r.w<view.left-50||r.x>view.right+50)continue;if(state.flags[r.anchor]){drawRoom(r.x,r.w,r.name,state.flags[r.operational],state.flags[r.operational]?r.restored:r.ruined);if(r.region){const color={fen:'#83bba9',ash:'#dba876',glass:'#a5cbe0',root:'#99be88',frost:'#b2d9e0',clock:'#d9bd83',deep:'#7abfbf',star:'#bcabe0'}[r.region];for(let i=0;i<3;i++){rect(r.x+125+i*42,340,24,42,color+'55');rect(r.x+122+i*42,335,30,5,color);}text('◇ '+D.regions.find(g=>g.id===r.region).name,r.x+100,325,11,color);}
- if(r.id==='library'){for(let i=0;i<8;i++)rect(r.x+140+i*10,330-i%3*8,7,50,'#938d63');if(!state.flags.libraryOpened){rect(r.x-5,250,14,145,'#6f637e');text('LITERACY',r.x+12,320,11,'#b8a5ce');}}if(r.id==='garden'){for(let i=0;i<5;i++){rect(r.x+120+i*22,355,15,28,'#a4815c');rect(r.x+125+i*22,315,6,45,'#72946c');}if(state.flags.hospice)rect(r.x+35,357,65,24,'#b8baa0');}if(r.id==='observatory'){rect(r.x+130,295,10,75,'#a79a71');rect(r.x+102,285,90,14,'#b4b59a');}if(r.id==='threshold'){rect(r.x+100,290,90,104,state.flags.gateOpen?'#7b9a77':'#4e6a65');rect(r.x+112,302,66,92,'#152a27');text(state.flags.prepared?'SAFE SEAL':'SEVERED',r.x+112,348,11,'#d8d197');}}
-    else missingRoom(r.x,r.w,r.id==='library'&&state.flags.anchor?'A MISSING ARCHIVE':'A DISTANT FRAGMENT',r.id==='library'&&state.flags.anchor?'Sera kept the chart':'Its destination is not yet known');}
-  rect(430,435,390,145,'#252e38');for(let ry=440;ry<574;ry+=18)for(let rx=435;rx<815;rx+=44){rect(rx+(ry%36?12:0),ry,39,16,'#303943');}rect(450,450,330,123,state.flags.cellarDrained?'#343b38':'#1a3839');rect(450,568,330,12,'#5b6050');text(state.flags.cellarDrained?'DRAINED CELLAR':'FLOODED CELLAR',480,475,15,'#8cabac');text('A dry landing above the ship',480,492,11,'#8cabac');rect(460,505,106,12,'#6c6354');rect(460,516,10,54,'#51493e');rect(590,522,150,38,'#273d40');if(!state.flags.cellarDrained)for(let i=0;i<7;i++)rect(550,530+i*5,230,1,'#365c5b');rect(620,528,100,22,'#665840');ctx.strokeStyle=state.flags.cellarDrained?'#8fd6b7':'#d38c70';ctx.lineWidth=3;ctx.beginPath();ctx.arc(735-camera,538,10,0,Math.PI*2);ctx.moveTo(725-camera,538);ctx.lineTo(745-camera,538);ctx.moveTo(735-camera,528);ctx.lineTo(735-camera,548);ctx.stroke();text(state.flags.cellarDrained?'DRAIN OPEN':'DRAIN WHEEL · E',683,516,10,'#e4c8a0');
-  if(state.flags.stairs){for(let i=0;i<6;i++)rect(495+i*8,404+i*19,26,5,'#aa9270');rect(520,525,44,6,'#aa9270');}else text('STAIRS COLLAPSED',480,425,10,'#c3ac7b');
-  rect(-330,395,385,12,'#736749');rect(43,275,12,120,'#8c7d5c');text(state.flags.gateOpen?'THE ROAD IS OPEN':'BOUNDARY',-100,340,12,'#c3b38b');
-  for(const r of D.home(state).filter(r=>r.id!==c.id))drawResident(r,residentPosition(r),380);
-  if(state.flags.repaired){ctx.save();ctx.translate(0,-240);drawRoom(705,270,'STORE ROOM',true,'Shared equipment · E at the shelves');for(let i=0;i<4;i++){rect(795+i*34,330,26,50,'#654f3b');rect(795+i*34,342,26,3,'#c49c62');}ctx.restore();}
-  drawVerticalRooms();for(const r of D.chambers.filter(r=>state.flags['discovered_'+r.id]&&r.x+r.w>=view.left&&r.x<=view.right&&r.y>=view.top&&r.y-190<=view.bottom))paintChamber(ctx,camera,r,state,ambience.time);drawPassageMarkers();drawRouteLandmarks();drawHomeAttack();drawResident(c,player.x,player.y,true);graphics.end(ctx);paintMagicMotes(ctx,ambience);
+function text(t, x, y, size = 14, color = '#adbaab') {
+  ctx.fillStyle = color;
+  ctx.font = `${size}px Georgia`;
+  ctx.fillText(t, x - camera, y);
 }
-function drawPassageMarkers(){
- const closest=nearest();
- for(const h of hotspots().filter(h=>h.y===player.floor&&(!h.done||(h.text||'').startsWith('W')||(h.text||'').startsWith('S')))){paintAffordance(ctx,camera,h,graphics.reducedMotion?0:last/1000,h.action===hoveredObject?.action&&h.x===hoveredObject?.x||Math.abs(h.x-player.x)<58);}
+function drawRoom(x, w, name, restored, details) {
+  const view = visibleBounds(camera, cameraY, graphics.zoom);
+  if (x + w < view.left - 50 || x > view.right + 50) return;
+  paintInterior(ctx, camera, x, w, name, restored, graphics.reducedMotion ? 0 : last / 1000);
+  paintRoomIdentity(ctx, camera, x, w, name, restored, graphics.reducedMotion ? 0 : last / 1000);
 }
-function drawHomeAttack(){
- const d=D.homeDanger(state);const battles=D.activeMissions(state).filter(m=>D.contracts.find(def=>def.id===m.id).internal);
- const threats=[...(d?[{def:d,location:state.threats[d.id]}]:[]),...battles.filter(m=>m.id==='dragon').map(m=>({def:D.contracts.find(d=>d.id===m.id),location:{x:760,y:1250}})),...D.contracts.filter(d=>d.location&&state.threats?.[d.id]&&!state.flags[d.exclusive]).map(def=>({def,location:def.location}))];
- for(const {def,location} of threats){const x=location?.x||640,y=location?.y||380,shape=def.shape||'dragon',time=last/1000;if(def.id!=='dragon')paintCreature(ctx,camera,x,y,shape,def.color||'#c99360',graphics.reducedMotion?0:time,def.id);text(def.name,x-80,y-105,12,'#efbc98');
- const m=battles.find(m=>m.id===def.id);if(m){m.party.forEach((id,i)=>{const c=state.roster.find(c=>c.id===id),side=i%2?-1:1,px=x+side*(90+Math.floor(i/2)*55),bob=D.injuryLevel(c)>=4||graphics.reducedMotion?0:Math.sin(time*3+i)*3;if(c.status!=='dead'){drawResident(c,px,y+bob);if(D.injuryLevel(c)>=4){text('UNCONSCIOUS',px-28,y+18,9,'#edaaa0');}else{paintSpell(ctx,camera,{x:px,y},{x,y},graphics.reducedMotion?0:time+i*.3,c.specialisation||c.type);}}});const total=def.days*D.profiles[def.id].amount;rect(x-45,y-121,90,5,'#30242a');rect(x-45,y-121,90*(1-m.progress/total),5,'#dc9b74');text('FIGHT · '+Math.floor(m.progress/total*100)+'% cleared',x-65,y-105,10,'#ead4b1');}
- }
+function missingRoom(x, w, name, lead) {
+  rect(x, 204, w, 200, '#0d111a');
+  for (let i = 0; i < 9; i++) rect(x + (i % 2) * 9, 205 + i * 21, 13, 15, '#535048');
+  rect(x, 395, 40, 12, '#796348');
+  text(name, x + 20, 275, 15, '#708d7b');
+  text(lead, x + 20, 300, 12, '#708d7b');
 }
-function drawRouteLandmarks(){
- // Visible stair silhouettes and actual doors replace explanatory placards.
- rect(325,256,50,132,'#17252c');for(let i=0;i<8;i++)rect(327+i*2,378-i*15,40,5,state.flags.tower?'#cbb28a':'#666b69');rect(326,244,49,9,'#8c9e90');
- if(!state.flags.tower){rect(352,322,9,11,'#bda477');ctx.strokeStyle='#bda477';ctx.beginPath();ctx.arc(356-camera,322,4,Math.PI,0);ctx.stroke();}
- rect(487,380,43,7,state.flags.stairs?'#bb9870':'#655a50');rect(505,383,3,19,'#cdb78b');
- if(state.flags.stairs){rect(565,428,25,76,'#645e51');rect(570,434,15,65,'#172b31');}
- if(state.flags.labyrinthHeart){rect(857,926,46,94,'#423b35');rect(864,934,32,82,'#20212a');rect(884,978,5,5,'#daa662');}
- for(const id of D.damagedRooms(state)){const x=id==='service'?810:id==='quarters'?310:D.rooms.find(r=>r.id===id).x+30;ctx.strokeStyle='#d28b76';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-camera,250);ctx.lineTo(x+20-camera,290);ctx.lineTo(x+6-camera,318);ctx.stroke();}
+function drawResident(c, x, y, controlled = false) {
+  paintCharacter(ctx, camera, c, x, y, controlled, player.facing || 1);
+  paintEquipment(
+    ctx,
+    camera,
+    c,
+    x,
+    y,
+    graphics.reducedMotion ? 0 : last / 1000,
+    controlled ? player.facing || 1 : 1,
+  );
+  if (c.specialisation || c.undead)
+    text(D.classOf(c).name, x - 30, y - 78, 9, c.undead ? '#99c58e' : '#d8bc82');
+  if (!controlled && D.availableChoices(state, c.id).length)
+    text('…', x - 5, y - 75, 20, '#c5a268');
 }
-function drawVerticalRooms(){
-  function chamber(x,y,w,title,color){
-   const personality=title.includes('MAP')?'RETURNED ARCHIVE':title.includes('LABYRINTH')?'TIDE VAULT':title.includes('CROWN')?'FROST LABORATORY':title.includes('FURNACE')?'ASH FORGE':'CLOCK WORKSHOP';
-   ctx.save();ctx.translate(0,y-380);paintInterior(ctx,camera,x,w,personality,true,graphics.reducedMotion?0:last/1000);paintRoomIdentity(ctx,camera,x,w,personality,true,graphics.reducedMotion?0:last/1000);ctx.restore();
+function drawWorld(c) {
+  const activeRoom = visualRoom();
+  if (graphics.focus && activeRoom) {
+    const key = player.floor + ':' + activeRoom.x;
+    if (graphics.focusKey !== key) {
+      graphics.focusKey = key;
+      setZoom(Math.min(2.5, 960 / activeRoom.w));
+    }
   }
-  if(state.flags.tower){rect(292,-290,626,495,'#353a40');ctx.strokeStyle='#83bbb766';ctx.lineWidth=1;ctx.beginPath();ctx.arc(605-camera,-322,24,0,Math.PI*2);ctx.moveTo(605-camera,-358);ctx.lineTo(605-camera,-287);ctx.stroke();for(let side of [286,918]){ctx.strokeStyle='#64887088';ctx.beginPath();ctx.moveTo(side-camera,-240);ctx.bezierCurveTo(side-15-camera,-110,side+18-camera,45,side-camera,183);ctx.stroke();}for(let ry=-280;ry<205;ry+=22){rect(294,ry,8,2,'#7d746044');rect(909,ry,8,2,'#7d746044');}ctx.fillStyle='#30323b';ctx.beginPath();ctx.moveTo(280-camera,-290);ctx.lineTo(605-camera,-420);ctx.lineTo(932-camera,-290);ctx.fill();chamber(300,140,610,'THE BELL TOWER · lower landing','#425968');if(state.flags.towerCrown)chamber(300,-100,610,'THE SILENT CROWN','#405a69');else{rect(300,-275,610,185,'#101722');text('THE SILENT CROWN',330,-185,16,'#76bdb5');}for(const y of [140,-100]){for(let i=0;i<12;i++)rect(328+i*2,y+15+i*18,38,5,'#9a805d');}if(state.flags.towerCrown){rect(747,-240,66,7,'#65513c');rect(777,-235,5,20,'#c5a268');ctx.fillStyle='#a78855';ctx.beginPath();ctx.moveTo(751-camera,-155);ctx.quadraticCurveTo(763-camera,-173,761-camera,-193);ctx.quadraticCurveTo(779-camera,-228,797-camera,-193);ctx.quadraticCurveTo(795-camera,-173,809-camera,-155);ctx.closePath();ctx.fill();rect(748,-155,65,6,'#c5a268');rect(775,-149,9,8,'#b9af9f');text('An alarm caught between heartbeats',580,-120,11,'#76bdb5');}}
-  if(state.flags.labyrinth){rect(290,605,630,445,'#181e27');chamber(300,790,610,'THE LABYRINTH · the borrowed paths','#344342');if(state.flags.labyrinthHeart)chamber(300,1020,610,'THE MAP THAT KEPT ITS MAKER','#473c50');else{rect(300,850,610,210,'#0e141e');text('THE FALSE FLOOR',330,920,15,'#76bdb5');text('Tracking or Echo sight finds a path below',330,946,12,'#b9af9f');}for(const y of state.flags.labyrinthHeart?[790,1020]:[790]){for(let i=0;i<11;i++)rect(505+i*2,y-213+i*20,40,5,'#8d7355');rect(350,y+8,470,2,'#c5a268');for(let i=0;i<3;i++){rect(410+i*140,y-112,35,114,'#303540');text('◇',420+i*140,y-77,22,'#76bdb5');}}}
-  if(state.flags.dragonFound){chamber(300,1250,610,'THE OLD FURNACE','#773e30');drawFurnaceThreat();}
-  for(const d of D.sleepers){if(d.requires.some(f=>!state.flags[f])||state.roster.some(c=>c.id===d.id))continue;rect(d.x-25,d.y-66,50,66,d.id==='maelin'?'#76bdb566':d.id==='oren'?'#797974':'#4c385d');drawResident({...d,color:d.id==='oren'?'#92918a':d.color},d.x,d.y);if(d.id==='maelin'){ctx.strokeStyle='#b5e2e0';ctx.strokeRect(d.x-25-camera,d.y-66,50,66);}text('◇',d.x-8,d.y-85,23,'#76bdb5');}
-}
-function drawFurnaceThreat(){
- rect(700,1120,160,143,'#3d2928');rect(728,1140,100,120,'#13151d');text(state.flags.dragonSlain?'THE FURNACE IS CLEAR':'KEEP BEHIND THE FIREBREAK',330,1160,13,'#e6aa60');
- if(!state.flags.dragonSlain){ctx.save();ctx.translate(760-camera,1250);ctx.scale(2,2);paintCreature(ctx,0,0,0,'dragon','#884a51',graphics.reducedMotion?0:last/1000,'dragon');ctx.restore();const progress=state.threats?.dragon?.progress||0;text('Clearing progress · '+Math.floor(progress/600*100)+'%',665,1100,14,'#d87575');}else{rect(765,1210,65,42,'#947341');rect(765,1228,65,4,'#c5a268');text('Forge tools recovered',670,1190,13,'#c5a268');}
- 
-}
-function frame(now){
-  const dt=Math.min((now-last)/1000||0,.035);last=now;graphics.tick(dt);
-  const c=D.home(state).find(c=>c.id===state.selected)||D.home(state)[0];
-  if(!$('scene').open&&!tab){
-    let dir=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
-    if(dir)walkTarget=null;else if(walkTarget!==null){if(Math.abs(walkTarget-player.x)<8)walkTarget=null;else dir=Math.sign(walkTarget-player.x);}
-    if(dir)player.facing=dir;player.x+=dir*210*dt;
-    const chamber=D.roomAt(player.floor);const min=chamber?chamber.x+20:player.floor<380||player.floor>=790?300:c.id==='rowan'&&state.flags.gateOpen?-180:70;
-    const max=chamber?chamber.encounter&&!state.flags['cleared_'+chamber.id]?chamber.x+220:chamber.x+chamber.w-20:player.floor===1250&&!state.flags.dragonSlain?605:player.floor<380||player.floor>=790?900:D.walkingBoundary(state,c.id);
-    player.x=Math.max(min,Math.min(player.x,max));
-    if(player.floor===510)player.x=Math.max(520,Math.min(player.x,555));
-    if(player.floor===555)player.x=Math.max(540,Math.min(player.x,760));
-    player.vy+=1100*dt;player.y+=player.vy*dt;
-    if(player.y>=player.floor){player.y=player.floor;player.vy=0;grounded=true;}
-    if(player.floor===380&&c.id==='rowan'&&player.x<0&&!state.flags.free)act(()=>D.finish(state));
+  const target =
+    graphics.focus && activeRoom ? activeRoom.x + activeRoom.w / 2 - 600 : player.x - 600;
+  camera += (target - camera) * 0.08;
+  cameraY += (player.floor - 380 - (graphics.focus ? 55 : 0) - cameraY) * 0.09;
+  graphics.begin(ctx);
+  const ambience = {
+    camera,
+    cameraY,
+    floor: player.floor,
+    time: graphics.reducedMotion ? 0 : last / 1000,
+  };
+  paintSky(ctx, ambience);
+  graphics.world(ctx, cameraY);
+  paintGuildRoof(ctx, camera, last / 1000);
+  drawRoom(55, 230, 'ENTRANCE', true, 'The token keeps the road open');
+  drawRoom(285, 190, 'QUARTERS', true, 'Beds for those who return');
+  drawRoom(475, 230, 'SERVICE CORRIDOR', true, 'Stairs reach a dry landing');
+  drawRoom(
+    705,
+    270,
+    'SERVICE ROOM',
+    state.flags.repaired,
+    state.flags.repaired ? 'The ledger found a shore' : 'Bricked shut from within',
+  );
+  if (!state.flags.breach) {
+    for (let y = 240; y < 395; y += 20)
+      for (let x = 698; x < 728; x += 16) rect(x + (y % 40 ? 0 : 6), y, 14, 18, '#877b65');
+    text('STR 10', 686, 330, 12, '#e8be82');
+  } else {
+    rect(698, 236, 30, 7, '#a59874');
   }
-  if(hoveredObject&&hoveredObject.y!==player.floor)hoveredObject=null;drawWorld(c);const h=hoveredObject||nearest();
-  $('hint').textContent=h?h.text:c.id==='rowan'&&!state.flags.repaired&&!state.flags.anchor&&player.x>650?'Rowan’s binding ends here. An adventurer must go further.':D.roomAt(player.floor)?'E at a marked door · Exploration lists routes and return passage':player.floor!==380?'Explore this floor · W / S at the stair · E investigate':state.flags.gateOpen?'Rowan can walk left through the entrance gate.':player.x>=D.worldBoundary(state)-10&&state.flags.anchor?'The next span is missing. Follow the house’s leads before crossing.':'Explore the rooms · E investigates and starts conversations';
-  $('position').textContent=visualRoom()?.name|| (player.floor===140&&player.x>705?'Store room':({380:'Ground floor',140:'Tower landing','-100':'Bell tower crown',510:'Dry cellar landing',555:state.flags.cellarDrained?'Drained cellar':'Flooded cellar',790:'Upper labyrinth',1020:'Labyrinth heart',1250:'Old furnace'})[player.floor]);
+  if (state.flags.repaired) {
+    rect(780, 319, 22, 61, '#283c44');
+    text('STORE ↑ · E', 758, 305, 10, '#b9d8d2');
+    rect(850, 350, 50, 14, '#ae8958');
+    rect(870, 338, 20, 12, '#e0cb91');
+    rect(935, 312, 8, 62, '#cead5e');
+    rect(930, 331, 18, 18, '#18202a');
+    if (state.flags.anchor) rect(934, 335, 10, 10, '#d3ad61');
+    text(state.flags.anchor ? 'BRASS FITTING' : 'EMPTY SOCKET', 904, 300, 9, '#cead5e');
+  }
+  if (state.flags.anchor) {
+    drawRoom(
+      975,
+      290,
+      'THE RETURNED LANDING',
+      true,
+      state.flags.welcomeLanding
+        ? 'A chair for visitors'
+        : state.flags.memorialLanding
+          ? 'An oath worth reading'
+          : 'Rain falls from a distant shore',
+    );
+    rect(1090, 323, 28, 44, '#4d7a69');
+    text('◇', 1098, 350, 22, '#d8d197');
+    rect(1175, 360, 16, 22, '#a78a61');
+    rect(1175, 348, 5, 20, '#a78a61');
+  } else missingRoom(975, 290, 'A MISSING LANDING', 'An anchor might bring it home');
+  const view = visibleBounds(camera, cameraY, graphics.zoom);
+  for (const r of D.rooms) {
+    if (r.x + r.w < view.left - 50 || r.x > view.right + 50) continue;
+    if (state.flags[r.anchor]) {
+      drawRoom(
+        r.x,
+        r.w,
+        r.name,
+        state.flags[r.operational],
+        state.flags[r.operational] ? r.restored : r.ruined,
+      );
+      if (r.region) {
+        const color = {
+          fen: '#83bba9',
+          ash: '#dba876',
+          glass: '#a5cbe0',
+          root: '#99be88',
+          frost: '#b2d9e0',
+          clock: '#d9bd83',
+          deep: '#7abfbf',
+          star: '#bcabe0',
+        }[r.region];
+        for (let i = 0; i < 3; i++) {
+          rect(r.x + 125 + i * 42, 340, 24, 42, color + '55');
+          rect(r.x + 122 + i * 42, 335, 30, 5, color);
+        }
+        text('◇ ' + D.regions.find((g) => g.id === r.region).name, r.x + 100, 325, 11, color);
+      }
+      if (r.id === 'library') {
+        for (let i = 0; i < 8; i++) rect(r.x + 140 + i * 10, 330 - (i % 3) * 8, 7, 50, '#938d63');
+        if (!state.flags.libraryOpened) {
+          rect(r.x - 5, 250, 14, 145, '#6f637e');
+          text('LITERACY', r.x + 12, 320, 11, '#b8a5ce');
+        }
+      }
+      if (r.id === 'garden') {
+        for (let i = 0; i < 5; i++) {
+          rect(r.x + 120 + i * 22, 355, 15, 28, '#a4815c');
+          rect(r.x + 125 + i * 22, 315, 6, 45, '#72946c');
+        }
+        if (state.flags.hospice) rect(r.x + 35, 357, 65, 24, '#b8baa0');
+      }
+      if (r.id === 'observatory') {
+        rect(r.x + 130, 295, 10, 75, '#a79a71');
+        rect(r.x + 102, 285, 90, 14, '#b4b59a');
+      }
+      if (r.id === 'threshold') {
+        rect(r.x + 100, 290, 90, 104, state.flags.gateOpen ? '#7b9a77' : '#4e6a65');
+        rect(r.x + 112, 302, 66, 92, '#152a27');
+        text(state.flags.prepared ? 'SAFE SEAL' : 'SEVERED', r.x + 112, 348, 11, '#d8d197');
+      }
+    } else
+      missingRoom(
+        r.x,
+        r.w,
+        r.id === 'library' && state.flags.anchor ? 'A MISSING ARCHIVE' : 'A DISTANT FRAGMENT',
+        r.id === 'library' && state.flags.anchor
+          ? 'Sera kept the chart'
+          : 'Its destination is not yet known',
+      );
+  }
+  rect(430, 435, 390, 145, '#252e38');
+  for (let ry = 440; ry < 574; ry += 18)
+    for (let rx = 435; rx < 815; rx += 44) {
+      rect(rx + (ry % 36 ? 12 : 0), ry, 39, 16, '#303943');
+    }
+  rect(450, 450, 330, 123, state.flags.cellarDrained ? '#343b38' : '#1a3839');
+  rect(450, 568, 330, 12, '#5b6050');
+  text(state.flags.cellarDrained ? 'DRAINED CELLAR' : 'FLOODED CELLAR', 480, 475, 15, '#8cabac');
+  text('A dry landing above the ship', 480, 492, 11, '#8cabac');
+  rect(460, 505, 106, 12, '#6c6354');
+  rect(460, 516, 10, 54, '#51493e');
+  rect(590, 522, 150, 38, '#273d40');
+  if (!state.flags.cellarDrained)
+    for (let i = 0; i < 7; i++) rect(550, 530 + i * 5, 230, 1, '#365c5b');
+  rect(620, 528, 100, 22, '#665840');
+  ctx.strokeStyle = state.flags.cellarDrained ? '#8fd6b7' : '#d38c70';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(735 - camera, 538, 10, 0, Math.PI * 2);
+  ctx.moveTo(725 - camera, 538);
+  ctx.lineTo(745 - camera, 538);
+  ctx.moveTo(735 - camera, 528);
+  ctx.lineTo(735 - camera, 548);
+  ctx.stroke();
+  text(state.flags.cellarDrained ? 'DRAIN OPEN' : 'DRAIN WHEEL · E', 683, 516, 10, '#e4c8a0');
+  if (state.flags.stairs) {
+    for (let i = 0; i < 6; i++) rect(495 + i * 8, 404 + i * 19, 26, 5, '#aa9270');
+    rect(520, 525, 44, 6, '#aa9270');
+  } else text('STAIRS COLLAPSED', 480, 425, 10, '#c3ac7b');
+  rect(-330, 395, 385, 12, '#736749');
+  rect(43, 275, 12, 120, '#8c7d5c');
+  text(state.flags.gateOpen ? 'THE ROAD IS OPEN' : 'BOUNDARY', -100, 340, 12, '#c3b38b');
+  for (const r of D.home(state).filter((r) => r.id !== c.id)) {
+    const position = D.residentPosition(state, r.id);
+    drawResident(r, position.x, position.y);
+  }
+  if (state.flags.repaired) {
+    ctx.save();
+    ctx.translate(0, -240);
+    drawRoom(705, 270, 'STORE ROOM', true, 'Shared equipment · E at the shelves');
+    for (let i = 0; i < 4; i++) {
+      rect(795 + i * 34, 330, 26, 50, '#654f3b');
+      rect(795 + i * 34, 342, 26, 3, '#c49c62');
+    }
+    ctx.restore();
+  }
+  drawVerticalRooms();
+  for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
+    drawResident(
+      { ...D.recruits.find((c) => c.id === d.id), name: '', color: '#9bb3ad' },
+      d.x,
+      d.y,
+    );
+    paintResidentPrison(ctx, camera, d, graphics.reducedMotion ? 0 : last / 1000);
+  }
+  for (const r of D.chambers.filter(
+    (r) =>
+      state.flags['discovered_' + r.id] &&
+      r.x + r.w >= view.left &&
+      r.x <= view.right &&
+      r.y >= view.top &&
+      r.y - 190 <= view.bottom,
+  ))
+    paintChamber(ctx, camera, r, state, ambience.time);
+  drawPassageMarkers();
+  drawRouteLandmarks();
+  drawHomeAttack();
+  drawResident(c, player.x, player.y, true);
+  graphics.end(ctx);
+  paintMagicMotes(ctx, ambience);
+}
+function drawPassageMarkers() {
+  const active = hoveredObject || nearest();
+  for (const h of hotspots().filter(
+    (h) =>
+      h.y === player.floor &&
+      (!h.done || (h.text || '').startsWith('W') || (h.text || '').startsWith('S')),
+  )) {
+    paintAffordance(
+      ctx,
+      camera,
+      h,
+      graphics.reducedMotion ? 0 : last / 1000,
+      h.action === active?.action && h.choice === active?.choice && h.x === active?.x,
+    );
+  }
+}
+function drawHomeAttack() {
+  const d = D.homeDanger(state);
+  const battles = D.activeMissions(state).filter(
+    (m) => D.contracts.find((def) => def.id === m.id).internal,
+  );
+  const threats = [
+    ...(d ? [{ def: d, location: state.threats[d.id] }] : []),
+    ...battles
+      .filter((m) => m.id === 'dragon')
+      .map((m) => ({ def: D.contracts.find((d) => d.id === m.id), location: { x: 760, y: 1250 } })),
+    ...D.contracts
+      .filter((d) => d.location && state.threats?.[d.id] && !state.flags[d.exclusive])
+      .map((def) => ({ def, location: def.location })),
+  ];
+  for (const { def, location } of threats) {
+    const x = location?.x || 640,
+      y = location?.y || 380,
+      shape = def.shape || 'dragon',
+      time = last / 1000;
+    if (def.id !== 'dragon')
+      paintCreature(
+        ctx,
+        camera,
+        x,
+        y,
+        shape,
+        def.color || '#c99360',
+        graphics.reducedMotion ? 0 : time,
+        def.id,
+      );
+    text(def.name, x - 80, y - 105, 12, '#efbc98');
+    const m = battles.find((m) => m.id === def.id);
+    if (m) {
+      m.party.forEach((id, i) => {
+        const c = state.roster.find((c) => c.id === id),
+          side = i % 2 ? -1 : 1,
+          px = x + side * (90 + Math.floor(i / 2) * 55),
+          bob = D.injuryLevel(c) >= 4 || graphics.reducedMotion ? 0 : Math.sin(time * 3 + i) * 3;
+        if (c.status !== 'dead') {
+          drawResident(c, px, y + bob);
+          if (D.injuryLevel(c) >= 4) {
+            text('UNCONSCIOUS', px - 28, y + 18, 9, '#edaaa0');
+          } else {
+            paintSpell(
+              ctx,
+              camera,
+              { x: px, y },
+              { x, y },
+              graphics.reducedMotion ? 0 : time + i * 0.3,
+              c.specialisation || c.type,
+            );
+          }
+        }
+      });
+      const total = def.days * D.profiles[def.id].amount;
+      rect(x - 45, y - 121, 90, 5, '#30242a');
+      rect(x - 45, y - 121, 90 * (1 - m.progress / total), 5, '#dc9b74');
+      text(
+        'FIGHT · ' + Math.floor((m.progress / total) * 100) + '% cleared',
+        x - 65,
+        y - 105,
+        10,
+        '#ead4b1',
+      );
+    }
+  }
+}
+function drawRouteLandmarks() {
+  // Visible stair silhouettes and actual doors replace explanatory placards.
+  rect(325, 256, 50, 132, '#17252c');
+  for (let i = 0; i < 8; i++)
+    rect(327 + i * 2, 378 - i * 15, 40, 5, state.flags.tower ? '#cbb28a' : '#666b69');
+  rect(326, 244, 49, 9, '#8c9e90');
+  if (!state.flags.tower) {
+    rect(352, 322, 9, 11, '#bda477');
+    ctx.strokeStyle = '#bda477';
+    ctx.beginPath();
+    ctx.arc(356 - camera, 322, 4, Math.PI, 0);
+    ctx.stroke();
+  }
+  rect(487, 380, 43, 7, state.flags.stairs ? '#bb9870' : '#655a50');
+  rect(505, 383, 3, 19, '#cdb78b');
+  if (state.flags.stairs) {
+    rect(565, 428, 25, 76, '#645e51');
+    rect(570, 434, 15, 65, '#172b31');
+  }
+  if (state.flags.labyrinthHeart) {
+    rect(857, 926, 46, 94, '#423b35');
+    rect(864, 934, 32, 82, '#20212a');
+    rect(884, 978, 5, 5, '#daa662');
+  }
+  for (const id of D.damagedRooms(state)) {
+    const x =
+      id === 'service' ? 810 : id === 'quarters' ? 310 : D.rooms.find((r) => r.id === id).x + 30;
+    ctx.strokeStyle = '#d28b76';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x - camera, 250);
+    ctx.lineTo(x + 20 - camera, 290);
+    ctx.lineTo(x + 6 - camera, 318);
+    ctx.stroke();
+  }
+}
+function drawVerticalRooms() {
+  function chamber(x, y, w, title, color) {
+    const personality = title.includes('MAP')
+      ? 'RETURNED ARCHIVE'
+      : title.includes('LABYRINTH')
+        ? 'TIDE VAULT'
+        : title.includes('CROWN')
+          ? 'FROST LABORATORY'
+          : title.includes('FURNACE')
+            ? 'ASH FORGE'
+            : 'CLOCK WORKSHOP';
+    ctx.save();
+    ctx.translate(0, y - 380);
+    paintInterior(ctx, camera, x, w, personality, true, graphics.reducedMotion ? 0 : last / 1000);
+    paintRoomIdentity(
+      ctx,
+      camera,
+      x,
+      w,
+      personality,
+      true,
+      graphics.reducedMotion ? 0 : last / 1000,
+    );
+    ctx.restore();
+  }
+  if (state.flags.tower) {
+    rect(292, -290, 626, 495, '#353a40');
+    ctx.strokeStyle = '#83bbb766';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(605 - camera, -322, 24, 0, Math.PI * 2);
+    ctx.moveTo(605 - camera, -358);
+    ctx.lineTo(605 - camera, -287);
+    ctx.stroke();
+    for (let side of [286, 918]) {
+      ctx.strokeStyle = '#64887088';
+      ctx.beginPath();
+      ctx.moveTo(side - camera, -240);
+      ctx.bezierCurveTo(side - 15 - camera, -110, side + 18 - camera, 45, side - camera, 183);
+      ctx.stroke();
+    }
+    for (let ry = -280; ry < 205; ry += 22) {
+      rect(294, ry, 8, 2, '#7d746044');
+      rect(909, ry, 8, 2, '#7d746044');
+    }
+    ctx.fillStyle = '#30323b';
+    ctx.beginPath();
+    ctx.moveTo(280 - camera, -290);
+    ctx.lineTo(605 - camera, -420);
+    ctx.lineTo(932 - camera, -290);
+    ctx.fill();
+    chamber(300, 140, 610, 'THE BELL TOWER · lower landing', '#425968');
+    if (state.flags.towerCrown) chamber(300, -100, 610, 'THE SILENT CROWN', '#405a69');
+    else {
+      rect(300, -275, 610, 185, '#101722');
+      text('THE SILENT CROWN', 330, -185, 16, '#76bdb5');
+    }
+    for (const y of [140, -100]) {
+      for (let i = 0; i < 12; i++) rect(328 + i * 2, y + 15 + i * 18, 38, 5, '#9a805d');
+    }
+    if (state.flags.towerCrown) {
+      rect(747, -240, 66, 7, '#65513c');
+      rect(777, -235, 5, 20, '#c5a268');
+      ctx.fillStyle = '#a78855';
+      ctx.beginPath();
+      ctx.moveTo(751 - camera, -155);
+      ctx.quadraticCurveTo(763 - camera, -173, 761 - camera, -193);
+      ctx.quadraticCurveTo(779 - camera, -228, 797 - camera, -193);
+      ctx.quadraticCurveTo(795 - camera, -173, 809 - camera, -155);
+      ctx.closePath();
+      ctx.fill();
+      rect(748, -155, 65, 6, '#c5a268');
+      rect(775, -149, 9, 8, '#b9af9f');
+      text('An alarm caught between heartbeats', 580, -120, 11, '#76bdb5');
+    }
+  }
+  if (state.flags.labyrinth) {
+    rect(290, 605, 630, 445, '#181e27');
+    chamber(300, 790, 610, 'THE LABYRINTH · the borrowed paths', '#344342');
+    if (state.flags.labyrinthHeart)
+      chamber(300, 1020, 610, 'THE MAP THAT KEPT ITS MAKER', '#473c50');
+    else {
+      rect(300, 850, 610, 210, '#0e141e');
+      text('THE FALSE FLOOR', 330, 920, 15, '#76bdb5');
+      text('Tracking or Echo sight finds a path below', 330, 946, 12, '#b9af9f');
+    }
+    for (const y of state.flags.labyrinthHeart ? [790, 1020] : [790]) {
+      for (let i = 0; i < 11; i++) rect(505 + i * 2, y - 213 + i * 20, 40, 5, '#8d7355');
+      rect(350, y + 8, 470, 2, '#c5a268');
+      for (let i = 0; i < 3; i++) {
+        rect(410 + i * 140, y - 112, 35, 114, '#303540');
+        text('◇', 420 + i * 140, y - 77, 22, '#76bdb5');
+      }
+    }
+  }
+  if (state.flags.dragonFound) {
+    chamber(300, 1250, 610, 'THE OLD FURNACE', '#773e30');
+    drawFurnaceThreat();
+  }
+  for (const d of D.sleepers) {
+    if (d.requires.some((f) => !state.flags[f]) || state.roster.some((c) => c.id === d.id))
+      continue;
+    rect(
+      d.x - 25,
+      d.y - 66,
+      50,
+      66,
+      d.id === 'maelin' ? '#76bdb566' : d.id === 'oren' ? '#797974' : '#4c385d',
+    );
+    drawResident({ ...d, color: d.id === 'oren' ? '#92918a' : d.color }, d.x, d.y);
+    if (d.id === 'maelin') {
+      ctx.strokeStyle = '#b5e2e0';
+      ctx.strokeRect(d.x - 25 - camera, d.y - 66, 50, 66);
+    }
+    text('◇', d.x - 8, d.y - 85, 23, '#76bdb5');
+  }
+}
+function drawFurnaceThreat() {
+  rect(700, 1120, 160, 143, '#3d2928');
+  rect(728, 1140, 100, 120, '#13151d');
+  text(
+    state.flags.dragonSlain ? 'THE FURNACE IS CLEAR' : 'KEEP BEHIND THE FIREBREAK',
+    330,
+    1160,
+    13,
+    '#e6aa60',
+  );
+  if (!state.flags.dragonSlain) {
+    ctx.save();
+    ctx.translate(760 - camera, 1250);
+    ctx.scale(2, 2);
+    paintCreature(
+      ctx,
+      0,
+      0,
+      0,
+      'dragon',
+      '#884a51',
+      graphics.reducedMotion ? 0 : last / 1000,
+      'dragon',
+    );
+    ctx.restore();
+    const progress = state.threats?.dragon?.progress || 0;
+    text(
+      'Clearing progress · ' + Math.floor((progress / 600) * 100) + '%',
+      665,
+      1100,
+      14,
+      '#d87575',
+    );
+  } else {
+    rect(765, 1210, 65, 42, '#947341');
+    rect(765, 1228, 65, 4, '#c5a268');
+    text('Forge tools recovered', 670, 1190, 13, '#c5a268');
+  }
+}
+function frame(now) {
+  const dt = Math.min((now - last) / 1000 || 0, 0.035);
+  last = now;
+  graphics.tick(dt);
+  const c = D.home(state).find((c) => c.id === state.selected) || D.home(state)[0];
+  if (!$('scene').open && !tab) {
+    let dir = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+    if (dir) walkTarget = null;
+    else if (walkTarget !== null) {
+      if (Math.abs(walkTarget - player.x) < 8) walkTarget = null;
+      else dir = Math.sign(walkTarget - player.x);
+    }
+    if (dir) player.facing = dir;
+    player.x += dir * 210 * dt;
+    const chamber = D.roomAt(player.floor);
+    const min = chamber
+      ? chamber.x + 20
+      : player.floor < 380 || player.floor >= 790
+        ? 300
+        : c.id === 'rowan' && state.flags.gateOpen
+          ? -180
+          : 70;
+    const max = chamber
+      ? chamber.encounter && !state.flags['cleared_' + chamber.id]
+        ? chamber.x + 220
+        : chamber.x + chamber.w - 20
+      : player.floor === 1250 && !state.flags.dragonSlain
+        ? 605
+        : player.floor < 380 || player.floor >= 790
+          ? 900
+          : D.walkingBoundary(state, c.id);
+    player.x = Math.max(min, Math.min(player.x, max));
+    if (player.floor === 510) player.x = Math.max(520, Math.min(player.x, 555));
+    if (player.floor === 555) player.x = Math.max(540, Math.min(player.x, 760));
+    player.vy += 1100 * dt;
+    player.y += player.vy * dt;
+    if (player.y >= player.floor) {
+      player.y = player.floor;
+      player.vy = 0;
+      grounded = true;
+    }
+    if (player.floor === 380 && c.id === 'rowan' && player.x < 0 && !state.flags.free)
+      act(() => D.finish(state));
+  }
+  if (hoveredObject && hoveredObject.y !== player.floor) hoveredObject = null;
+  D.rememberPosition(state, state.selected, player);
+  drawWorld(c);
+  const h = hoveredObject || nearest();
+  $('hint').textContent = h
+    ? h.text
+    : c.id === 'rowan' && !state.flags.repaired && !state.flags.anchor && player.x > 650
+      ? 'Rowan’s binding ends here. An adventurer must go further.'
+      : D.roomAt(player.floor)
+        ? 'E at a marked door · Exploration lists routes and return passage'
+        : player.floor !== 380
+          ? 'Explore this floor · W / S at the stair · E investigate'
+          : state.flags.gateOpen
+            ? 'Rowan can walk left through the entrance gate.'
+            : player.x >= D.worldBoundary(state) - 10 && state.flags.anchor
+              ? 'The next span is missing. Follow the house’s leads before crossing.'
+              : 'Explore the rooms · E investigates and starts conversations';
+  $('position').textContent =
+    visualRoom()?.name ||
+    (player.floor === 140 && player.x > 705
+      ? 'Store room'
+      : {
+          380: 'Ground floor',
+          140: 'Tower landing',
+          '-100': 'Bell tower crown',
+          510: 'Dry cellar landing',
+          555: state.flags.cellarDrained ? 'Drained cellar' : 'Flooded cellar',
+          790: 'Upper labyrinth',
+          1020: 'Labyrinth heart',
+          1250: 'Old furnace',
+        }[player.floor]);
   requestAnimationFrame(frame);
 }
-try{const raw=localStorage.getItem('bound-house-auto');if(raw)state=D.load(raw);}catch{toast('Autosave could not be read; export a checkpoint if needed.');}
-const contentErrors=D.validateContent();if(contentErrors.length)console.error(contentErrors);
-renderUI();requestAnimationFrame(frame);
-if(!state.flags.opening){scene('The visitor at the gate','For thirty years, the road ended in fog. This morning Mara arrived with a brass token, warm in her hand.\n“I found it in a pawnbroker’s drawer,” she said. “The old guild mark. When I turned it, your gate came back.”\nRowan could reach the courtyard again, but no further. The house still held their life. Mara brought word of three willing recruits and work along the old road.\n“There is a wage to earn, and a house to mend. Start there.”\nRecruit Bryn, earn gold and XP on the lantern road, and train her Strength. The house’s history will lead you beyond it. The people you hire will bring histories of their own.');state.flags.opening=true;persist();}else if(state.scenes.length)presentScene();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let loadedSave = false;
+try {
+  const raw = localStorage.getItem('bound-house-auto');
+  if (raw) {
+    state = D.load(raw);
+    loadedSave = true;
+  }
+} catch {
+  toast('Autosave could not be read; export a checkpoint if needed.');
+}
+const contentErrors = D.validateContent();
+if (contentErrors.length) console.error(contentErrors);
+player = D.residentPosition(state, state.selected);
+if (loadedSave) persist();
+renderUI();
+requestAnimationFrame(frame);
+if (!state.flags.opening) {
+  scene('The visitor at the gate', D.initial().journal[0].text);
+  state.flags.opening = true;
+  persist();
+} else if (state.scenes.length) presentScene();

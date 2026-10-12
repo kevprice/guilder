@@ -1,344 +1,459 @@
 # Available characters
 
-> Narrative update: every recruit now has a personal record, a home destination and a permanent farewell. See [STORY_REVISION.md](STORY_REVISION.md) and `homecoming.js`. Lark, Ves, Fenn, Sorrel, Sal and Tavi are spirits whose deaths are revealed through personal evidence. Oren, Maelin, Ysra, Eda and Maro survived through magical preservation. The remaining companions are living. Departures preserve register entries and return equipment to storage.
-
-Complete reference for the current playable game. There are **31 controllable characters**: Rowan, 27 hires and three awakened residents. Starting stats below are before equipment, automatic level growth and optional points. Every character has a portrait. Regional hires become available after their region’s third story job; the regional campaign begins after Rowan gains freedom.
+There are 31 controllable characters: Rowan and thirty discoverable former guild members. Regional missions recover rooms and records; residents are released inside restored guild rooms. Every character has a portrait. Existing saved parties remain available.
 
 ## Rowan
 
 ![Rowan](portraits/rowan.svg)
 
-Bound survivor and protagonist. Starts at STR 2 · AGI 4 · INT 7 · END 4. Rowan cannot join expedition parties and does not follow the recruit class trees. The landing fitting grants **House inscriptions**, used to read the warning that names Sera Venn. The observatory grants **Anchor sight**, required to inspect the replacement anchors before removing the binding. Freedom allows Rowan to leave and starts the eight-region campaign.
+The bound survivor and protagonist, STR 2 · AGI 4 · INT 7 · END 4. Rowan belonged to the old guild and helped catalogue its acquired rooms. Halden saved their life through the emergency binding. Rowan cannot leave until a replacement is prepared. House inscriptions and Anchor sight are gained through the main investigation.
 
-## Hired residents
-
-### Tamsin
+## Tamsin
 
 ![Tamsin](portraits/tamsin.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Recover the pump plans” in The Lantern Fen; hire for 80 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 12 · END 8.
-- **Starting abilities:** Water breathing.
-- **Narrative:** Pump keeper who stayed to measure the rising water.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 12 · END 8.
 
-### Rufus
+**Found in:** Sluice workshop. **Trapped by:** Held in a reversed-water ward. **Release:** Turn the disconnected hand valve.
+
+Tamsin wears the old guild’s spellkeeper insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Tamsin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** water.
+
+**Homecoming:** the fen relief camp. Magic preserved them across the years; returning home means discovering what changed.
+
+## Rufus
 
 ![Rufus](portraits/rufus.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Recover the pump plans” in The Lantern Fen; hire for 80 gold.
-- **Starting level:** 1. **Stats:** STR 12 · AGI 6 · INT 6 · END 8.
-- **Starting abilities:** Guard.
-- **Narrative:** Ferryman who carried the school to high ground.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 12 · AGI 6 · INT 6 · END 8.
 
-### Lark
+**Found in:** Reed conservatory. **Trapped by:** Held in a reversed-water ward. **Release:** Turn the disconnected hand valve.
+
+Rufus wears the old guild’s watch insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Rufus asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** his sister’s ferry landing. Magic preserved them across the years; returning home means discovering what changed.
+
+## Lark
 
 ![Lark](portraits/lark.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Recover the pump plans” in The Lantern Fen; hire for 80 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 12 · INT 6 · END 8.
-- **Starting abilities:** Tracking.
-- **Narrative:** Diver searching for the colleague lost in the culvert.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 12 · INT 6 · END 8.
 
-### Kest
+**Found in:** River infirmary. **Trapped by:** Held in a reversed-water ward. **Release:** Turn the disconnected hand valve.
+
+Lark wears the old guild’s pathfinder insignia. Their drainage ward stopped the disaster at this room’s door, but held its keeper in the same unfinished moment. The explorer follows the surviving release diagram. When the ward opens, Lark asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** tracking.
+
+**Homecoming:** the culvert memorial. Their personal evidence reveals a spirit who can pass on.
+
+## Kest
 
 ![Kest](portraits/kest.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Recover Kest’s patrol” in The Ash March; hire for 110 gold.
-- **Starting level:** 1. **Stats:** STR 13 · AGI 6 · INT 6 · END 9.
-- **Starting abilities:** Guard.
-- **Narrative:** Firewatch captain who wants the furnace shut down safely.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 13 · AGI 6 · INT 6 · END 9.
 
-### Ves
+**Found in:** Ash forge. **Trapped by:** Caught in a cooling circle. **Release:** Break the chalk circuit with its wooden switch.
+
+Kest wears the old guild’s watch insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Kest asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** the firewatch settlement. Magic preserved them across the years; returning home means discovering what changed.
+
+## Ves
 
 ![Ves](portraits/ves.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Recover Kest’s patrol” in The Ash March; hire for 110 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 13 · END 9.
-- **Starting abilities:** Magical literacy.
-- **Narrative:** Kiln apprentice carrying the last watch order.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 13 · END 9.
 
-### Dara
+**Found in:** Cinder baths. **Trapped by:** Caught in a cooling circle. **Release:** Break the chalk circuit with its wooden switch.
+
+Ves wears the old guild’s spellkeeper insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Ves asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** literacy.
+
+**Homecoming:** the kiln workers’ burial ground. Their personal evidence reveals a spirit who can pass on.
+
+## Dara
 
 ![Dara](portraits/dara.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Recover Kest’s patrol” in The Ash March; hire for 110 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 13 · INT 6 · END 9.
-- **Starting abilities:** Tracking.
-- **Narrative:** Farm runner who knows the underground fuel routes.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 13 · INT 6 · END 9.
 
-### Corin
+**Found in:** Firewatch hall. **Trapped by:** Caught in a cooling circle. **Release:** Break the chalk circuit with its wooden switch.
+
+Dara wears the old guild’s pathfinder insignia. The old guild’s fire crew sealed this room before the furnace spread. The protective circle never released its occupants. The explorer follows the surviving release diagram. When the ward opens, Dara asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** tracking.
+
+**Homecoming:** her family’s farm. Magic preserved them across the years; returning home means discovering what changed.
+
+## Corin
 
 ![Corin](portraits/corin.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Recover the lens maker” in The Glass Coast; hire for 140 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 14 · END 10.
-- **Starting abilities:** Echo sight.
-- **Narrative:** Lens maker determined to restore one truthful beacon.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 14 · END 10.
 
-### Fenn
+**Found in:** Mirror studio. **Trapped by:** Caught behind a reflected doorway. **Release:** Cover the spare mirror with its cloth.
+
+Corin wears the old guild’s spellkeeper insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Corin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** echoSight.
+
+**Homecoming:** the coastal lens workshop. Magic preserved them across the years; returning home means discovering what changed.
+
+## Fenn
 
 ![Fenn](portraits/fenn.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Recover the lens maker” in The Glass Coast; hire for 140 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 14 · INT 6 · END 10.
-- **Starting abilities:** Threadwalk.
-- **Narrative:** Rescue sailor who has followed too many false lights.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 14 · INT 6 · END 10.
 
-### Mira
+**Found in:** Tide chart room. **Trapped by:** Caught behind a reflected doorway. **Release:** Cover the spare mirror with its cloth.
+
+Fenn wears the old guild’s pathfinder insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Fenn asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** threadwalk.
+
+**Homecoming:** the harbour where their partner lives. Their personal evidence reveals a spirit who can pass on.
+
+## Mira
 
 ![Mira](portraits/mira.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Recover the lens maker” in The Glass Coast; hire for 140 gold.
-- **Starting level:** 1. **Stats:** STR 14 · AGI 6 · INT 6 · END 10.
-- **Starting abilities:** Guard.
-- **Narrative:** Harbour guard protecting the lighthouse workers.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 14 · AGI 6 · INT 6 · END 10.
 
-### Asha
+**Found in:** Salt chapel. **Trapped by:** Caught behind a reflected doorway. **Release:** Cover the spare mirror with its cloth.
+
+Mira wears the old guild’s watch insignia. The coast watch tried to close a false road. Their own reflection kept calling them back into the room. The explorer follows the surviving release diagram. When the ward opens, Mira asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** the harbour watch. Magic preserved them across the years; returning home means discovering what changed.
+
+## Asha
 
 ![Asha](portraits/asha.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Find the original seed keeper” in The Rootwild; hire for 170 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 15 · END 11.
-- **Starting abilities:** Magical literacy.
-- **Narrative:** Seed keeper who knows how to pause the growth spell.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 15 · END 11.
 
-### Bram
+**Found in:** Root nursery. **Trapped by:** Sleeping inside a root cradle. **Release:** Open the labelled pruning latch.
+
+Asha wears the old guild’s spellkeeper insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Asha asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** literacy.
+
+**Homecoming:** the village seed house. Magic preserved them across the years; returning home means discovering what changed.
+
+## Bram
 
 ![Bram](portraits/bram.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Find the original seed keeper” in The Rootwild; hire for 170 gold.
-- **Starting level:** 1. **Stats:** STR 15 · AGI 6 · INT 6 · END 11.
-- **Starting abilities:** Stone song.
-- **Narrative:** Village carpenter protecting the food carriers.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 15 · AGI 6 · INT 6 · END 11.
 
-### Sorrel
+**Found in:** Herbal kitchen. **Trapped by:** Sleeping inside a root cradle. **Release:** Open the labelled pruning latch.
+
+Bram wears the old guild’s watch insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Bram asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** stoneSong.
+
+**Homecoming:** the village carpenters’ yard. Magic preserved them across the years; returning home means discovering what changed.
+
+## Sorrel
 
 ![Sorrel](portraits/sorrel.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Find the original seed keeper” in The Rootwild; hire for 170 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 15 · INT 6 · END 11.
-- **Starting abilities:** Tracking.
-- **Narrative:** Herbalist reaching sick families through the canopy.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 15 · INT 6 · END 11.
 
-### Neris
+**Found in:** Seed vault. **Trapped by:** Sleeping inside a root cradle. **Release:** Open the labelled pruning latch.
+
+Sorrel wears the old guild’s pathfinder insignia. The guild’s growers used a living shelter to protect this room. Its roots held the occupants after the evacuation ended. The explorer follows the surviving release diagram. When the ward opens, Sorrel asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** tracking.
+
+**Homecoming:** the canopy hospice. Their personal evidence reveals a spirit who can pass on.
+
+## Neris
 
 ![Neris](portraits/neris.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Rescue Neris from the ice shelf” in The White Stair; hire for 200 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 16 · END 12.
-- **Starting abilities:** Echo sight.
-- **Narrative:** Weather keeper stranded by her own station’s broken ward.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 16 · END 12.
 
-### Tor
+**Found in:** Frost laboratory. **Trapped by:** Preserved in a snow ward. **Release:** Turn the thaw lever shown on the wall.
+
+Neris wears the old guild’s spellkeeper insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Neris asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** echoSight.
+
+**Homecoming:** the mountain weather station. Magic preserved them across the years; returning home means discovering what changed.
+
+## Tor
 
 ![Tor](portraits/tor.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Rescue Neris from the ice shelf” in The White Stair; hire for 200 gold.
-- **Starting level:** 1. **Stats:** STR 16 · AGI 6 · INT 6 · END 12.
-- **Starting abilities:** Guard.
-- **Narrative:** Mountain porter who refuses to leave travellers behind.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 16 · AGI 6 · INT 6 · END 12.
 
-### Eda
+**Found in:** Mountain guesthouse. **Trapped by:** Preserved in a snow ward. **Release:** Turn the thaw lever shown on the wall.
+
+Tor wears the old guild’s watch insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Tor asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** the mountain porters’ lodge. Magic preserved them across the years; returning home means discovering what changed.
+
+## Eda
 
 ![Eda](portraits/eda.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Rescue Neris from the ice shelf” in The White Stair; hire for 200 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 16 · INT 6 · END 12.
-- **Starting abilities:** Threadwalk.
-- **Narrative:** Avalanche surveyor with a record of every broken pole.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 16 · INT 6 · END 12.
 
-### Perrin
+**Found in:** Snow observatory. **Trapped by:** Preserved in a snow ward. **Release:** Turn the thaw lever shown on the wall.
+
+Eda wears the old guild’s pathfinder insignia. The weather crew stopped the collapsing roof with a freezing ward. The ward preserved them alongside the ice. The explorer follows the surviving release diagram. When the ward opens, Eda asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** threadwalk.
+
+**Homecoming:** her grown apprentice’s survey hut. Magic preserved them across the years; returning home means discovering what changed.
+
+## Perrin
 
 ![Perrin](portraits/perrin.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Find Perrin’s missing key” in The Clockwork Ward; hire for 230 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 17 · END 13.
-- **Starting abilities:** Magical literacy.
-- **Narrative:** Clockmaker trying to end the expired emergency charter.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 17 · END 13.
 
-### Joss
+**Found in:** Clock workshop. **Trapped by:** Held by the emergency clock. **Release:** Release the local pendulum brake.
+
+Perrin wears the old guild’s spellkeeper insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Perrin asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** literacy.
+
+**Homecoming:** the town’s public workshop. Magic preserved them across the years; returning home means discovering what changed.
+
+## Joss
 
 ![Joss](portraits/joss.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Find Perrin’s missing key” in The Clockwork Ward; hire for 230 gold.
-- **Starting level:** 1. **Stats:** STR 17 · AGI 6 · INT 6 · END 13.
-- **Starting abilities:** Guard.
-- **Narrative:** Former court guard who now escorts released prisoners.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 17 · AGI 6 · INT 6 · END 13.
 
-### Pip
+**Found in:** Brass court. **Trapped by:** Held by the emergency clock. **Release:** Release the local pendulum brake.
+
+Joss wears the old guild’s watch insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Joss asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** the prisoners’ public hearing. Magic preserved them across the years; returning home means discovering what changed.
+
+## Pip
 
 ![Pip](portraits/pip.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Find Perrin’s missing key” in The Clockwork Ward; hire for 230 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 17 · INT 6 · END 13.
-- **Starting abilities:** Tracking.
-- **Narrative:** Apprentice who mapped the courthouse service passages.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 17 · INT 6 · END 13.
 
-### Liora
+**Found in:** Automaton stable. **Trapped by:** Held by the emergency clock. **Release:** Release the local pendulum brake.
+
+Pip wears the old guild’s pathfinder insignia. The guild’s court staff were held by a clock that refused to let the emergency hour finish. The explorer follows the surviving release diagram. When the ward opens, Pip asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** tracking.
+
+**Homecoming:** their mother’s bakery. Magic preserved them across the years; returning home means discovering what changed.
+
+## Liora
 
 ![Liora](portraits/liora.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Find Liora’s dive team” in The Undersea Vault; hire for 260 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 18 · END 14.
-- **Starting abilities:** Water breathing.
-- **Narrative:** Treasury diver determined to return every recovered deposit.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 18 · END 14.
 
-### Maro
+**Found in:** Diving room. **Trapped by:** Suspended inside a pressure seal. **Release:** Open the isolated pressure release.
+
+Liora wears the old guild’s spellkeeper insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Liora asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** water.
+
+**Homecoming:** the quay deposit office. Magic preserved them across the years; returning home means discovering what changed.
+
+## Maro
 
 ![Maro](portraits/maro.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Find Liora’s dive team” in The Undersea Vault; hire for 260 gold.
-- **Starting level:** 1. **Stats:** STR 18 · AGI 6 · INT 6 · END 14.
-- **Starting abilities:** Stone song.
-- **Narrative:** Quay worker who braces the flooded vault roof.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 18 · AGI 6 · INT 6 · END 14.
 
-### Sal
+**Found in:** Pearl infirmary. **Trapped by:** Suspended inside a pressure seal. **Release:** Open the isolated pressure release.
+
+Maro wears the old guild’s watch insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Maro asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** stoneSong.
+
+**Homecoming:** his grandchildren’s quay house. Magic preserved them across the years; returning home means discovering what changed.
+
+## Sal
 
 ![Sal](portraits/sal.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Find Liora’s dive team” in The Undersea Vault; hire for 260 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 18 · INT 6 · END 14.
-- **Starting abilities:** Water breathing.
-- **Narrative:** Deep-water courier guiding trapped divers home.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 18 · INT 6 · END 14.
 
-### Sable
+**Found in:** Coral archive. **Trapped by:** Suspended inside a pressure seal. **Release:** Open the isolated pressure release.
+
+Sal wears the old guild’s pathfinder insignia. The guild’s divers sealed the borrowed room against the sea. Their safety spell trapped them inside its pressure boundary. The explorer follows the surviving release diagram. When the ward opens, Sal asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** water.
+
+**Homecoming:** the divers’ shore vigil. Their personal evidence reveals a spirit who can pass on.
+
+## Sable
 
 ![Sable](portraits/sable.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** After “Find Sable’s wrecked camp” in The Fallen Star; hire for 290 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 19 · END 15.
-- **Starting abilities:** Echo sight.
-- **Narrative:** Signal engineer carrying the plans for manual road lamps.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 5 · AGI 6 · INT 19 · END 15.
 
-### Wynn
+**Found in:** Star laboratory. **Trapped by:** Lost inside a signal echo. **Release:** Disconnect the local echo receiver.
+
+Sable wears the old guild’s spellkeeper insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Sable asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** echoSight.
+
+**Homecoming:** the roadkeepers’ signal school. Magic preserved them across the years; returning home means discovering what changed.
+
+## Wynn
 
 ![Wynn](portraits/wynn.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** After “Find Sable’s wrecked camp” in The Fallen Star; hire for 290 gold.
-- **Starting level:** 1. **Stats:** STR 19 · AGI 6 · INT 6 · END 15.
-- **Starting abilities:** Guard.
-- **Narrative:** Roadkeeper who held the camp against the beacon’s predators.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 19 · AGI 6 · INT 6 · END 15.
 
-### Tavi
+**Found in:** Sky infirmary. **Trapped by:** Lost inside a signal echo. **Release:** Disconnect the local echo receiver.
+
+Wynn wears the old guild’s watch insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Wynn asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** guard.
+
+**Homecoming:** the surviving road camp. Magic preserved them across the years; returning home means discovering what changed.
+
+## Tavi
 
 ![Tavi](portraits/tavi.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** After “Find Sable’s wrecked camp” in The Fallen Star; hire for 290 gold.
-- **Starting level:** 1. **Stats:** STR 5 · AGI 19 · INT 6 · END 15.
-- **Starting abilities:** Threadwalk.
-- **Narrative:** Hill runner who counts travellers before closing a road.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 5 · AGI 19 · INT 6 · END 15.
 
-### Bryn
+**Found in:** Roadkeepers hall. **Trapped by:** Lost inside a signal echo. **Release:** Disconnect the local echo receiver.
+
+Tavi wears the old guild’s pathfinder insignia. The roadkeepers brought this room into the house during the evacuation. Its broken receiver kept repeating their final signal. The explorer follows the surviving release diagram. When the ward opens, Tavi asks whether the evacuation is over. Rowan explains how long the room has been cut off. They sit together before looking through the belongings for a home address. Someone outside may still be waiting for news.
+
+**Starting abilities:** threadwalk.
+
+**Homecoming:** the hill travellers’ memorial. Their personal evidence reveals a spirit who can pass on.
+
+## Bryn
 
 ![Bryn](portraits/bryn.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Arrival:** Available from the beginning; hire for 30 gold.
-- **Starting level:** 1. **Stats:** STR 7 · AGI 4 · INT 3 · END 7.
-- **Starting abilities:** None; learn foundation skills through Training.
-- **Narrative:** A mason’s daughter who carries a shield made from a door. She came to repair the guild’s reputation, one paid job at a time.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 7 · AGI 4 · INT 3 · END 7.
 
-### Nell
+**Found in:** Entrance hall. **Trapped by:** Caught beneath a stasis-bound door. **Release:** Lift the loose latch.
+
+The workshop door is balanced across Bryn’s shoulder. Dust hangs motionless around its latch. Rowan remembers her carrying it toward the failing stair.
+Lifting the latch breaks the ward. Bryn catches the door, curses its weight and asks Rowan to take one end.
+She thinks the alarm has only just stopped. Rowan tells her the year. She looks toward the stair, then back at them.
+“Father was meant to come on Friday,” she says.
+Mara helps them lower the door. Bryn runs her hand over its familiar chisel mark. Later she will fit straps to it. For now she asks whether there are any letters.
+
+**Starting abilities:** Learn through Training.
+
+**Homecoming:** the rebuilt waystation. Magic preserved them across the years; returning home means discovering what changed.
+
+## Nell
 
 ![Nell](portraits/nell.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Arrival:** Available from the beginning; hire for 65 gold.
-- **Starting level:** 1. **Stats:** STR 4 · AGI 8 · INT 5 · END 5.
-- **Starting abilities:** None; learn foundation skills through Training.
-- **Narrative:** A local guide who remembers paths that the maps have forgotten. Her grandmother once sheltered a returning guild party.
+**Class:** Scout. **Starting level:** 1. **Stats:** STR 4 · AGI 8 · INT 5 · END 5.
 
-### Ivo
+**Found in:** Quarters. **Trapped by:** Hidden inside a folded corridor. **Release:** Unfold the chalk route.
+
+The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.
+Nell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.
+She opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.
+“Did they get there?” she asks. Nobody can answer yet.
+She had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.
+
+**Starting abilities:** Learn through Training.
+
+**Homecoming:** the shelter roads. Magic preserved them across the years; returning home means discovering what changed.
+
+## Ivo
 
 ![Ivo](portraits/ivo.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Arrival:** Available from the beginning; hire for 80 gold.
-- **Starting level:** 1. **Stats:** STR 3 · AGI 4 · INT 8 · END 4.
-- **Starting abilities:** None; learn foundation skills through Training.
-- **Narrative:** An apprentice archivist searching for a missing teacher. He suspects the house’s silence is a language.
+**Class:** Wizard. **Starting level:** 1. **Stats:** STR 3 · AGI 4 · INT 8 · END 4.
 
-## Residents awakened inside the guild
+**Found in:** Restored service room. **Trapped by:** Held inside an unfinished protective rune. **Release:** Close the open line in Ada’s diagram.
 
-### Oren
+Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
+Rowan follows Ada’s margin diagram and closes the line. Ivo lands badly, still trying to save the book. Mara helps him up.
+“Is the joining over?” he asks. Then, seeing Rowan’s face: “What happened?”
+His last memory is Ada sending him to fetch the test records. Thirty years have passed since then.
+He sits with the notebook on his knees. After a while he asks where his teacher is. Rowan remembers the records in the service room. They can start there.
+
+**Starting abilities:** Learn through Training.
+
+**Homecoming:** an independent school beside Ada’s monastery. Magic preserved them across the years; returning home means discovering what changed.
+
+## Oren
 
 ![Oren](portraits/oren.svg)
 
-- **Role:** Warrior; can specialise as Barbarian or Paladin.
-- **Location:** Dry cellar landing. **Condition:** Petrified.
-- **Awakening:** Strength 10 · remove the casting ring. Access requires stairs; investigate before releasing the seal. No hiring fee.
-- **Starting level:** 4. **Stats:** STR 12 · AGI 4 · INT 6 · END 11.
-- **Starting abilities:** Guard, Stone song.
-- **Narrative:** A guild mason trapped in his own stone-skin spell while bracing the collapsing cellar stair.
-- **After awakening:** The repair crew has braced the ceiling with new timber. The figure beneath it no longer carries its weight, but the iron ring on his wrist is bent shut. An old guild craft manual identifies it as a stone-skin casting ring. When the ring is forced open, flakes of stone fall from the man’s shoulders. He folds at the knees and catches the new support. “Did they get down?” he asks. “The people on the stair.” His tool belt carries the name Oren. He remembers the warning bell, then the beam coming down. Mara brings water while Rowan explains how long the house has been cut off.
+**Class:** Warrior. **Starting level:** 4. **Stats:** STR 12 · AGI 4 · INT 6 · END 11.
 
-### Maelin
+**Found in:** Dry cellar landing. **Trapped by:** Petrified. **Release:** Strength 10 · remove the casting ring.
+
+The ceiling rests on new timber now. The stone figure beneath it is still bent under a beam that no longer needs him.
+His casting ring is jammed shut. When it is forced open, stone flakes from his shoulders. He drops to his knees and immediately reaches for the support.
+“Did they get down?” he asks.
+Rowan tells him the stair was cleared. They do not know what happened to every passenger afterward.
+Oren listens while Mara explains the thirty years. His tool belt is intact. He touches the buckle, then asks if they can find his daughter. She was seven when he came to work that morning.
+
+**Starting abilities:** guard, stoneSong.
+
+**Homecoming:** his daughter’s riverside workshop. Magic preserved them across the years; returning home means discovering what changed.
+
+## Maelin
 
 ![Maelin](portraits/maelin.svg)
 
-- **Role:** Wizard; can specialise as Necromancer or Healer / Priest.
-- **Location:** Bell tower crown. **Condition:** Frozen in blue ice.
-- **Awakening:** Magical literacy · disable the repeating rune. Access requires towerCrown; investigate before releasing the seal. No hiring fee.
-- **Starting level:** 5. **Stats:** STR 4 · AGI 7 · INT 12 · END 8.
-- **Starting abilities:** Magical literacy, Water breathing, Echo sight.
-- **Narrative:** The tower bellkeeper sealed herself inside a frost ward when the alarm began ringing on its own.
-- **After awakening:** The ice surrounds a woman, the bell rope and the bell’s clapper. A ward on the floor repeats the same frost rune. It cannot thaw while the repeating line remains closed. The literate resident breaks that line before opening the warming rune. The ice melts slowly. Maelin’s first movement is to catch the clapper so it cannot strike. “It rang after I let go,” she says. “Something in the wall had learned the alarm.” She recognises Rowan, but asks where the other watchkeepers are. Nobody at the house knows. She agrees to stay while the guild searches the surviving records.
+**Class:** Wizard. **Starting level:** 5. **Stats:** STR 4 · AGI 7 · INT 12 · END 8.
 
-### Ysra
+**Found in:** Bell tower crown. **Trapped by:** Frozen in blue ice. **Release:** Magical literacy · disable the repeating rune.
+
+The thaw takes time. Ice drains from Maelin’s sleeves while she remains braced against the bell rope.
+Her first movement is to catch the clapper. Nobody tells her to let go yet.
+“It rang after my hand left the rope,” she says. “I could hear Vey in the wall. Vey was downstairs.”
+She recognises Rowan and asks who relieved the watch. Rowan explains that the others left thirty years ago.
+Maelin asks for a chair without releasing the clapper. Mara wraps it in a towel and holds it while she sits. They will look for the watchkeepers’ records. Tonight the bell can remain silent.
+
+**Starting abilities:** literacy, water, echoSight.
+
+**Homecoming:** the watchkeepers’ coastal memorial. Magic preserved them across the years; returning home means discovering what changed.
+
+## Ysra
 
 ![Ysra](portraits/ysra.svg)
 
-- **Role:** Scout; can specialise as Thief or Archer.
-- **Location:** Labyrinth heart. **Condition:** Bound in living ink.
-- **Awakening:** Magical literacy · cancel the tracking rune. Access requires labyrinthHeart; investigate before releasing the seal. No hiring fee.
-- **Starting level:** 5. **Stats:** STR 5 · AGI 12 · INT 10 · END 8.
-- **Starting abilities:** Tracking, Threadwalk.
-- **Narrative:** A cartographer trapped in a live map she used to guide people through the shifting house.
-- **After awakening:** The map redraws itself whenever someone moves in the chamber. One ink figure remains in its centre. The tracking rune beneath it has no finishing mark. The literate resident adds that mark. The ink stops moving and runs off the table. Ysra is left on the floor, gripping a pen that has worn through her glove. “I kept the route to the infirmary open,” she says. “Then the corridor vanished. The spell kept trying to place me somewhere.” She asks for paper. Her first drawing shows the route she remembers, including a rear stair Rowan no longer recognises.
+**Class:** Scout. **Starting level:** 5. **Stats:** STR 5 · AGI 12 · INT 10 · END 8.
 
-## Injury, death and reanimation
+**Found in:** Labyrinth heart. **Trapped by:** Bound in living ink. **Release:** Magical literacy · cancel the tracking rune.
 
-Residents can be fit, hurt, injured, incapacitated, unconscious or dead. Assignment and injury are separate: wounded residents may still be away. Marked lethal jobs can permanently kill them. Conscious survivors can retreat carrying wounded companions and recovered remains. Lost remains can be collected by Mara’s crew for 60 gold and one day.
+The unfinished map keeps drawing an ink figure in the middle of a corridor that no longer exists. When the tracking rune is cancelled, the figure stops moving. Ink runs across the floor, and Ysra is there, clutching her pen.
+She asks someone to tell the people at the stair that the infirmary route is failing.
+Rowan sits beside her and explains the year. Ysra looks at the pen. Its nib has worn down to a blunt edge.
+“I was still drawing,” she says.
+She asks for fresh paper. Her first sketch shows where the infirmary moved during the collapse. Then she draws a little kitchen beside it and asks whether anyone remembers who lived there.
 
-A necromancer with Raise dead can animate recovered mortal remains for 80 gold, once per caster per day. The same person returns as a zombie: STR +6, END +8, AGI −3 (minimum 1), INT halved (minimum 1). Living talents, specialisation and skills are removed. Identity, relationships and memories remain. Zombies gain Undead labour (+10% party work) and Grave endurance (physical risk −10, undead risk −15, magical risk +15). They gain STR +2 / END +2 on future levels, cannot learn living-class talents, need repairs instead of natural healing, and cannot be raised twice.
+**Starting abilities:** tracking, threadwalk.
 
-## Named supporting characters
+**Homecoming:** the community displaced by her survey. Magic preserved them across the years; returning home means discovering what changed.
 
-These people appear in scenes and records but are not additional controllable recruits. Tamsin, Kest, Corin, Asha, Neris, Perrin, Liora and Sable are both regional keepers and listed playable hires.
+## Supporting cast
 
-| Person | Narrative role |
-| --- | --- |
-| Mara | Restores the entrance, organises repairs, pays doorstep work and sends recovery crews. |
-| Keeper of Wren’s Crossing | Exchanges the landing fitting and tower/labyrinth keys for help with the bell. |
-| Captain Sera Venn | Surviving navigator; the ship and coast lead to the archive. |
-| Edda | Keeper connected to the orchard and returned greenhouse. |
-| Elian | Observatory witness whose logs locate the infirmary recording. |
-| Ada Merrow | Ivo’s missing teacher; her seal work informs the replacement-anchor plan. |
-| Halden | Infirmary recording explains how Rowan was bound to the house. |
-| Vey | Gave the evacuation order and ordered the connecting road cut. |
+Mara, raised by Halden, returns the inherited token and helps with repairs. Ada Merrow is Ivo’s teacher and an old guild researcher. Vey authorised the joining and severance. Halden saved Rowan, lived outside for twenty-nine years, and died before the entrance reopened. Sera Venn, Edda and Elian are surviving witnesses. Present regional keepers are distinct from the old guild residents trapped in the house. These supporting people are not additional playable recruits.
 
-Class and ability details: [CLASSES_AND_SKILLS.md](CLASSES_AND_SKILLS.md). Source data: domain.js, exploration.js and expansion.js.
+References: [Discovery scenes](RESIDENT_DISCOVERIES.md), [Homecomings](HOMECOMINGS.md), [Classes and skills](CLASSES_AND_SKILLS.md), [Story revision](STORY_REVISION.md).

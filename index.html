@@ -1,1 +1,65 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Bound House</title><link rel="stylesheet" href="style.css"></head><body><header><div><small>THE OLD GUILD ESTATE</small><h1>The Bound House</h1></div><button id="status" title="Open the gold ledger"></button><div class="header-actions"><button data-tab="Journal">Journal</button><button data-tab="Options">Options</button><button id="day">Advance day →</button></div></header><nav id="nav" aria-label="Guild management"></nav><main><section id="world"><canvas id="game" width="1200" height="650" aria-label="Explorable cutaway estate"></canvas><div class="world-caption"><small>A HOME BETWEEN WORLDS</small><span>Keep the hearth. Recover the house.</span></div><button id="overview" class="overview-button" data-tab="Overview">◇ House overview</button><div id="expeditions"></div><div id="hint"></div><div id="character-hud"></div><div id="home-strip" aria-label="Home residents"></div><footer><span>A / D · walk &nbsp; Space · jump &nbsp; W / S · stairs &nbsp; E · interact &nbsp; Tab · switch</span><span id="resident" hidden></span><span id="position" class="stats"></span></footer></section><section id="story-rail" aria-label="Current narrative"><small id="chapter-label"></small><h2 id="objective"></h2><p id="story-event"></p><button data-tab="Stories">Follow the story →</button></section><aside id="panel" hidden aria-label="Guild ledger"></aside></main><div id="toast" role="status"></div><dialog id="scene"><div class="scene-header"><div><small id="scene-label">THE HOUSE REMEMBERS</small><h2 id="scene-title"></h2></div><button id="dismiss-scene" aria-label="Close story panel">×</button></div><div class="scene-content"><div id="scene-body"></div><div id="scene-options"></div><button id="close-scene">Continue →</button></div></dialog><script type="module" src="game.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>The Bound House</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <small>THE OLD GUILD ESTATE</small>
+        <h1>The Bound House</h1>
+      </div>
+      <button id="status" title="Open the gold ledger"></button>
+      <div class="header-actions">
+        <button data-tab="Journal">Journal</button><button data-tab="Options">Options</button
+        ><button id="day">Advance day →</button>
+      </div>
+    </header>
+    <nav id="nav" aria-label="Guild management"></nav>
+    <main>
+      <section id="world">
+        <canvas id="game" width="1200" height="650" aria-label="Explorable cutaway estate"></canvas>
+        <div class="world-caption">
+          <small>A HOME BETWEEN WORLDS</small><span>Keep the hearth. Recover the house.</span>
+        </div>
+        <button id="overview" class="overview-button" data-tab="Overview">◇ House overview</button>
+        <div id="expeditions"></div>
+        <div id="hint"></div>
+        <div id="character-hud"></div>
+        <div id="home-strip" aria-label="Home residents"></div>
+        <footer>
+          <span
+            >A / D · walk &nbsp; Space · jump &nbsp; W / S · stairs &nbsp; E · interact &nbsp; Tab ·
+            switch</span
+          ><span id="resident" hidden></span><span id="position" class="stats"></span>
+        </footer>
+      </section>
+      <section id="story-rail" aria-label="Current narrative">
+        <small id="chapter-label"></small>
+        <h2 id="objective"></h2>
+        <p id="story-event"></p>
+        <button data-tab="Stories">Follow the story →</button>
+      </section>
+      <aside id="panel" hidden aria-label="Guild ledger"></aside>
+    </main>
+    <div id="toast" role="status"></div>
+    <dialog id="scene">
+      <div class="scene-header">
+        <div>
+          <small id="scene-label">THE HOUSE REMEMBERS</small>
+          <h2 id="scene-title"></h2>
+        </div>
+        <button id="dismiss-scene" aria-label="Close story panel">×</button>
+      </div>
+      <div class="scene-content">
+        <div id="scene-body"></div>
+        <div id="scene-options"></div>
+        <button id="close-scene">Continue →</button>
+      </div>
+    </dialog>
+    <script type="module" src="game.js"></script>
+  </body>
+</html>

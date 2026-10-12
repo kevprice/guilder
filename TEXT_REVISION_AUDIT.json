@@ -1,0 +1,39 @@
+{
+  "entries": 2454,
+  "changed": 397,
+  "edits": [
+    {
+      "file": "narrative.js",
+      "count": 96
+    },
+    {
+      "file": "resident-discoveries.js",
+      "count": 5
+    },
+    {
+      "file": "homecoming.js",
+      "count": 69
+    },
+    {
+      "file": "exploration.js",
+      "count": 12
+    },
+    {
+      "file": "expansion.js",
+      "count": 154
+    },
+    {
+      "file": "sprawl.js",
+      "count": 18
+    },
+    {
+      "file": "story-model.js",
+      "count": 10
+    },
+    {
+      "file": "domain.js",
+      "count": 35
+    }
+  ],
+  "unresolved": []
+}

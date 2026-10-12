@@ -1,28 +1,284 @@
-const jobs=[
- ['wallSurvey','Survey the sealed service wall','end',7,1,38,45,0,[], 'wallSurveyed','STORY LEAD','The wall survey identifies the hidden service room and a missing mason’s tool chest.','Walk Mara’s surveyor along the estate boundary and compare the sealed wall with the surviving plans.','The surveyor marks the service room on the plan. Strength 10 can open its wall. A mason’s tool chest at the old cart shed can reduce restoration costs.'],
- ['masonTools','Recover the mason’s tool chest','str',8,1,48,60,12,['wallSurveyed'],'repairSupplies','PLOT ITEM','Mason’s tools · service-room restoration costs 50g instead of 70g.','Retrieve chisels and shoring clamps from a cart shed overgrown with brambles.','The chest contains chisels and usable shoring clamps. Mara can now restore the service room for 50 gold once the wall is open.'],
- ['lostGoat','The goat on the chapel roof','str',8,1,65,100,15,['wallSurveyed'],'goatReturned','OPTIONAL JOB','One-time rescue · gold and experience.','The bell rope has lifted a farmer’s goat onto the ruined chapel roof. Brace a ladder and bring it down before the next rain.','The goat returns to its owner. The ladder and chapel roof are made safe; this request is finished.'],
- ['herbDelivery','Medicine before the rain','end',7,1,42,60,8,[],'medicineDelivered','OPTIONAL JOB','One-time delivery · gold and experience.','Carry dry medicines to the hillside midwife before the ford rises.','The medicines reach the midwife dry. She pays the agreed wage and sends a receipt, rather than posting the same emergency again.'],
- ['bridgeRope','A rope for the mill bridge','agi',6,2,65,75,18,[],'millBridgeMended','OPTIONAL JOB','One-time repair · gold and experience.','Cross the mill’s fallen footbridge with a guide rope so its workers can install a new handrail.','The millworkers finish the handrail. The repaired crossing no longer needs this contract.'],
- ['marketWatch','The lantern-market pickpocket','int',5,1,40,65,10,[],'marketCaseClosed','OPTIONAL JOB','One-time investigation · gold and experience.','Compare stallholders’ accounts and identify who is moving stolen purses through the evening market.','The purses return to their owners. The watch takes the evidence and closes the case.'],
- ['cellarTimber','Bring home the cellar stair timbers','str',9,2,35,85,12,['repaired'],'stairs','PLOT ITEM','Fitted stair timbers · unlocks the dry cellar landing.','Escort Mara’s carpenter and the replacement stair timbers from the sawmill. The service-room key gives access to the cellar hatch.','The carpenter fits the recovered timbers beneath the cellar hatch. The stairs are repaired: use S at the service corridor to reach the dry landing. Water magic is only needed beyond it.'],
- ['missingCourier','The courier who missed supper','agi',8,2,85,90,25,['anchor'],'courierFound','OPTIONAL JOB','One-time search · gold and experience.','Follow dropped letters to a courier stranded beside the north ridge. Bring the courier and the undelivered post home.','The courier reaches the village with the recovered letters. Their family is waiting at the door.'],
- ['orchardPests','Beetles in the seed carts','int',8,2,90,100,30,['archiveRead'],'seedCartsSafe','OPTIONAL JOB','One-time containment · gold and experience.','Separate enchanted beetles from the seed stock without burning the village’s next planting.','The beetles are contained and the seed carts are returned intact.'],
- ['wellRescue','A voice from the quarry well','str',12,2,110,110,38,['archiveRead'],'wellWorkerSaved','OPTIONAL JOB','One-time rescue · gold and experience.','Lower a braced basket into an abandoned quarry well and recover the worker trapped below its broken ladder.','The worker returns with a fractured ankle. Their crew seals the well and pays the rescue fee.'],
- ['stormShelter','Keep the storm shelter open','end',12,3,130,120,40,['gardenRead'],'shelterReopened','OPTIONAL JOB','One-time defence · gold and experience.','Guard a hillside shelter while its residents replace a door battered by storm creatures.','The new shelter door holds. Its residents can maintain the watch themselves.'],
- ['falseMap','The map sold twice','int',12,2,100,110,35,['observatoryRead'],'falseMapExposed','OPTIONAL JOB','One-time investigation · gold and experience.','Follow two contradictory salvage maps and recover evidence before either party enters the unsafe passage.','Both parties return. The fraudulent maps enter the public archive with the seller’s signed receipts.'],
+const jobs = [
+  [
+    'wallSurvey',
+    'Survey the sealed service wall',
+    'end',
+    7,
+    1,
+    38,
+    45,
+    0,
+    [],
+    'wallSurveyed',
+    'STORY LEAD',
+    'The wall survey identifies the hidden service room and a missing mason’s tool chest.',
+    'Walk Mara’s surveyor along the estate boundary and compare the sealed wall with the surviving plans.',
+    'The surveyor marks the service room on the plan. Strength 10 can open its wall. A mason’s tool chest at the old cart shed can reduce restoration costs.',
+  ],
+  [
+    'masonTools',
+    'Recover the mason’s tool chest',
+    'str',
+    8,
+    1,
+    48,
+    60,
+    12,
+    ['wallSurveyed'],
+    'repairSupplies',
+    'PLOT ITEM',
+    'Mason’s tools · service-room restoration costs 50g instead of 70g.',
+    'Retrieve chisels and shoring clamps from a cart shed overgrown with brambles.',
+    'The chest contains chisels and usable shoring clamps. Mara can now restore the service room for 50 gold once the wall is open.',
+  ],
+  [
+    'lostGoat',
+    'The goat on the chapel roof',
+    'str',
+    8,
+    1,
+    65,
+    100,
+    15,
+    ['wallSurveyed'],
+    'goatReturned',
+    'OPTIONAL JOB',
+    'One-time rescue · gold and experience.',
+    'The bell rope has lifted a farmer’s goat onto the ruined chapel roof. Brace a ladder and bring it down before the next rain.',
+    'The goat returns to its owner. The ladder and chapel roof are made safe; this request is finished.',
+  ],
+  [
+    'herbDelivery',
+    'Medicine before the rain',
+    'end',
+    7,
+    1,
+    42,
+    60,
+    8,
+    [],
+    'medicineDelivered',
+    'OPTIONAL JOB',
+    'One-time delivery · gold and experience.',
+    'Carry dry medicines to the hillside midwife before the ford rises.',
+    'The medicines reach the midwife dry. She pays the agreed wage and sends a receipt, rather than posting the same emergency again.',
+  ],
+  [
+    'bridgeRope',
+    'A rope for the mill bridge',
+    'agi',
+    6,
+    2,
+    65,
+    75,
+    18,
+    [],
+    'millBridgeMended',
+    'OPTIONAL JOB',
+    'One-time repair · gold and experience.',
+    'Cross the mill’s fallen footbridge with a guide rope so its workers can install a new handrail.',
+    'The millworkers finish the handrail. The repaired crossing no longer needs this contract.',
+  ],
+  [
+    'marketWatch',
+    'The lantern-market pickpocket',
+    'int',
+    5,
+    1,
+    40,
+    65,
+    10,
+    [],
+    'marketCaseClosed',
+    'OPTIONAL JOB',
+    'One-time investigation · gold and experience.',
+    'Compare stallholders’ accounts and identify who is moving stolen purses through the evening market.',
+    'The purses return to their owners. The watch takes the evidence and closes the case.',
+  ],
+  [
+    'cellarTimber',
+    'Bring home the cellar stair timbers',
+    'str',
+    9,
+    2,
+    35,
+    85,
+    12,
+    ['repaired'],
+    'stairs',
+    'PLOT ITEM',
+    'Fitted stair timbers · unlocks the dry cellar landing.',
+    'Escort Mara’s carpenter and the replacement stair timbers from the sawmill. The service-room key gives access to the cellar hatch.',
+    'The carpenter fits the recovered timbers beneath the cellar hatch. The stairs are repaired: use S at the service corridor to reach the dry landing. Water magic is only needed beyond it.',
+  ],
+  [
+    'missingCourier',
+    'The courier who missed supper',
+    'agi',
+    8,
+    2,
+    85,
+    90,
+    25,
+    ['anchor'],
+    'courierFound',
+    'OPTIONAL JOB',
+    'One-time search · gold and experience.',
+    'Follow dropped letters to a courier stranded beside the north ridge. Bring the courier and the undelivered post home.',
+    'The courier reaches the village with the recovered letters. Their family is waiting at the door.',
+  ],
+  [
+    'orchardPests',
+    'Beetles in the seed carts',
+    'int',
+    8,
+    2,
+    90,
+    100,
+    30,
+    ['archiveRead'],
+    'seedCartsSafe',
+    'OPTIONAL JOB',
+    'One-time containment · gold and experience.',
+    'Separate enchanted beetles from the seed stock without burning the village’s next planting.',
+    'The beetles are contained and the seed carts are returned intact.',
+  ],
+  [
+    'wellRescue',
+    'A voice from the quarry well',
+    'str',
+    12,
+    2,
+    110,
+    110,
+    38,
+    ['archiveRead'],
+    'wellWorkerSaved',
+    'OPTIONAL JOB',
+    'One-time rescue · gold and experience.',
+    'Lower a braced basket into an abandoned quarry well and recover the worker trapped below its broken ladder.',
+    'The worker returns with a fractured ankle. Their crew seals the well and pays the rescue fee.',
+  ],
+  [
+    'stormShelter',
+    'Keep the storm shelter open',
+    'end',
+    12,
+    3,
+    130,
+    120,
+    40,
+    ['gardenRead'],
+    'shelterReopened',
+    'OPTIONAL JOB',
+    'One-time defence · gold and experience.',
+    'Guard a hillside shelter while its residents replace a door battered by storm creatures.',
+    'The new shelter door holds. Its residents can maintain the watch themselves.',
+  ],
+  [
+    'falseMap',
+    'The map sold twice',
+    'int',
+    12,
+    2,
+    100,
+    110,
+    35,
+    ['observatoryRead'],
+    'falseMapExposed',
+    'OPTIONAL JOB',
+    'One-time investigation · gold and experience.',
+    'Follow two contradictory salvage maps and recover evidence before either party enters the unsafe passage.',
+    'Both parties return. The fraudulent maps enter the public archive with the seller’s signed receipts.',
+  ],
 ];
-export const openingContracts=jobs.map(([id,name,stat,amount,days,reward,xp,threat,requires,flag,category,plotReward,desc,result])=>({id,name,days,reward,xp,capacity:3,requires,sets:[flag],exclusive:flag,oneShot:true,category,plotReward,desc,result,injuryDays:2,checks:[{stat,min:amount,label:'Combined '+stat.toUpperCase()+' '+amount}]}));
-export const openingProfiles=Object.fromEntries(jobs.map(([id,,stat,amount,,,,threat])=>[id,{stat,amount,threat,skills:{guard:10,tracking:10,literacy:10,stoneSong:10}}]));
-const rewards={anchor:'Landing fitting + bell-tower key + labyrinth-gate key',navigator:'Archive door seal',orchard:'Greenhouse fitting + seeds or research roots',lens:'Observatory lens',witness:'Rowan’s binding revealed + replacement-system plans',covenant:'Safe replacement system · unlocks liberation',lattice:'Safe replacement system · unlocks liberation',outsideArchivist:'Seal diagrams · opens archive and awakens sealed residents'};
-export function contractLabel(def){
- if(def.homeEvent)return {kind:'HOME DEFENCE',detail:'Protects residents and rooms · no pay',priority:0};
- if(def.category)return {kind:def.category,detail:def.plotReward,priority:def.category==='OPTIONAL JOB'?4:1};
- if(def.personal)return {kind:'COMPANION STORY',detail:'Advances a companion’s personal history and road home',priority:2};
- if(def.region)return {kind:'REGIONAL STORY',detail:'Advances the regional campaign'+(def.sets?.some(f=>f.endsWith('Key'))?' · returns a room key':''),priority:2};
- if(rewards[def.id])return {kind:'MAIN STORY · PLOT REWARD',detail:rewards[def.id],priority:1};
- if(def.choices)return {kind:'STORY MISSION',detail:'New evidence and a story decision',priority:2};
- if(def.internal)return {kind:'GUILD EXPLORATION',detail:def.hiddenReward?'Clears a room · reward unknown until completion':'Clears a room and opens its investigation',priority:2};
- if(def.lethal)return {kind:'OPTIONAL · LETHAL',detail:'High-risk paid adventure',priority:4};
- return {kind:'REPEATABLE WORK',detail:'Gold and experience · does not advance the main story',priority:5};
+export const openingContracts = jobs.map(
+  ([
+    id,
+    name,
+    stat,
+    amount,
+    days,
+    reward,
+    xp,
+    threat,
+    requires,
+    flag,
+    category,
+    plotReward,
+    desc,
+    result,
+  ]) => ({
+    id,
+    name,
+    days,
+    reward,
+    xp,
+    capacity: 3,
+    requires,
+    sets: [flag],
+    exclusive: flag,
+    oneShot: true,
+    category,
+    plotReward,
+    desc,
+    result,
+    injuryDays: 2,
+    checks: [{ stat, min: amount, label: 'Combined ' + stat.toUpperCase() + ' ' + amount }],
+  }),
+);
+export const openingProfiles = Object.fromEntries(
+  jobs.map(([id, , stat, amount, , , , threat]) => [
+    id,
+    { stat, amount, threat, skills: { guard: 10, tracking: 10, literacy: 10, stoneSong: 10 } },
+  ]),
+);
+const rewards = {
+  anchor: 'Landing fitting + bell-tower key + labyrinth-gate key',
+  navigator: 'Archive door seal',
+  orchard: 'Greenhouse fitting + seeds or research roots',
+  lens: 'Observatory lens',
+  witness: 'Rowan’s binding revealed + replacement-system plans',
+  covenant: 'Safe replacement system · unlocks liberation',
+  lattice: 'Safe replacement system · unlocks liberation',
+  outsideArchivist: 'Seal diagrams · opens archive and awakens sealed residents',
+};
+export function contractLabel(def) {
+  if (def.homeEvent)
+    return { kind: 'HOME DEFENCE', detail: 'Protects residents and rooms', priority: 0 };
+  if (def.category)
+    return {
+      kind: def.category,
+      detail: def.plotReward,
+      priority: def.category === 'OPTIONAL JOB' ? 4 : 1,
+    };
+  if (def.personal)
+    return {
+      kind: 'COMPANION STORY',
+      detail: 'Advances a companion’s personal history and road home',
+      priority: 2,
+    };
+  if (def.region)
+    return {
+      kind: 'REGIONAL STORY',
+      detail:
+        'Advances the regional campaign' +
+        (def.sets?.some((f) => f.endsWith('Key')) ? ' · returns a room key' : ''),
+      priority: 2,
+    };
+  if (rewards[def.id])
+    return { kind: 'MAIN STORY · PLOT REWARD', detail: rewards[def.id], priority: 1 };
+  if (def.choices)
+    return { kind: 'STORY MISSION', detail: 'New evidence and a story decision', priority: 2 };
+  if (def.internal)
+    return {
+      kind: 'GUILD EXPLORATION',
+      detail: def.hiddenReward
+        ? 'Clears a room · reward unknown until completion'
+        : 'Clears a room and opens its investigation',
+      priority: 2,
+    };
+  if (def.lethal)
+    return { kind: 'OPTIONAL · LETHAL', detail: 'High-risk paid adventure', priority: 4 };
+  return { kind: 'REPEATABLE WORK', detail: 'Gold and experience', priority: 5 };
 }

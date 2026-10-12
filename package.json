@@ -1,1 +1,17 @@
-{"name":"the-bound-house","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test"}}
+{
+  "name": "the-bound-house",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test",
+    "docs": "node generate-reference.mjs && prettier --write CHARACTERS.md CLASSES_AND_SKILLS.md HOMECOMINGS.md PERSONAL_RECORDS.md RESIDENT_DISCOVERIES.md",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm test && npm run format:check"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}
