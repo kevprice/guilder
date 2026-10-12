@@ -106,11 +106,23 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
   const sx = x - camera,
     mage = !c.undead && (c.type === 'mage' || ['healer', 'necromancer'].includes(c.specialisation)),
     warrior = c.type === 'warrior',
-    gear = c.gear;
+    gear = c.equipmentSlots?.sword?.id || c.gear,
+    shield = c.equipmentSlots?.shield?.id || c.gear,
+    body = c.equipmentSlots?.body?.id || c.gear,
+    feet = c.equipmentSlots?.feet?.id || c.gear;
   ctx.save();
   if (
     warrior ||
-    ['emberBlade', 'sunHammer', 'thornSpear', 'lanternSpear', 'glassDagger'].includes(gear)
+    [
+      'emberBlade',
+      'sunHammer',
+      'thornSpear',
+      'lanternSpear',
+      'glassDagger',
+      'shortSword',
+      'longSword',
+      'ironAxe',
+    ].includes(gear)
   ) {
     ctx.save();
     ctx.translate(sx + 19 * facing, y - 24);
@@ -176,7 +188,7 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
     }
     ctx.restore();
   }
-  if (warrior || ['shield', 'oathShield'].includes(gear)) {
+  if (warrior || ['shield', 'oathShield', 'buckler', 'ironShield'].includes(shield)) {
     const px = sx - 17 * facing;
     path(
       ctx,
@@ -187,7 +199,7 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
         [px, y - 5],
         [px - 11, y - 14],
       ],
-      gear === 'oathShield' ? '#507788' : '#835d3f',
+      shield === 'oathShield' ? '#507788' : '#835d3f',
       '#dfba77',
       2,
     );
@@ -210,7 +222,7 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
       glow(ctx, px, y - 22, 24, '#f5cf80', 0.2);
     }
   }
-  if (mage || ['wardStaff', 'stormRod'].includes(gear)) {
+  if (mage || ['wardStaff', 'stormRod', 'ashStaff'].includes(gear)) {
     const px = sx + 16,
       py = y - 55,
       color =
@@ -243,7 +255,7 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
       ellipse(ctx, px + 1.5, py - 1, 1, 1, '#f9d6ff');
     }
   }
-  if (c.type === 'scout' || gear === 'moonBow') {
+  if (c.type === 'scout' || ['moonBow', 'huntingBow'].includes(gear)) {
     const px = sx + 17;
     ctx.strokeStyle = gear === 'moonBow' ? '#bce8fa' : '#d6aa75';
     ctx.lineWidth = 2;
@@ -264,20 +276,20 @@ export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
     ctx.stroke();
     if (gear === 'moonBow') glow(ctx, px, y - 26, 26, '#a7dcec', 0.24);
   }
-  if (['frostCloak', 'stoneMail', 'ironHeart'].includes(gear)) {
-    ctx.strokeStyle = gear === 'frostCloak' ? '#c9eafa' : '#dcc69b';
+  if (['frostCloak', 'stoneMail', 'ironHeart'].includes(body)) {
+    ctx.strokeStyle = body === 'frostCloak' ? '#c9eafa' : '#dcc69b';
     ctx.lineWidth = 2;
     ctx.strokeRect(sx - 8, y - 33, 16, 18);
   }
   if (
     ['riverCharm', 'rootCrown', 'phoenixPin', 'echoLens', 'threadRing', 'starCompass'].includes(
-      gear,
+      c.equipmentSlots?.head?.id || c.equipmentSlots?.accessory?.id || c.gear,
     )
   ) {
     ellipse(ctx, sx, y - 29, 3, 3, '#e8d8a7');
     glow(ctx, sx, y - 29, 20, '#9fd7cf', 0.25);
   }
-  if (gear === 'mistBoots') {
+  if (feet === 'mistBoots') {
     for (let i = 0; i < 4; i++)
       ellipse(ctx, sx - 12 + i * 8, y + 1 + Math.sin(time + i) * 2, 7, 2, '#8ad7e62a');
   }

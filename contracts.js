@@ -3,7 +3,7 @@ import { openingProfiles } from './opening-contracts.js';
 import { damageType, personalProtection, talentValue, classWorkFactor } from './classes.js';
 import { conscious } from './equipment.js';
 import { expansionProfiles } from './expansion.js';
-import { itemDefinition, workFactor } from './equipment.js';
+import { equipmentBonus, workFactor } from './equipment.js';
 export const abilityNames = {
   guard: 'Guard',
   tracking: 'Tracking',
@@ -256,8 +256,7 @@ homeThreats[1].shape = 'hound';
 homeThreats[1].color = '#af7d62';
 export function effectiveStat(c, stat) {
   return Math.floor(
-    (c[stat] + (itemDefinition(c.gear)?.stats[stat] || 0) + talentValue(c, stat)) *
-      classWorkFactor(c),
+    (c[stat] + equipmentBonus(c, stat) + talentValue(c, stat)) * classWorkFactor(c),
   );
 }
 export function assessContract(def, party, progress = 0) {
@@ -308,7 +307,7 @@ export function assessContract(def, party, progress = 0) {
   const talentProtection = active.reduce((n, c) => n + talentValue(c, type), 0);
   if (talentProtection)
     reductions.push({ label: 'Class skills (' + type + ')', amount: talentProtection });
-  const protection = party.reduce((sum, c) => sum + (itemDefinition(c.gear)?.protection || 0), 0);
+  const protection = party.reduce((sum, c) => sum + equipmentBonus(c, 'protection'), 0);
   if (protection) reductions.push({ label: 'Equipped magic wards', amount: protection });
   const threat = Math.min(
     100,

@@ -93,7 +93,6 @@ function sheet(
   const rowan = person.id === 'rowan';
   const section = (title, body) =>
     `<section class="sheet-section"><h4>${title}</h4>${body}</section>`;
-  const gear = D.equipment.find((item) => item.id === person.gear);
   const skillDefs = Object.values(D.skills).flat();
   const abilities = (person.skills || []).map((id) => ({
     name: abilityNames[id] || id,
@@ -115,13 +114,24 @@ function sheet(
     <div class="sheet-attributes">${attributes.map(([key, name]) => `<div class="sheet-attribute"><span>${name}</span><strong>${person[key]}</strong>${!rowan && effectiveStat(person, key) !== person[key] ? `<small>${effectiveStat(person, key)} on contracts</small>` : ''}</div>`).join('')}</div>
     <div class="sheet-columns"><div>${section('Abilities & talents', abilityList)}${section(
       'Equipment',
-      gear
-        ? `<strong>${esc(gear.name)}</strong>${paragraphs(gear.desc)}<p class="sheet-muted">${Object.entries(
-            gear.stats,
-          )
-            .map(([key, value]) => `${attributes.find(([id]) => id === key)?.[1] || key} +${value}`)
-            .join(' · ')}${gear.protection ? ` · Protection ${gear.protection}` : ''}</p>`
-        : '<p>Standard kit</p>',
+      D.equipmentSlots
+        .map((slot) => {
+          const item = person.equipmentSlots?.[slot];
+          const def = D.equipment.find(
+            (e) =>
+              e.id === item?.id ||
+              (!person.equipmentSlots && e.id === person.gear && e.slot === slot),
+          );
+          return `<p><strong>${esc(slot)}</strong>: ${esc(def?.name || 'empty')}${
+            def
+              ? ' · ' +
+                Object.entries(def.stats)
+                  .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+                  .join(' · ')
+              : ''
+          }</p>`;
+        })
+        .join(''),
     )}${rowan ? '' : section('Relationship', `<p>Trust <strong>${person.bond}</strong></p>`)}</div><div>${section('Biography', paragraphs(biography))}${history}</div></div>
     ${actions ? `<footer class="sheet-actions" aria-label="Character actions">${actions}</footer>` : ''}</article>`;
 }

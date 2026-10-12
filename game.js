@@ -189,7 +189,12 @@ function renderStore() {
   html += visitor
     ? card(
         visitor.name + ' · in the store',
-        `<p>Equipped: ${esc(D.equipment.find((e) => e.id === visitor.gear)?.name || 'nothing')}</p>${visitor.gear ? btn('Return equipment to storage', 'unequip:' + visitor.id) : ''}`,
+        D.equipmentSlots
+          .map((slot) => {
+            const item = D.ensureEquipmentSlots(visitor)[slot];
+            return `<p>${esc(slot)}: ${esc(D.equipment.find((e) => e.id === item?.id)?.name || 'empty')}</p>${item ? btn('Return to storage', 'unequip:' + visitor.id + ':' + slot) : ''}`;
+          })
+          .join(''),
       )
     : card('Store room', `${btn('Walk to store door', 'walk:790')}`);
   html += '<h3>Guild inventory</h3>';
@@ -198,13 +203,13 @@ function renderStore() {
       owner = state.roster.find((c) => c.id === item.owner);
     html += card(
       def.name,
-      `<p>${owner ? (owner.status === 'dead' ? 'Lost with ' : 'Carried by ') + esc(owner.name) : 'Available in storage'} · ${Object.entries(
+      `<p>${esc(def.slot)} · ${owner ? (owner.status === 'dead' ? 'Lost with ' : 'Carried by ') + esc(owner.name) : 'Available in storage'} · ${Object.entries(
         def.stats,
       )
         .map(([k, v]) => k.toUpperCase() + ' +' + v)
         .join(
           ' · ',
-        )}${def.protection ? ' · ' + def.protection + ' threat reduction' : ''}</p>${visitor && !owner ? btn('Equip on ' + visitor.name, 'equipItem:' + visitor.id + ':' + item.uid, !!visitor.gear) : ''}`,
+        )}${def.protection ? ' · ' + def.protection + ' threat reduction' : ''}</p>${visitor && !owner ? btn('Equip on ' + visitor.name, 'equipItem:' + visitor.id + ':' + item.uid, !!D.ensureEquipmentSlots(visitor)[def.slot] || visitor.level < def.minLevel) : ''}`,
     );
   }
   html +=
@@ -213,11 +218,13 @@ function renderStore() {
       .map((e) =>
         card(
           e.name,
-          `<p>${esc(e.desc)}</p><p class="stats">${Object.entries(e.stats)
+          `<p>${esc(e.desc)}</p><p>${esc(e.slot)} · ${esc(e.rarity)} · Level ${e.minLevel}</p><p class="stats">${Object.entries(
+            e.stats,
+          )
             .map(([k, v]) => k.toUpperCase() + ' +' + v)
             .join(
               ' · ',
-            )}${e.protection ? ' · ' + e.protection + ' percentage points less daily threat' : ''}</p>${btn('Buy into storage · ' + e.cost + 'g', 'buy:' + e.id, state.gold < e.cost)}`,
+            )}${e.protection ? ' · ' + e.protection + ' percentage points less daily threat' : ''}</p>${btn('Buy into storage · ' + e.cost + 'g', 'buy:' + e.id, state.gold < e.cost || (e.rarity === 'rare' && !state.flags.truth))}`,
         ),
       )
       .join('');
@@ -798,7 +805,7 @@ document.addEventListener('click', (e) => {
     if (op === 'advance') D.advance(state, id, value, choiceLevel);
     if (op === 'buy') D.buyEquipment(state, id);
     if (op === 'equipItem') D.equipItem(state, id, value);
-    if (op === 'unequip') D.unequip(state, id);
+    if (op === 'unequip') D.unequip(state, id, value);
     if (op === 'watch') {
       const m = state.missions.find((m) => m.uid === id),
         def = D.contracts.find((d) => d.id === m.id),

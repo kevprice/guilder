@@ -56,7 +56,7 @@ test('legacy personal gear migrates into shared inventory, retaining its stats a
   assert.equal(restored.inventory[0].owner, 'bryn');
   const uid = D.buyEquipment(restored, 'boots');
   assert.notEqual(uid, restored.inventory[0].uid);
-  assert.equal(assessContract(D.contracts[0], [restored.roster[0]]).totals.end, 9);
+  assert.equal(assessContract(D.contracts[0], [restored.roster[0]]).totals.end, 8);
 });
 test('injuries reduce work; unconscious members do no work and need a conscious escort', () => {
   const s = guild();

@@ -500,6 +500,7 @@ export function releaseCompanion(s, id) {
   const c = s.roster.find((c) => c.id === id);
   if (!c || c.status !== 'home') throw Error('The companion must return home before departure.');
   for (const item of s.inventory || []) if (item.owner === id) item.owner = null;
+  c.equipmentSlots = {};
   c.gear = null;
   delete c.gearUid;
   c.status = 'departed';

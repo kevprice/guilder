@@ -84,7 +84,7 @@ test('store access follows service-room restoration and damage', () => {
 
 test('distinct parties, shared equipment and away availability', () => {
   const s = D.initial();
-  s.gold = 200;
+  s.gold = 500;
   D.recruit(s, 'bryn');
   const uid = D.equip(s, 'bryn', 'shield');
   assert.equal(s.roster[0].gear, null);

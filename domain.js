@@ -37,8 +37,27 @@ import {
   damageType,
 } from './classes.js';
 export { classes, talents, classOf, talentSlots, availableTalents, xpRequired, unspentLevels };
-import { equipment, itemDefinition, injuryNames, injuryLevel, conscious } from './equipment.js';
-export { equipment, injuryNames, injuryLevel, conscious };
+import {
+  equipment,
+  itemDefinition,
+  equipmentSlots,
+  equipmentBonus,
+  ensureEquipmentSlots,
+  syncLegacyGear,
+  returnEquipment,
+  injuryNames,
+  injuryLevel,
+  conscious,
+} from './equipment.js';
+export {
+  equipment,
+  equipmentSlots,
+  equipmentBonus,
+  ensureEquipmentSlots,
+  injuryNames,
+  injuryLevel,
+  conscious,
+};
 import {
   expansionMissions,
   expansionRooms,
@@ -521,6 +540,7 @@ export function awaken(s, id) {
     xp: 0,
     points: 0,
     gear: null,
+    equipmentSlots: {},
     status: 'home',
     recovery: 0,
     visits: 0,
@@ -547,6 +567,7 @@ export function recruit(s, id) {
     levelChoices: {},
     skills: [...(r.startingSkills || [])],
     gear: null,
+    equipmentSlots: {},
     status: 'home',
     recovery: 0,
     injury: 0,
@@ -678,10 +699,7 @@ export function recoverRemains(s, id) {
   pay(s, 60, 'Recovery crew for ' + c.name);
   day(s);
   c.bodyRecovered = true;
-  const item = s.inventory?.find((e) => e.uid === c.gearUid);
-  if (item) item.owner = null;
-  c.gear = null;
-  delete c.gearUid;
+  returnEquipment(s, c);
   note(
     s,
     'Mara’s recovery crew brought ' + c.name + ' and their equipment home.',
@@ -735,6 +753,8 @@ export function raiseDead(s, id, targetId) {
 export function buyEquipment(s, gear) {
   const def = itemDefinition(gear);
   if (!def) throw Error('Unknown equipment.');
+  if (def.rarity === 'rare' && !s.flags.truth)
+    throw Error('Rare equipment requires uncovering the guild truth.');
   pay(s, def.cost, def.name + ' placed in store room');
   s.inventory ||= [];
   const item = { uid: 'item-' + (s.nextItem = (s.nextItem || 0) + 1), id: gear, owner: null };
@@ -759,19 +779,24 @@ export function equipItem(s, id, uid) {
   if (s.storeVisitor !== id) throw Error('This resident must enter the store room.');
   const item = s.inventory?.find((e) => e.uid === uid);
   if (!item || item.owner) throw Error('Item is not in storage.');
-  if (c.gear) throw Error('Unequip the current item first.');
+  const def = itemDefinition(item.id);
+  const slots = ensureEquipmentSlots(c);
+  if (slots[def.slot]) throw Error('Unequip the current item in the ' + def.slot + ' slot first.');
+  if (c.level < def.minLevel) throw Error('Requires level ' + def.minLevel + '.');
   item.owner = id;
-  c.gear = item.id;
-  c.gearUid = uid;
+  slots[def.slot] = { id: item.id, uid };
+  syncLegacyGear(c);
 }
-export function unequip(s, id) {
+export function unequip(s, id, slot) {
   const c = readyResident(s, id);
   if (s.storeVisitor !== id) throw Error('This resident must enter the store room.');
-  const item = s.inventory?.find((e) => e.uid === c.gearUid);
+  const slots = ensureEquipmentSlots(c);
+  if (!slot) slot = itemDefinition(c.gear)?.slot;
+  const item = s.inventory?.find((e) => e.uid === slots[slot]?.uid);
   if (!item) throw Error('No equipped item.');
   item.owner = null;
-  c.gear = null;
-  delete c.gearUid;
+  delete slots[slot];
+  syncLegacyGear(c);
 }
 // Kept for older callers: a purchase now goes into storage, never directly onto a resident.
 export function equip(s, id, gear) {
@@ -845,10 +870,7 @@ export function missionCost(s, m) {
     : m.cost || 0;
 }
 function effective(c, stat) {
-  return (
-    c[stat] +
-    (stat === 'agi' && c.gear === 'boots' ? 2 : stat === 'end' && c.gear === 'shield' ? 2 : 0)
-  );
+  return c[stat] + equipmentBonus(c, stat);
 }
 export function risk(s, id, ids) {
   const def = contracts.find((m) => m.id === id);
@@ -966,12 +988,7 @@ function recoverFallenEquipment(s, m) {
     const c = resident(s, id);
     if (c.status === 'dead') {
       c.bodyRecovered = true;
-      if (c.gear) {
-        const item = s.inventory?.find((e) => e.uid === c.gearUid);
-        if (item) item.owner = null;
-        c.gear = null;
-        delete c.gearUid;
-      }
+      returnEquipment(s, c);
     }
   }
 }
@@ -2111,6 +2128,7 @@ export function load(raw) {
         c.gearUid = uid;
       }
   }
+  for (const c of s.roster) ensureEquipmentSlots(c);
   if (
     !Number.isInteger(s.nextItem) ||
     s.nextItem < 0 ||
@@ -2123,12 +2141,20 @@ export function load(raw) {
         !/^item-[1-9][0-9]*$/.test(e.uid) ||
         Number(e.uid.slice(5)) > s.nextItem ||
         (e.owner !== null &&
-          !s.roster.some((c) => c.id === e.owner && c.gearUid === e.uid && c.gear === e.id)),
+          !s.roster.some(
+            (c) =>
+              c.id === e.owner &&
+              c.equipmentSlots[itemDefinition(e.id).slot]?.uid === e.uid &&
+              c.equipmentSlots[itemDefinition(e.id).slot]?.id === e.id,
+          )),
     ) ||
-    s.roster.some(
-      (c) =>
-        c.gear &&
-        !s.inventory.some((e) => e.uid === c.gearUid && e.owner === c.id && e.id === c.gear),
+    s.roster.some((c) =>
+      Object.entries(c.equipmentSlots).some(
+        ([slot, item]) =>
+          !equipmentSlots.includes(slot) ||
+          itemDefinition(item.id)?.slot !== slot ||
+          !s.inventory.some((e) => e.uid === item.uid && e.owner === c.id && e.id === item.id),
+      ),
     )
   )
     throw Error('Invalid equipment inventory.');
