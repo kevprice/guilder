@@ -106,3 +106,54 @@ test('ghost room damage blocks plot until paid repair, survives clearing and per
   assert(loaded.flags.ledger);
   assert.deepEqual(D.load(D.save(loaded)), loaded);
 });
+
+test('one companion cannot trigger home attacks at home or while away', () => {
+  const s = D.initial();
+  D.recruit(s, 'bryn');
+  const gold = s.gold;
+  for (const seed of [17, 117, 217, 317, 417]) {
+    s.eventSeed = seed;
+    D.day(s);
+    assert.equal(D.homeDanger(s), null);
+    assert.deepEqual(s.threats, {});
+    assert.equal(s.gold, gold);
+    assert.equal(D.damagedRooms(s).length, 0);
+    assert.equal(s.roster[0].status, 'home');
+  }
+  D.dispatch(s, 'road', ['bryn']);
+  s.eventSeed = 17;
+  D.day(s);
+  assert.equal(D.homeDanger(s), null);
+  assert.deepEqual(s.threats, {});
+  assert(!s.scenes.some((scene) => scene.title === 'Defend your home'));
+  assert.deepEqual(D.load(D.save(s)), s);
+});
+
+test('dead or departed companions do not unlock home attacks', () => {
+  for (const status of ['dead', 'departed']) {
+    const s = guild();
+    s.roster[1].status = status;
+    s.eventSeed = 17;
+    D.day(s);
+    assert.equal(D.homeDanger(s), null);
+    assert.deepEqual(s.threats, {});
+  }
+});
+
+test('existing home threats pause their damage when only one companion remains', () => {
+  const s = guild();
+  s.eventSeed = 17;
+  D.day(s);
+  const def = D.homeDanger(s);
+  s.roster[1].status = 'dead';
+  const before = structuredClone(s.threats[def.id]);
+  const gold = s.gold;
+  D.day(s);
+  D.day(s);
+  assert.equal(D.homeDanger(s), null);
+  assert(!D.availableContracts(s).some((d) => d.id === def.id));
+  assert.equal(s.gold, gold);
+  assert.deepEqual(s.threats[def.id], before);
+  assert.equal(D.damagedRooms(s).length, 0);
+  assert.equal(s.roster[0].status, 'home');
+});

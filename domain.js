@@ -857,7 +857,7 @@ export function availableContracts(s) {
       !s.missions.some((x) => x.id === m.id && activeMission(x)) &&
       (!m.choices || !s.missions.some((x) => x.id === m.id && x.status === 'resolved')) &&
       (m.id !== 'dragon' || !s.flags.dragonSlain) &&
-      (!m.homeEvent || s.threats?.[m.id]?.active) &&
+      (!m.homeEvent || (homeAttacksEnabled(s) && s.threats?.[m.id]?.active)) &&
       (!(!m.internal && !m.choices) ||
         !s.missions.some(
           (x) => x.id === m.id && x.status === 'resolved' && x.completedDay === s.day,
@@ -1255,7 +1255,11 @@ function resolve(s, m, choice) {
     party: party.map((c) => c.name),
   });
 }
+function homeAttacksEnabled(s) {
+  return s.roster.filter((c) => !['dead', 'departed'].includes(c.status)).length >= 2;
+}
 export function dailyHomeEvent(s) {
+  if (!homeAttacksEnabled(s)) return;
   s.eventSeed = ((s.eventSeed ?? 97) * 48271) % 2147483647;
   const current = homeThreats.find((d) => s.threats?.[d.id]?.active);
   if (current) {
@@ -1351,6 +1355,7 @@ export function dailyHomeEvent(s) {
   }
 }
 export function homeDanger(s) {
+  if (!homeAttacksEnabled(s)) return null;
   return homeThreats.find((d) => s.threats?.[d.id]?.active) || null;
 }
 export function day(s) {
