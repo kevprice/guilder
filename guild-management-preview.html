@@ -22,6 +22,7 @@
       <button data-branch="house">Launch house production demo</button>
       <button data-branch="guard">Launch Mara defence demo</button>
       <button data-branch="patterns">Launch recipe discovery demo</button>
+      <button data-branch="doors">Launch door puzzle demo</button>
     </div>
     <p id="result" role="status"></p>
     <script type="module">
@@ -62,7 +63,7 @@
         D.recruit(s, 'bryn');
         D.recruit(s, 'ivo');
         s.roster[0].str = 10;
-        if (['house', 'guard', 'patterns'].includes(branch)) {
+        if (['house', 'guard', 'patterns', 'doors'].includes(branch)) {
           s.flags.discovered_sluice =
             s.flags.searched_sluice =
             s.flags.discovered_study =
@@ -125,11 +126,23 @@
           s.selected = 'ivo';
           D.rememberPosition(s, 'ivo', { x: study.x + 135, floor: study.y });
         }
+        if (branch === 'doors') {
+          s.selected = 'bryn';
+          s.flags.key_drainKey = false;
+          s.flags.searched_sluice = false;
+          const door = D.passages.find((p) => p.id === 'cellDoor');
+          const entrance = D.passages.find((p) => p.id === 'drainDoor');
+          s.dungeonReturns = { sluice: { x: entrance.x, y: entrance.y, floor: entrance.y } };
+          D.rememberPosition(s, 'bryn', { x: door.x, floor: door.y });
+          s.guild.house.rooms.corridor.workers = [null];
+          s.flags.towerCrown = true;
+        }
         if (branch === 'decision') {
           D.dispatch(s, 'survey_mill', ['bryn']);
           D.day(s);
         }
         D.discoverPatterns(s);
+        D.refreshRouteProgress(s);
         s.scenes = [];
         localStorage.setItem('bound-house-auto', D.save(D.load(D.save(s))));
         location.href = '/';

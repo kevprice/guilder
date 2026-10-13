@@ -3,7 +3,9 @@ import { paintInterior } from './room-personality.js';
 export function paintRoom(ctx, camera, x, w, name, restored, details) {
   paintInterior(ctx, camera, x, w, name, restored, 0);
 }
-export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
+export function paintCharacter(ctx, camera, c, x, y, controlled, facing, motion = {}) {
+  const stride = motion.moving ? Math.sin((motion.time || 0) * 9) * 6 : 0;
+  y -= motion.moving ? Math.abs(stride) * 0.25 : Math.sin((motion.time || 0) * 2 + x) * 0.6;
   const sx = x - camera,
     warrior = c.type === 'warrior',
     mage = c.type === 'mage',
@@ -24,7 +26,15 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
   ctx.beginPath();
   ctx.ellipse(sx, y + 2, 17, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  shape(
+  const leg = (points, swing) =>
+    shape(
+      points.map(([px, py]) => [
+        px + (swing * (py + 17)) / 17,
+        py - (Math.max(0, swing) * 0.35 * (py + 17)) / 17,
+      ]),
+      '#44372c',
+    );
+  leg(
     [
       [-9, -17],
       [-2, -17],
@@ -32,9 +42,9 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
       [-13, 0],
       [-13, -4],
     ],
-    '#44372c',
+    stride,
   );
-  shape(
+  leg(
     [
       [2, -17],
       [9, -17],
@@ -42,7 +52,7 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
       [15, 0],
       [2, 0],
     ],
-    '#44372c',
+    -stride,
   );
   // Cloak silhouettes identify classes before their equipment is inspected.
   shape(
@@ -157,7 +167,7 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing) {
   }
   ctx.fillStyle = c.undead ? '#e5d99a' : '#253039';
   ctx.beginPath();
-  ctx.arc(sx + (controlled ? facing : 1) * 3, y - 43, 1.2, 0, Math.PI * 2);
+  ctx.arc(sx + (facing || 1) * 3, y - 43, 1.2, 0, Math.PI * 2);
   ctx.fill();
   shape(
     [

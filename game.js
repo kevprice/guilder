@@ -3,6 +3,13 @@ import { renderPatternRewards } from './management-ui.js';
 import { renderNavigation, renderHudResources } from './interface-navigation.js';
 import { paintProductionBadges, productionBadgeAt } from './production-art.js';
 import { roomProduction } from './production-view.js';
+import {
+  renderRouteLedger,
+  renderDoorCard,
+  renderRouteRewards,
+  renderDevelopmentRewards,
+} from './route-ui.js';
+import { planResidentWalk, walkSample } from './resident-motion.js';
 import { paintHouseFurnishings, paintRoomWorker } from './house-art.js';
 import { renderGuildRewards, paintGuildFurnishings } from './guild-art.js';
 import { renderQuestReward } from './quest-rewards.js';
@@ -68,6 +75,11 @@ let trainingResident = null,
   trainingLevels = {},
   trainingTargets = {};
 let hoveredObject = null;
+const residentWalks = new Map();
+const homePresence = new Map();
+let motionState = state;
+let routeSelection = null,
+  pendingDoor = null;
 let characterPage = null;
 let selectedRecord = null;
 let contractTab = 'all';
@@ -132,7 +144,7 @@ function persist() {
   }
 }
 window.addEventListener('pagehide', () => {
-  D.rememberPosition(state, state.selected, player);
+  if (!residentWalks.has(state.selected)) D.rememberPosition(state, state.selected, player);
   persist();
 });
 function scene(
@@ -144,6 +156,9 @@ function scene(
   questReward = null,
   guildRewards = [],
   recipeRewards = [],
+  routeRewards = [],
+  developmentRewards = [],
+  door = null,
 ) {
   const record = D.records.find((r) => r.id === recordId);
   $('scene-label').hidden = true;
@@ -151,11 +166,14 @@ function scene(
   $('scene-body').classList.remove('record-page');
   $('scene-title').textContent = title;
   $('scene-body').innerHTML =
+    (door ? renderDoorCard(state, door, { esc, btn }, player) : '') +
+    renderRouteRewards(state, routeRewards, { esc, btn }) +
+    renderDevelopmentRewards(state, developmentRewards, { esc, btn }) +
     renderPatternRewards(recipeRewards, { esc }) +
     renderGuildRewards(guildRewards, esc, state) +
     renderQuestReward(questReward, { esc }) +
     renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
-    (questReward ? '' : record ? renderRecordPage(record) : paragraphs(body));
+    (questReward || door ? '' : record ? renderRecordPage(record) : paragraphs(body));
   $('scene-options').innerHTML = options
     .map((c) => `<div class="card">${btn(c.label, c.action, c.disabled)}</div>`)
     .join('');
@@ -177,6 +195,8 @@ function presentScene() {
       next.questReward,
       next.guildRewards,
       next.recipeRewards,
+      next.routeRewards,
+      next.developmentRewards,
     );
   }
 }
@@ -187,11 +207,12 @@ $('close-scene').onclick = () => {
   $('scene').close();
   if (state.scenes.length) presentScene();
 };
-function act(fn) {
+function act(fn, failureTitle = null) {
   try {
     const selectedBefore = state.selected;
-    D.rememberPosition(state, selectedBefore, player);
+    if (!residentWalks.has(selectedBefore)) D.rememberPosition(state, selectedBefore, player);
     fn();
+    D.refreshRouteProgress(state);
     if (selectedBefore !== state.selected) {
       player = D.residentPosition(state, state.selected);
       walkTarget = null;
@@ -200,7 +221,8 @@ function act(fn) {
     renderUI();
     presentScene();
   } catch (e) {
-    toast(e.message);
+    if (failureTitle) scene(failureTitle, e.message);
+    else toast(e.message);
   }
 }
 function openChoice(id) {
@@ -707,6 +729,44 @@ function renderStories() {
   return html;
 }
 function renderUI() {
+  if (motionState !== state) {
+    residentWalks.clear();
+    homePresence.clear();
+    motionState = state;
+    pendingDoor = null;
+  }
+  for (const c of state.roster) {
+    const fit = c.status === 'home' && !c.injury,
+      room = D.assignedRoom(state, c.id);
+    if (
+      fit &&
+      homePresence.get(c.id) === false &&
+      room &&
+      !graphics.reducedMotion &&
+      !residentWalks.has(c.id)
+    ) {
+      const legs = planResidentWalk(
+        state,
+        c,
+        { x: 170, y: 380, floor: 380 },
+        D.residentPosition(state, c.id),
+      );
+      if (legs) residentWalks.set(c.id, { legs, elapsed: 0, room: room.name });
+    }
+    homePresence.set(c.id, fit);
+  }
+  if (tab === 'Exploration') {
+    const known = D.passages.filter((p) => D.routeVisible(state, p)),
+      current =
+        known.find((p) => p.id === routeSelection) ||
+        known.find((p) => p.from === currentSource(player.floor)) ||
+        known[0];
+    if (current) {
+      routeSelection = current.id;
+      D.inspectRoute(state, current.id);
+      persist();
+    }
+  }
   productionSnapshots = D.houseRooms
     .filter((r) => r.w >= 90 && D.roomUnlocked(state, r))
     .map((r) => roomProduction(state, r.id));
@@ -727,7 +787,7 @@ function renderUI() {
   $('home-strip').innerHTML = D.home(state)
     .map(
       (c) =>
-        `<button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}">${portrait(c)}${esc(c.name)}${c.points ? ' · ↑' : ''}</button>`,
+        `<button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}" title="${esc(residentWalks.has(c.id) ? 'Walking to ' + residentWalks.get(c.id).room : D.assignedRoom(state, c.id) ? 'Assigned to ' + D.assignedRoom(state, c.id).name : 'Select ' + c.name)}">${portrait(c)}${esc(c.name)}${c.points ? ' · ↑' : ''}</button>`,
     )
     .join('');
   $('expeditions').innerHTML =
@@ -805,19 +865,14 @@ function renderUI() {
         'Recovered rescue instructions',
         btn('Read the bell ward release diagram', 'bellDiagram'),
       );
-    html += D.passages
-      .filter((p) => p.from === here)
-      .map((p) => card(passageLabel(state, p), btn('Walk to this passage', 'routeWalk:' + p.id)))
-      .join('');
-    html += D.chambers
-      .filter((r) => state.flags['discovered_' + r.id])
-      .map((r) =>
-        card(
-          r.name,
-          `<p>${state.flags['searched_' + r.id] ? esc(r.story) : ''}</p><span class="stats">${r.encounter && !state.flags['cleared_' + r.id] ? 'Creature guards this room' : state.flags['searched_' + r.id] ? 'Searched' : 'Investigate the marked plinth'}</span>`,
-        ),
-      )
-      .join('');
+    html += renderRouteLedger(
+      state,
+      { esc, btn },
+      { here, selected: routeSelection, origin: player },
+    );
+    const secured = D.houseRooms.filter((r) => r.kind === 'chamber' && !D.roomPause(state, r));
+    if (secured.length)
+      html += `<details class="quiet-details"><summary>Secured workplaces · ${secured.length}</summary>${secured.map((r) => btn(r.name, 'workplace:' + r.id)).join('')}</details>`;
   }
   if (tab === 'Store room') html += renderStore();
   if (tab === 'Guild' || tab === 'Characters') html += renderGuild();
@@ -905,11 +960,22 @@ $('status').onclick = () => {
   renderUI();
 };
 function chooseResident(id) {
+  pendingDoor = null;
   D.leaveStore(state);
   if (!D.home(state).some((c) => c.id === id)) throw Error('Resident unavailable.');
-  D.rememberPosition(state, state.selected, player);
+  if (!residentWalks.has(state.selected)) D.rememberPosition(state, state.selected, player);
   const leaving = state.selected,
-    assigned = D.settleResident(state, leaving, player);
+    assigned = residentWalks.has(leaving)
+      ? D.assignedRoom(state, leaving)
+      : D.settleResident(state, leaving, player);
+  if (assigned && !residentWalks.has(leaving) && !graphics.reducedMotion) {
+    const target = D.residentPosition(state, leaving);
+    if (Math.abs(target.x - player.x) > 8) {
+      const c = state.roster.find((c) => c.id === leaving),
+        legs = planResidentWalk(state, c, player, target);
+      if (legs) residentWalks.set(leaving, { legs, elapsed: 0, room: assigned.name });
+    }
+  }
   if (assigned)
     toast(D.recruits.find((c) => c.id === leaving)?.name + ' now works in ' + assigned.name + '.');
   state.selected = id;
@@ -917,6 +983,55 @@ function chooseResident(id) {
   keys = {};
   hoveredObject = null;
   walkTarget = null;
+}
+function inspectDoor(id) {
+  try {
+    D.inspectRoute(state, id);
+    routeSelection = id;
+    pendingDoor = null;
+    persist();
+    renderUI();
+    scene(D.doorName(id), '', [], null, [], null, [], [], [], [], id);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+function sendWorker(roomId, slot, id) {
+  pendingDoor = null;
+  const room = D.houseRooms.find((r) => r.id === roomId),
+    c = state.roster.find((c) => c.id === id);
+  const previous = state.guild.house.rooms[roomId].workers[slot];
+  let legs = null,
+    origin;
+  if (c && c.status === 'home' && !c.injury) {
+    const journey = residentWalks.get(id);
+    origin = journey ? walkSample(journey.legs, journey.elapsed) : D.residentPosition(state, id);
+    origin = { x: origin.x, y: origin.floor, floor: origin.floor };
+    legs = planResidentWalk(state, c, origin, D.workerStation(room, slot));
+    if (!legs)
+      throw Error(
+        'No secured route for ' +
+          c.name +
+          ' to ' +
+          room.name +
+          '. Open its passages with a specialist or an earned mechanism first.',
+      );
+  }
+  D.assignRoomWorker(state, roomId, slot, id);
+  if (previous && previous !== id && residentWalks.has(previous)) {
+    const journey = residentWalks.get(previous),
+      sample = walkSample(journey.legs, journey.elapsed);
+    D.rememberPosition(state, previous, { x: sample.x, floor: sample.floor });
+    residentWalks.delete(previous);
+  }
+  if (id && legs && !graphics.reducedMotion) {
+    residentWalks.set(id, { legs, elapsed: 0, room: room.name });
+    if (id === state.selected) {
+      player = { ...origin, vy: 0 };
+      walkTarget = null;
+    }
+    toast(c.name + ' is walking to ' + room.name + '. Work begins on game days.');
+  } else if (id === state.selected) player = D.residentPosition(state, id);
 }
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button');
@@ -945,6 +1060,48 @@ document.addEventListener('click', (e) => {
     return;
   }
   moreOpen = false;
+  if (op === 'routeSelect') {
+    routeSelection = id;
+    tab = 'Exploration';
+    renderUI();
+    return;
+  }
+  if (op === 'routeInspect' || op === 'rewardRoute') {
+    if (op === 'rewardRoute') $('scene').close();
+    inspectDoor(id);
+    return;
+  }
+  if (op === 'routeSolve') {
+    $('scene').close();
+    act(() => D.solveRoute(state, id, value));
+    return;
+  }
+  if (op === 'doorOpen') {
+    $('scene').close();
+    closePanel();
+    act(() => {
+      player = D.enterPassage(state, id, { x: player.x, floor: player.floor });
+      walkTarget = null;
+      grounded = true;
+    });
+    return;
+  }
+  if (op === 'rewardWorkplace') {
+    $('scene').close();
+    houseRoom = id;
+    roomSection = 'house';
+    tab = 'Rooms';
+    renderUI();
+    return;
+  }
+  if (op === 'routeContract') {
+    $('scene').close();
+    tab = 'Contracts';
+    contractTab = 'exploration';
+    renderUI();
+    openMission(id);
+    return;
+  }
   if (op === 'material') {
     materialId = id;
     saleQuantity = 1;
@@ -972,7 +1129,7 @@ document.addEventListener('click', (e) => {
       craftCategory = 'all';
       craftSource = null;
     }
-    if (op === 'recipeReward') $('scene').close();
+    if ($('scene').open) $('scene').close();
     if (state.guild.patterns.includes(id)) D.readPattern(state, id);
     roomSection = 'recipes';
     tab = 'Rooms';
@@ -1113,7 +1270,9 @@ document.addEventListener('click', (e) => {
       return;
     }
     closePanel();
+    $('scene').close();
     walkTarget = p.x;
+    pendingDoor = id;
     canvas.focus();
     return;
   }
@@ -1292,6 +1451,11 @@ document.addEventListener('input', (e) => {
   }
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.id === 'route-select') {
+    routeSelection = e.target.value;
+    renderUI();
+    return;
+  }
   if (e.target.id === 'room-search') {
     roomSearch = e.target.value;
     renderUI();
@@ -1316,11 +1480,7 @@ document.addEventListener('change', async (e) => {
   }
   if (e.target.dataset.roomWorker) {
     act(() => {
-      D.assignWorker(state, e.target.dataset.roomWorker, e.target.value || null);
-      if (e.target.value === state.selected) {
-        player = D.residentPosition(state, state.selected);
-        walkTarget = null;
-      }
+      sendWorker(D.facilityRoom(state, e.target.dataset.roomWorker), 0, e.target.value || null);
     });
     return;
   }
@@ -1336,16 +1496,11 @@ document.addEventListener('change', async (e) => {
   }
   if (e.target.dataset.houseRoom) {
     act(() => {
-      D.assignRoomWorker(
-        state,
+      sendWorker(
         e.target.dataset.houseRoom,
         Number(e.target.dataset.houseSlot),
         e.target.value || null,
       );
-      if (e.target.value === state.selected) {
-        player = D.residentPosition(state, state.selected);
-        walkTarget = null;
-      }
     });
     return;
   }
@@ -1408,6 +1563,8 @@ document.addEventListener('change', async (e) => {
   }
 });
 function advanceGuildDay() {
+  if (residentWalks.has(state.selected)) player = D.residentPosition(state, state.selected);
+  residentWalks.clear();
   D.day(state);
   const m = state.missions.find((m) => m.status === 'decision' || m.pendingEvent);
   const summary = state.guild.dailySummary?.lines || [];
@@ -1664,7 +1821,9 @@ function hotspots() {
         text: `E · Restore ${r.name.toLowerCase()} · ${r.cost}g${r.requiresSkill ? ' · Magical literacy' : ''}${r.id === 'threshold' ? ' · Safe preparation' : ''}`,
       });
   }
-  for (const c of D.home(state).filter((c) => c.id !== state.selected)) {
+  for (const c of D.home(state).filter(
+    (c) => c.id !== state.selected && !residentWalks.has(c.id),
+  )) {
     const n = D.availableChoices(state, c.id)[0];
     if (n)
       list.push({
@@ -1813,6 +1972,20 @@ canvas.addEventListener('click', (e) => {
     return;
   }
   if (tab) return;
+  const clickedDoor = D.passages.find(
+    (p) =>
+      p.y === player.floor &&
+      p.from === currentSource(player.floor) &&
+      Math.abs(wx - p.x) < 28 &&
+      Math.abs(wy - (p.y - 37)) < 40,
+  );
+  if (clickedDoor) {
+    walkTarget = clickedDoor.x;
+    pendingDoor = clickedDoor.id;
+    canvas.focus();
+    return;
+  }
+  pendingDoor = null;
   const route = [
     { x: 400, y: 380, to: 350 },
     { x: 505, y: 380, to: 505 },
@@ -1856,6 +2029,10 @@ document.addEventListener('keydown', (e) => {
       );
     }
     if (key === 'e') {
+      if (residentWalks.has(state.selected)) {
+        toast('This companion is walking to their assigned room.');
+        return;
+      }
       const h = nearest();
       if (h && !h.done) {
         if (h.action?.startsWith('recover:')) {
@@ -1865,14 +2042,7 @@ document.addEventListener('keydown', (e) => {
           return;
         }
         if (h.action?.startsWith('passage:')) {
-          act(() => {
-            player = D.enterPassage(state, h.action.split(':')[1], {
-              x: player.x,
-              floor: player.floor,
-            });
-            walkTarget = null;
-            grounded = true;
-          });
+          inspectDoor(h.action.split(':')[1]);
           return;
         }
         if (h.action?.startsWith('leave:')) {
@@ -1941,18 +2111,24 @@ document.addEventListener('keydown', (e) => {
         }
         if (h.choice) openChoice(h.choice);
         else
-          act(() => {
-            D.interact(state, h.action);
-            toast(
-              h.action === 'wall'
-                ? 'The wall opens. Restoration is a separate job.'
-                : h.action === 'ledger'
-                  ? 'A new expedition lead is in Contracts.'
-                  : h.action === 'mara'
-                    ? 'Mara sets the kettle down to listen.'
-                    : 'The house has changed.',
-            );
-          });
+          act(
+            () => {
+              D.interact(state, h.action);
+              toast(
+                h.action === 'wall'
+                  ? 'The wall opens. Restoration is a separate job.'
+                  : h.action === 'ledger'
+                    ? 'A new expedition lead is in Contracts.'
+                    : h.action === 'mara'
+                      ? 'Mara sets the kettle down to listen.'
+                      : 'The house has changed.',
+              );
+            },
+            ['wall', 'repair', 'tower', 'stairs', 'labyrinth', 'drain'].includes(h.action) ||
+              h.action.startsWith('room:')
+              ? 'Door requirement not met'
+              : null,
+          );
       }
     }
     if (key === 'w' || key === 'arrowup') stair('up');
@@ -2022,20 +2198,27 @@ function missingRoom(x, w, name, lead) {
   text(lead, x + 20, 300, 12, '#708d7b');
 }
 function drawResident(c, x, y, controlled = false) {
-  paintCharacter(ctx, camera, c, x, y, controlled, player.facing || 1);
-  paintEquipment(
-    ctx,
-    camera,
-    c,
-    x,
-    y,
-    graphics.reducedMotion ? 0 : last / 1000,
-    controlled ? player.facing || 1 : 1,
-  );
+  const journey = residentWalks.get(c.id),
+    sample = journey?.sample;
+  const moving = sample
+    ? sample.moving
+    : controlled &&
+      grounded &&
+      !!(keys.a || keys.d || keys.arrowleft || keys.arrowright || walkTarget !== null);
+  const facing = sample?.facing || (controlled ? player.facing || 1 : 1);
+  ctx.save();
+  ctx.globalAlpha *= sample?.opacity ?? 1;
+  paintCharacter(ctx, camera, c, x, y, controlled, facing, {
+    moving,
+    time: graphics.reducedMotion || (!controlled && c.status !== 'home') ? 0 : last / 1000,
+  });
+  paintEquipment(ctx, camera, c, x, y, graphics.reducedMotion ? 0 : last / 1000, facing);
   if (c.specialisation || c.undead)
     text(D.classOf(c).name, x - 30, y - 78, 9, c.undead ? '#99c58e' : '#d8bc82');
   if (!controlled && D.availableChoices(state, c.id).length)
     text('…', x - 5, y - 75, 20, '#c5a268');
+  if (journey) text('→ ' + journey.room, x - 38, y - 82, 8, '#9bcfc9');
+  ctx.restore();
 }
 function drawWorld(c) {
   const activeRoom = visualRoom();
@@ -2232,9 +2415,10 @@ function drawWorld(c) {
   paintHouseFurnishings(ctx, camera, state);
   paintProductionBadges(ctx, camera, state, productionSnapshots);
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
-    const position = D.residentPosition(state, r.id);
+    const position = residentWalks.get(r.id)?.sample || D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);
-    paintRoomWorker(ctx, camera, state, r, position, graphics.reducedMotion ? 0 : last / 1000);
+    if (!residentWalks.has(r.id))
+      paintRoomWorker(ctx, camera, state, r, position, graphics.reducedMotion ? 0 : last / 1000);
   }
   for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
     drawResident(
@@ -2268,7 +2452,14 @@ function drawWorld(c) {
   drawRouteLandmarks();
   drawHomeAttack();
   drawResident(c, player.x, player.y, true);
-  if (!keys.a && !keys.d && !keys.arrowleft && !keys.arrowright && walkTarget === null)
+  if (
+    !residentWalks.has(c.id) &&
+    !keys.a &&
+    !keys.d &&
+    !keys.arrowleft &&
+    !keys.arrowright &&
+    walkTarget === null
+  )
     paintRoomWorker(ctx, camera, state, c, player, graphics.reducedMotion ? 0 : last / 1000);
   graphics.end(ctx);
   paintMagicMotes(ctx, ambience);
@@ -2556,8 +2747,29 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000 || 0, 0.035);
   last = now;
   graphics.tick(dt);
+  for (const [id, journey] of residentWalks) {
+    const resident = state.roster.find((c) => c.id === id);
+    if (
+      !resident ||
+      resident.status !== 'home' ||
+      resident.injury ||
+      D.assignedRoom(state, id)?.name !== journey.room
+    ) {
+      residentWalks.delete(id);
+      continue;
+    }
+    journey.elapsed += dt;
+    journey.sample = walkSample(journey.legs, journey.elapsed);
+    if (id === state.selected) player = { ...journey.sample, vy: 0 };
+    if (journey.sample.arrived) {
+      residentWalks.delete(id);
+      const avatar = $('home-strip').querySelector('[data-action="select:' + id + '"]');
+      if (avatar) avatar.title = 'Assigned to ' + journey.room;
+      if (id === state.selected) player = D.residentPosition(state, id);
+    }
+  }
   const c = D.home(state).find((c) => c.id === state.selected) || D.home(state)[0];
-  if (!$('scene').open && !tab) {
+  if (!$('scene').open && !tab && !residentWalks.has(state.selected)) {
     let dir = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
     if (dir) walkTarget = null;
     else if (walkTarget !== null) {
@@ -2597,7 +2809,14 @@ function frame(now) {
       act(() => D.finish(state));
   }
   if (hoveredObject && hoveredObject.y !== player.floor) hoveredObject = null;
-  D.rememberPosition(state, state.selected, player);
+  if (!residentWalks.has(state.selected)) D.rememberPosition(state, state.selected, player);
+  if (pendingDoor && !tab && !$('scene').open) {
+    const door = D.passages.find((p) => p.id === pendingDoor);
+    if (door && door.y === player.floor && Math.abs(door.x - player.x) <= 58) {
+      walkTarget = null;
+      inspectDoor(pendingDoor);
+    }
+  }
   drawWorld(c);
   const h = hoveredObject || nearest();
   $('hint').textContent = h ? h.text : '';

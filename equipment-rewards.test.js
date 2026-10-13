@@ -5,7 +5,7 @@ import { equipment } from './equipment.js';
 import { equipmentIcon, renderEquipmentRewards } from './equipment-rewards.js';
 const esc = (value) =>
   String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-test('investigating treasure announces physical equipment separately and only awards it once', () => {
+test('investigating treasure includes prominent physical equipment rewards and only awards them once', () => {
   const s = D.initial();
   D.recruit(s, 'bryn');
   s.selected = 'bryn';
@@ -16,7 +16,7 @@ test('investigating treasure announces physical equipment separately and only aw
   assert.equal(s.inventory[0].owner, null);
   const reward = s.scenes.find((scene) => scene.equipmentRewards);
   assert.deepEqual(reward.equipmentRewards, ['riverCharm']);
-  assert.match(reward.title, /River charm/);
+  assert.match(renderEquipmentRewards(reward.equipmentRewards, { esc }), /River charm/);
   assert(s.journal.some((entry) => entry.kind === 'Equipment recovered'));
   const loaded = D.load(D.save(s));
   assert.deepEqual(

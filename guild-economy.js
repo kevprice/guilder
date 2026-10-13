@@ -1,4 +1,5 @@
 import { materials } from './house-rooms.js';
+import { mechanismRecipes } from './route-content.js';
 
 export const resources = [
   {
@@ -60,6 +61,77 @@ export const resources = [
 ];
 
 export const patternRecipes = [
+  ...mechanismRecipes,
+  ...[
+    ['ironHelm', 'searched_crypt', 'Search the crypt of erased names', { ore: 8, cloth: 3 }, 150],
+    [
+      'ironGreaves',
+      'searched_vault',
+      'Search the treasury under the roots',
+      { ore: 6, cloth: 4 },
+      120,
+    ],
+    [
+      'shield',
+      'searched_ratway',
+      'Clear and search the rat king’s cistern',
+      { timber: 5, ore: 3, cloth: 2 },
+      75,
+    ],
+    [
+      'glassDagger',
+      'searched_mirror',
+      'Clear and search the mirror chamber',
+      { ore: 5, aether: 4, timber: 2 },
+      180,
+    ],
+    [
+      'mistBoots',
+      'searched_menagerie',
+      'Secure and search the moonlit menagerie',
+      { cloth: 6, aether: 4 },
+      220,
+    ],
+    [
+      'stoneMail',
+      'searched_ossuary',
+      'Search the bone library',
+      { ore: 10, cloth: 3, aether: 5, components: 3 },
+      400,
+    ],
+    [
+      'wardStaff',
+      'searched_rift',
+      'Clear and search the drowned rift',
+      { ore: 4, timber: 6, aether: 8, components: 2 },
+      320,
+    ],
+    [
+      'threadRing',
+      'searched_stars',
+      'Search the observatory of lost roads',
+      { components: 3, aether: 6, ore: 4 },
+      280,
+    ],
+  ].map(([item, sourceFlag, source, materials, gold]) => ({
+    id: 'pattern_' + item,
+    item,
+    sourceFlag,
+    source,
+    materials,
+    gold,
+    work: gold >= 280 ? 10 : 8,
+    category: [
+      'shield',
+      'ironHelm',
+      'ironGreaves',
+      'mistBoots',
+      'stoneMail',
+      'threadRing',
+    ].includes(item)
+      ? 'armour'
+      : 'weapon',
+  })),
   {
     id: 'pattern_scholarHood',
     item: 'scholarHood',
@@ -114,7 +186,7 @@ export const patternRecipes = [
     gold: 70,
     category: 'weapon',
   },
-].map((r) => ({ ...r, pattern: true, facility: 'workshop', salvage: 0, work: 6 }));
+].map((r) => ({ work: 6, ...r, pattern: true, facility: 'workshop', salvage: 0 }));
 
 export function resourceStock(s, id) {
   if (id === 'gold') return s.gold;

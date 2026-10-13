@@ -2,6 +2,7 @@ import { equipmentBonus, itemDefinition } from './equipment.js';
 import { classWorkFactor, talentValue } from './classes.js';
 import * as H from './house-rooms.js';
 import * as E from './guild-economy.js';
+import * as R from './guild-routes.js';
 export { resources, resourceStock, recipeKnown, patternRecipes } from './guild-economy.js';
 export {
   houseRooms,
@@ -273,9 +274,16 @@ export const guildProfiles = Object.fromEntries(
 
 export function managementState() {
   return {
-    version: 6,
+    version: 7,
     patterns: [],
     readPatterns: [],
+    mechanisms: [],
+    solvedRoutes: {},
+    seenRoutes: [],
+    readyRoutes: [],
+    readRoutes: [],
+    unlocksAnnounced: [],
+    roomsAnnounced: [],
     house: H.houseState(),
     salvage: 6,
     supplies: 4,
@@ -333,7 +341,7 @@ export function grantTrophies(s) {
 }
 export function migrateManagement(s) {
   if (s.guild === undefined) s.guild = managementState();
-  const legacy = s.guild.version < 6;
+  const legacy = s.guild.version < 7;
   validateManagement(s);
   if (s.guild.version === 1) {
     s.guild.nextOrder = 0;
@@ -355,6 +363,10 @@ export function migrateManagement(s) {
     s.guild.patterns = [];
     s.guild.readPatterns = [];
     s.guild.version = 6;
+  }
+  if (s.guild.version === 6) {
+    s.guild.version = 7;
+    R.initialiseRoutes(s);
   }
   reconcileAssignments(s);
   grantTrophies(s);
@@ -565,6 +577,8 @@ export function queueWorkshopOrder(s, recipeId, quantity = 1) {
   if (recipe.sourceEquipment || recipe.reclaim)
     throw Error('Choose a specific stored item to refit or reclaim.');
   if (recipe.maraTier) throw Error('Upgrade Mara as an individual workshop project.');
+  if (recipe.routeTool)
+    throw Error('Build a door mechanism as an individual project; the guild needs one copy.');
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99)
     throw Error('Choose between 1 and 99 items per order.');
   const order = {
@@ -904,6 +918,8 @@ export function startProject(s, id, recipeId, patient, hooks, source = null) {
   const f = requireFacility(s, id);
   if (f.project) throw Error('Finish or cancel this room’s current project first.');
   const base = projectRecipe(s, id, recipeId, null);
+  if (base.routeTool && s.guild.mechanisms.includes(base.routeTool))
+    throw Error('This mechanism is already owned by the guild.');
   if ((base.sourceEquipment || base.reclaim) && !source)
     throw Error('Choose a specific stored item to refit or reclaim.');
   if (source && !(base.sourceEquipment || base.reclaim))
@@ -1101,6 +1117,10 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
         label +
         '. Mara can guard the home while companions travel. Manage her guard mode in Rooms → Mara.',
     });
+  } else if (r.routeTool) {
+    if (!s.guild.mechanisms.includes(r.routeTool)) s.guild.mechanisms.push(r.routeTool);
+    label = r.name + ' ready to install';
+    R.refreshRouteProgress(s);
   } else if (r.materialOutput || r.resourceOutput) {
     for (const [id, n] of Object.entries(r.materialOutput || {})) s.guild.house.materials[id] += n;
     for (const [id, n] of Object.entries(r.resourceOutput || {})) s.guild[id] += n;
@@ -1270,7 +1290,7 @@ export function validateManagement(s) {
   };
   if (
     !g ||
-    ![1, 2, 3, 4, 5, 6].includes(g.version) ||
+    ![1, 2, 3, 4, 5, 6, 7].includes(g.version) ||
     !['salvage', 'supplies', 'nextFurniture', 'nextCompletion', 'readCompletion'].every((k) =>
       nonnegativeInt(g[k]),
     ) ||
@@ -1295,6 +1315,7 @@ export function validateManagement(s) {
     Object.keys(g.facilities).length !== facilities.length
   )
     bad();
+  if (g.version >= 7) R.validateRouteState(s);
   if (
     g.version >= 6 &&
     (!Array.isArray(g.patterns) ||
@@ -1350,6 +1371,7 @@ export function validateManagement(s) {
               !r.sourceEquipment &&
               !r.reclaim &&
               !r.maraTier &&
+              !r.routeTool &&
               (!r.pattern || g.patterns?.includes(r.id)) &&
               (!r.blueprint || g.blueprints.includes(r.blueprint)),
           ),
@@ -1387,6 +1409,7 @@ export function validateManagement(s) {
     const p = f.project;
     if (p !== null) {
       const r = recipes.find((r) => r.id === p?.recipe && r.facility === def.id);
+      if (r?.routeTool && g.mechanisms.includes(r.routeTool)) bad();
       if (r?.sourceEquipment || r?.reclaim) {
         const source = p.source,
           item = source?.item;

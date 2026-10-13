@@ -53,6 +53,10 @@ export function navigationNotices(s) {
       label: 'completed production or new recipes',
     },
     Training: { count: levels, label: 'unspent level choices' },
+    Exploration: {
+      count: s.guild.readyRoutes?.filter((id) => !s.guild.readRoutes.includes(id)).length || 0,
+      label: 'door solutions earned',
+    },
     Characters: {
       count: s.roster.filter(
         (c) => !['dead', 'departed'].includes(c.status) && D.unspentLevels(c).length,

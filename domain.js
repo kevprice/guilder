@@ -1,4 +1,14 @@
 import * as G from './guild-management.js';
+import * as R from './guild-routes.js';
+export {
+  routeStatus,
+  routeVisible,
+  roomBenefit,
+  doorName,
+  sourceName,
+  routeItems,
+  mechanismRecipes,
+} from './guild-routes.js';
 import { questRewards } from './quest-rewards.js';
 import { advancementAbilities } from './advancement-abilities.js';
 import {
@@ -381,6 +391,16 @@ const guildHooks = {
       );
   },
 };
+export function inspectRoute(s, id) {
+  return R.inspectRoute(s, id);
+}
+export function solveRoute(s, id, method) {
+  R.solveRoute(s, id, method, guildHooks);
+  R.refreshRouteProgress(s);
+}
+export function refreshRouteProgress(s) {
+  R.refreshRouteProgress(s);
+}
 export function assignWorker(s, id, worker) {
   G.assignWorker(s, id, worker);
   refreshHomeDefence(s);
@@ -645,8 +665,16 @@ export function enterPassage(s, id, origin) {
     (chambers.some((r) => r.id === p.from) && !s.flags['discovered_' + p.from])
   )
     throw Error('Reach this part of the guild first.');
-  const error = passageError(s, p, c);
+  const assessment = R.routeStatus(s, id, c);
+  const sourceRoom = chambers.find((r) => r.id === p.from);
+  const error =
+    sourceRoom?.encounter && !s.flags['cleared_' + sourceRoom.id]
+      ? 'Clear the room’s creature before using its deeper passage.'
+      : assessment.solved
+        ? null
+        : passageError(s, p, c);
   if (error) throw Error(error);
+  if (R.routeVisible(s, p)) R.inspectRoute(s, id);
   if (passageCanStayOpen(p) && !passageOpened(s, p)) {
     s.openedPassages ||= [];
     s.openedPassages.push(p.id);
@@ -738,6 +766,7 @@ export function disarmChamberTrap(s, id) {
   s.scenes.push({ title: 'Trap disarmed · route safe', body: text });
 }
 export function investigateChamber(s, id) {
+  const sceneStart = s.scenes.length;
   const r = chambers.find((r) => r.id === id),
     c = home(s).find((c) => c.id === s.selected);
   if (!r || !c || !s.flags['discovered_' + id]) throw Error('Discover this room first.');
@@ -752,6 +781,7 @@ export function investigateChamber(s, id) {
   if (r.key) s.flags['key_' + r.key] = true;
   if (r.id === 'potions') showBellWardDiagram(s);
   if (r.item) awardEquipment(s, r.item, r.name);
+  R.refreshRouteProgress(s);
   note(
     s,
     r.story +
@@ -764,8 +794,16 @@ export function investigateChamber(s, id) {
         : ''),
     'Dungeon record',
   );
+  const newScenes = s.scenes.splice(sceneStart);
+  s.scenes.push(...newScenes.filter((n) => n.questReward));
+  const rewards = Object.fromEntries(
+    ['equipmentRewards', 'recipeRewards', 'routeRewards', 'developmentRewards']
+      .map((key) => [key, [...new Set(newScenes.flatMap((n) => n[key] || []))]])
+      .filter(([, ids]) => ids.length),
+  );
   s.scenes.push({
     title: 'Investigation: ' + r.name,
+    ...rewards,
     body:
       r.story +
       (r.item
@@ -1696,6 +1734,7 @@ function resolve(s, m, choice) {
   m.completedDay = s.day;
   G.reconcileAssignments(s);
   G.discoverPatterns(s);
+  R.refreshRouteProgress(s);
   s.reports.unshift({
     day: s.day,
     title: def.name,
@@ -2148,6 +2187,13 @@ export function repairRoom(s, id) {
   );
 }
 export function interact(s, action) {
+  const before = s.scenes.length;
+  interactAction(s, action);
+  const storyScenes = s.scenes.splice(before);
+  R.refreshRouteProgress(s);
+  s.scenes.push(...storyScenes);
+}
+function interactAction(s, action) {
   if (action === 'mara') {
     s.scenes.push(maraDialogue(s));
     return;
@@ -2423,6 +2469,12 @@ export function load(raw) {
         (n.recipeRewards !== undefined &&
           (!Array.isArray(n.recipeRewards) ||
             n.recipeRewards.some((id) => !G.patternRecipes.some((r) => r.id === id)))) ||
+        (n.routeRewards !== undefined &&
+          (!Array.isArray(n.routeRewards) ||
+            n.routeRewards.some((id) => !R.validRouteReward(id)))) ||
+        (n.developmentRewards !== undefined &&
+          (!Array.isArray(n.developmentRewards) ||
+            n.developmentRewards.some((id) => !G.houseRooms.some((r) => r.id === id)))) ||
         (n.guildRewards !== undefined &&
           (!Array.isArray(n.guildRewards) ||
             n.guildRewards.some((id) => !G.furnishings.some((f) => f.id === id)))) ||
@@ -2870,12 +2922,25 @@ export function validateContent() {
       !G.facilities.some((f) => f.id === r.facility) ||
       (r.item && !itemDefinition(r.item)) ||
       (r.furniture && !G.furnishings.some((f) => f.id === r.furniture)) ||
+      (r.routeTool &&
+        !R.mechanismRecipes.some((m) => m.id === r.id && m.routeTool === r.routeTool)) ||
+      (r.sourceFlag && !knownFlags.has(r.sourceFlag)) ||
       Object.entries(r.materials || r.materialOutput || {}).some(
         ([id, n]) => !materialIds.has(id) || !Number.isInteger(n) || n < 1,
       )
     )
       errors.push('Invalid guild recipe ' + r.id);
     recipeIds.add(r.id);
+  }
+  for (const [id, solutions] of Object.entries(R.routeSolutions)) {
+    if (!passages.some((p) => p.id === id)) errors.push('Unknown puzzle door ' + id);
+    for (const o of solutions)
+      if (
+        (o.recipe && !recipeIds.has(o.recipe)) ||
+        (o.flag && !knownFlags.has(o.flag)) ||
+        (o.resident && ![...recruits, ...sleepers].some((c) => c.id === o.resident))
+      )
+        errors.push('Invalid door solution ' + id + '/' + o.id);
   }
   for (const m of contracts) {
     if (ids.has(m.id)) errors.push(`Duplicate mission ${m.id}`);

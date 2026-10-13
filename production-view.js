@@ -48,7 +48,7 @@ export function roomProduction(s, id) {
   const cycleDays = work > 0 && target ? Math.max(1, Math.ceil(target / work)) : null;
   const nextDays = !reason && cycleDays ? Math.max(1, Math.ceil((target - progress) / work)) : null;
   const main = Object.entries(outputs)[0];
-  const amount = main?.[1] || (recipe?.item || recipe?.furniture ? 1 : 0);
+  const amount = main?.[1] || (recipe?.item || recipe?.furniture || recipe?.routeTool ? 1 : 0);
   const resource = main?.[0] || (watch ? 'guard' : core === 'infirmary' ? 'care' : 'craft');
   const resourceName =
     D.resources.find((r) => r.id === resource)?.name ||
@@ -74,7 +74,7 @@ export function roomProduction(s, id) {
     : main
       ? `${main[1]} ${resourceName.toLowerCase()} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
       : recipe
-        ? `1 ${recipe.item ? 'item' : recipe.furniture ? 'furnishing' : recipe.materialOutput ? 'batch' : recipe.maraTier ? 'upgrade' : 'treatment'} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
+        ? `1 ${recipe.item ? 'item' : recipe.furniture ? 'furnishing' : recipe.routeTool ? 'mechanism' : recipe.materialOutput ? 'batch' : recipe.maraTier ? 'upgrade' : 'treatment'} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
         : reason;
   return {
     id,

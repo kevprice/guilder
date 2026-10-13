@@ -211,7 +211,7 @@ test('version 5 saves quietly gain earned patterns with no change to resources, 
   D.startRoomProject(s, 'workshop', 'materials_shortSword');
   const before = structuredClone(s),
     loaded = reload(s);
-  assert.equal(loaded.guild.version, 6);
+  assert.equal(loaded.guild.version, 7);
   assert.deepEqual(loaded.guild.patterns, ['pattern_scholarHood']);
   assert.deepEqual(loaded.scenes, before.scenes);
   for (const key of ['gold', 'roster', 'flags', 'inventory', 'missions'])

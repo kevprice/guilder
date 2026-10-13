@@ -1,3 +1,4 @@
+import { routeItems } from './route-content.js';
 // A branching, persistent dungeon graph. Every chamber has a specific discovery and reward.
 export const chambers = [
   {
@@ -588,6 +589,7 @@ export function passageOpened(s, p) {
   );
 }
 export function passageLabel(s, p) {
+  if (s.guild?.solvedRoutes?.[p.id]) return p.label.split(' · ')[0] + ' · secured for the guild';
   return passageOpened(s, p) ? p.label.split(' · ')[0] + ' · opened for all companions' : p.label;
 }
 export function trapDisarmed(s, room) {
@@ -600,7 +602,18 @@ export function trapRequirement(room) {
 }
 export function passageError(s, p, c) {
   if (p.gate.flag && !s.flags[p.gate.flag]) return 'Follow the story first: ' + p.label;
-  if (p.gate.key && !s.flags['key_' + p.gate.key]) return 'Find the key or clue first: ' + p.label;
+  if (p.gate.key && !s.flags['key_' + p.gate.key]) {
+    const item = routeItems.find((i) => i.id === p.gate.key);
+    return (
+      'Required: ' +
+      (item?.name || p.gate.key) +
+      '. ' +
+      (item?.source || 'Search the preceding chamber') +
+      '. Opens ' +
+      p.label.split(' · ')[0] +
+      '.'
+    );
+  }
   if (p.gate.skill && !passageOpened(s, p) && !c.skills.includes(p.gate.skill))
     return 'Bring a resident with ' + p.label.split(' · ').at(-1);
   if (p.gate.skills && !passageOpened(s, p) && !p.gate.skills.some((k) => c.skills.includes(k)))

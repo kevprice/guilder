@@ -31,8 +31,10 @@ test('management version 2 upgrades without producing work, replacing stocks or 
   s.guild.version = 2;
   const before = structuredClone(s),
     copy = reload(s);
-  assert.equal(copy.guild.version, 6);
-  before.guild.version = 6;
+  assert.equal(copy.guild.version, 7);
+  before.guild.version = 7;
+  before.guild.unlocksAnnounced = ['cellarKey'];
+  before.guild.roomsAnnounced = ['service', 'store', 'garden', 'hospice'];
   assert.deepEqual(copy, before);
   assert.deepEqual(reload(copy), copy);
 });

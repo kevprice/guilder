@@ -20,7 +20,7 @@ export function renderCrew(s, id, { esc }, leadOnly = false) {
     room = s.guild.house.rooms[id];
   const core = D.coreFacility(s, id),
     role = D.activities[core || r.activity];
-  return `<div class="room-crew"><p class="stats">${room.workers.filter(Boolean).length}/${r.capacity} worker slots filled · ${role.stat.toUpperCase()} improves production at 10 and 20.</p>${room.workers
+  return `<div class="room-crew"><p class="stats">${room.workers.filter(Boolean).length}/${r.capacity} worker slots filled · ${role.stat.toUpperCase()} improves production at 10, 20, 30 and 40.</p>${room.workers
     .map((uid, index) => {
       if (leadOnly && index === 0) return '';
       return `<label>Worker ${index + 1}<select data-house-room="${r.id}" data-house-slot="${index}" aria-label="${esc(r.name)} worker ${index + 1}" ${D.roomPause(s, r) ? 'disabled' : ''}><option value="">Empty slot</option>${s.roster

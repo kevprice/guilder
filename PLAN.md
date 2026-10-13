@@ -19,6 +19,7 @@
 - Reclamation of spare stored equipment and furnishings, blueprint refits, exact item reservations and cancellation returns.
 - Optional automatic infirmary care, patient priorities, protected supplies, recovery forecasts and garden funding controls.
 - Survey and recovery expeditions, facility blueprints, safe mid-journey decisions, repeat cooldowns and guardian trophies.
+- Door inspections and a route ledger connect precise requirements to named keys, skills, crafted mechanisms, trusted companions, paid crews and earned regional permission. Secured rooms reveal their production purpose and discovered patterns; deeper workplaces reward stronger crews with richer yields. Assignments and home returns animate along available stairs and passages.
 - Room overview and facility pages, shared furniture storage, worker stat forecasts and expedition preparation budgets.
 - A sprawling tower and underworld with keys, traps, secret passages and distinct chambers.
 - Room focus, zoom, themed interiors, personal decoration, visible weapons, magical effects and creature silhouettes.

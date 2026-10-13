@@ -45,9 +45,11 @@ test('care stays manual by default and version 3 migration preserves active rese
   delete s.guild.carePolicy;
   const before = structuredClone(s),
     loaded = reload(s);
-  before.guild.version = 6;
+  before.guild.version = 7;
   before.guild.carePolicy = { mode: 'manual', priority: 'longest', reserve: 2 };
   before.guild.patterns = ['pattern_longSword'];
+  before.guild.unlocksAnnounced = ['cellarKey'];
+  before.guild.roomsAnnounced = ['service', 'store', 'garden', 'hospice'];
   assert.deepEqual(loaded, before);
   assert.deepEqual(reload(loaded), loaded);
   tick(loaded);

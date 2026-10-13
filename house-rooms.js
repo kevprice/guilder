@@ -327,22 +327,47 @@ export function workerContribution(c, stat) {
     status: c.status,
     stat: effective,
     fit: c.status === 'home' && !c.injury,
-    work: c.status === 'home' && !c.injury ? 1 + Math.min(2, Math.floor(effective / 10)) : 0,
+    work: c.status === 'home' && !c.injury ? 1 + Math.min(4, Math.floor(effective / 10)) : 0,
   };
 }
 export function roomForecast(s, id, excluded = []) {
   const r = houseRooms.find((r) => r.id === id),
     state = s.guild.house.rooms[id];
   const core = coreFacility(s, id),
-    role = activities[core || r.activity];
+    baseRole = activities[core || r.activity];
   const workers = state.workers
     .map((id) => s.roster.find((c) => c.id === id))
     .filter(Boolean)
     .map((c) =>
       excluded.includes(c.id)
-        ? { ...workerContribution(c, role.stat), fit: false, work: 0 }
-        : workerContribution(c, role.stat),
+        ? { ...workerContribution(c, baseRole.stat), fit: false, work: 0 }
+        : workerContribution(c, baseRole.stat),
     );
+  const quality =
+    r.id === 'furnace'
+      ? 3
+      : r.kind === 'chamber'
+        ? r.depth >= 5
+          ? 3
+          : r.depth >= 3
+            ? 2
+            : 1
+        : r.region
+          ? Number(r.id.at(-1)) >= 2
+            ? 3
+            : 2
+          : 1;
+  const bestStat = Math.max(0, ...workers.filter((w) => w.fit).map((w) => w.stat));
+  const yieldBonus =
+    !core && baseRole.work && quality > 1
+      ? Number(bestStat >= 20) + Number(quality >= 3 && bestStat >= 30)
+      : 0;
+  const role = {
+    ...baseRole,
+    output: Object.fromEntries(
+      Object.entries(baseRole.output).map(([id, n]) => [id, n + yieldBonus]),
+    ),
+  };
   const work = workers.reduce((n, c) => n + c.work, 0);
   const shortage = Object.entries(role.inputs || {}).find(
     ([id, n]) => s.guild.house.materials[id] < n,
@@ -358,6 +383,9 @@ export function roomForecast(s, id, excluded = []) {
     room: r,
     core,
     role,
+    quality,
+    yieldBonus,
+    bestStat,
     workers,
     work: paused ? 0 : work,
     paused,

@@ -14,21 +14,24 @@ export const managementPages = [
   ['mara', 'Mara'],
 ];
 const group = (r) =>
-  r.maraTier
-    ? 'mara'
-    : r.category === 'weapon'
-      ? 'weapons'
-      : r.category === 'armour'
-        ? 'armour'
-        : r.furniture
-          ? 'furniture'
-          : 'materials';
+  r.routeTool
+    ? 'mechanisms'
+    : r.maraTier
+      ? 'mara'
+      : r.category === 'weapon'
+        ? 'weapons'
+        : r.category === 'armour'
+          ? 'armour'
+          : r.furniture
+            ? 'furniture'
+            : 'materials';
 const categoryNames = {
   all: 'All',
   weapons: 'Weapons',
   armour: 'Armour',
   furniture: 'Furniture',
   materials: 'Supplies & parts',
+  mechanisms: 'Door mechanisms',
 };
 function recipeTiles(recipes) {
   const grouped = new Map();
@@ -138,7 +141,10 @@ export function renderRoomInspector(s, helpers, id, facilityDetails = '') {
     `<div class="inspector-title"><h3>${esc(r.name)}</h3><span class="production-state state-${p.status}">${p.status === 'working' ? 'Working' : p.status === 'blocked' ? 'Locked' : p.status === 'paused' ? 'Paused' : 'Idle'}</span></div><div class="production-hero">${outputButtons(p, helpers)}<div><span class="eyebrow">${p.watch ? 'HOME DEFENCE' : 'PRODUCES'}</span><strong>${esc(p.recipe ? recipeName(p.recipe) : p.amount ? p.amount + ' ' + p.resourceName : p.resourceName)}</strong><p>${esc(p.reason || p.rate)}</p>${p.average && D.resources.some((r) => r.id === p.resource) ? '<span class="stats">Average ' + number(p.average) + ' ' + esc(p.resourceName.toLowerCase()) + ' per game day</span>' : ''}</div></div>`;
   if (p.target)
     html += `<div class="production-timing"><progress value="${p.progress}" max="${p.target}" aria-label="Production progress"></progress><span>${p.nextDays ? 'Ready in ' + p.nextDays + (p.nextDays === 1 ? ' day' : ' days') : 'Work paused'}${p.nextDays ? ' · Day ' + (s.day + p.nextDays) : ''}</span></div>`;
-  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Mara adds 1 baseline work each day. ' : ''}Each fit resident adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, and 20 adds a third. Away and injured residents keep their slots and resume on return.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
+  const forecast = D.roomForecast(s, id);
+  if (!p.core && forecast.quality > 1)
+    html += `<p class="production-milestone">${forecast.yieldBonus ? '✓ +' + forecast.yieldBonus + ' output per batch earned. ' : ''}Richer workplace · effective ${p.stat.toUpperCase()} 20 adds +1 output per batch${forecast.quality >= 3 ? '; 30 adds another +1' : ''}. Current best worker: ${forecast.bestStat}.</p>`;
+  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Mara adds 1 baseline work each day. ' : ''}Each fit resident adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, 20 adds a third, 30 a fourth and 40 a fifth. Away and injured residents keep their slots and resume on return.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
     D.activities[p.core || r.activity].inputs || {},
   )
     .map(
@@ -242,7 +248,8 @@ export function renderCrafting(
           : r.id === recipe.id,
     );
     html += `<section class="recipe-detail" aria-label="Selected recipe"><div class="recipe-detail-heading">${iconForRecipe(recipe, esc)}<div><span class="eyebrow">${recipe.pattern ? 'DISCOVERED PATTERN' : recipe.materials ? 'MATERIAL RECIPE' : 'SCRAP RECIPE'}</span><h3>${esc(recipeName(recipe))}</h3></div></div>${variants.length > 1 ? '<div class="craft-filters" role="group" aria-label="Recipe inputs">' + variants.map((r) => `<button data-action="craftRecipe:${r.id}" aria-pressed="${r.id === recipe.id}">Use ${r.materials ? 'materials' : 'scrap'}</button>`).join('') + '</div>' : ''}<p>${esc(
-      item?.desc ||
+      recipe.purpose ||
+        item?.desc ||
         furniture?.effect ||
         'Produces ' +
           Object.entries(recipe.materialOutput || recipe.resourceOutput || {})
@@ -266,7 +273,7 @@ export function renderCrafting(
       )
       .join(
         '',
-      )}</div><div class="recipe-build-actions"><span>${days} ${days === 1 ? 'day' : 'days'} with current staff</span>${btn(active ? 'Add to build queue' : 'Craft ' + recipeName(recipe), active ? 'queueOrder:' + recipe.id : 'project:workshop:' + recipe.id, !D.facilityAvailable(s, 'workshop') || (!active && !!missing.length))}</div>${missing.length ? '<p class="stats">Need ' + missing.map((m) => m.amount + ' ' + esc(D.resources.find((r) => r.id === m.resource)?.name || m.resource)).join(' + ') + '. Planned orders wait for materials.</p>' : ''}${recipe.pattern ? '<p class="stats">' + esc(recipe.source) + '.</p>' : ''}</section>`;
+      )}</div><div class="recipe-build-actions"><span>${days} ${days === 1 ? 'day' : 'days'} with current staff</span>${btn(recipe.routeTool && s.guild.mechanisms.includes(recipe.routeTool) ? 'Mechanism owned' : active && recipe.routeTool ? 'Finish current project first' : active ? 'Add to build queue' : 'Craft ' + recipeName(recipe), active ? 'queueOrder:' + recipe.id : 'project:workshop:' + recipe.id, !D.facilityAvailable(s, 'workshop') || (!active && !!missing.length) || (!!recipe.routeTool && (!!active || s.guild.mechanisms.includes(recipe.routeTool))))}</div>${missing.length ? '<p class="stats">Need ' + missing.map((m) => m.amount + ' ' + esc(D.resources.find((r) => r.id === m.resource)?.name || m.resource)).join(' + ') + '. Planned orders wait for materials.</p>' : ''}${recipe.pattern ? '<p class="stats">' + esc(recipe.source) + '.</p>' : ''}</section>`;
   } else html += '<div class="empty-state"><p>No known recipes match this filter.</p></div>';
   html +=
     '<div class="recipe-list" aria-label="Known recipes">' +
