@@ -701,7 +701,14 @@ export function paintAffordance(ctx, camera, h, time, near = false) {
     y = h.y - 37;
   ctx.save();
   const locked = /key|locked|literacy|strength|tracking/i.test(h.text || '') && !near;
-  const color = locked ? '#cfb585' : '#d9eccc';
+  const indicator = h.routeIndicator;
+  const color = indicator
+    ? indicator.ready
+      ? '#9fdfb0'
+      : '#efc773'
+    : locked
+      ? '#cfb585'
+      : '#d9eccc';
   glow(ctx, x, y, near ? 26 : 15, color, near ? 0.17 : 0.08);
   if (/^(passage|leave):/.test(h.action || '')) {
     ctx.fillStyle = '#0f212b';
@@ -756,6 +763,26 @@ export function paintAffordance(ctx, camera, h, time, near = false) {
   } else {
     ctx.globalAlpha = 0.5 + 0.2 * Math.sin(time * 1.3 + h.x);
     ctx.fillRect(x + 7, y - 9, 2, 2);
+  }
+  if (indicator) {
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 9px system-ui';
+    const width = ctx.measureText(indicator.label).width + 30;
+    ctx.fillStyle = '#172831';
+    ctx.fillRect(x - width / 2, h.y - 94, width, 19);
+    ctx.strokeStyle = color;
+    ctx.strokeRect(x - width / 2, h.y - 94, width, 19);
+    const kx = x - width / 2 + 8,
+      ky = h.y - 85;
+    ctx.beginPath();
+    ctx.arc(kx, ky - 2, 3, 0, Math.PI * 2);
+    ctx.moveTo(kx + 2, ky);
+    ctx.lineTo(kx + 7, ky + 5);
+    ctx.lineTo(kx + 9, ky + 3);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.fillText(indicator.label, x - width / 2 + 21, h.y - 81);
   }
   ctx.restore();
 }

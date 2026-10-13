@@ -348,7 +348,7 @@ Tavi wears the old guild’s pathfinder insignia. The roadkeepers brought this r
 
 ![Bryn](portraits/bryn.svg)
 
-**Class:** Warrior. **Starting level:** 1. **Stats:** STR 7 · AGI 4 · INT 3 · END 7.
+**Class:** Warrior. **Starting level:** 1. **Stats:** STR 8 · AGI 4 · INT 3 · END 7.
 
 **Found in:** Entrance hall. **Trapped by:** Caught beneath a stasis-bound door. **Release:** Lift the loose latch.
 

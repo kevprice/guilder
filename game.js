@@ -89,6 +89,7 @@ let decoratingFurniture = null;
 let houseRoom = null;
 let decorationRoom = null;
 let productionSnapshots = [];
+let routeIndicators = new Map();
 let moreOpen = false,
   roomFilter = 'all',
   roomSearch = '',
@@ -770,6 +771,12 @@ function renderUI() {
   productionSnapshots = D.houseRooms
     .filter((r) => r.w >= 90 && D.roomUnlocked(state, r))
     .map((r) => roomProduction(state, r.id));
+  routeIndicators = new Map(
+    [...D.passages.map((p) => p.id), 'stairs', 'tower', 'labyrinth'].map((id) => [
+      id,
+      D.routeIndicator(state, id),
+    ]),
+  );
   if (tab === 'Store room' && !D.storeAvailable(state)) tab = null;
   $('status').textContent = `Day ${state.day}`;
   $('hud-resources').innerHTML = renderHudResources(state, esc);
@@ -797,7 +804,7 @@ function renderUI() {
     D.activeMissions(state)
       .map(
         (m) =>
-          `<button data-tab="Contracts"><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.pendingEvent ? 'Safely camped · decision due' : m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
+          `<button ${m.pendingEvent ? 'data-action="expeditionEvent:' + m.uid + '"' : m.status === 'decision' ? 'data-action="letter:' + m.uid + '"' : 'data-tab="Contracts"'}><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.pendingEvent ? 'Safely camped · decision due' : m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
       )
       .join('');
   $('panel').hidden = !tab;
@@ -1670,8 +1677,11 @@ canvas.addEventListener('mousemove', (e) => {
         !h.done &&
         (h.action || h.choice) &&
         h.y === player.floor &&
-        Math.abs(h.x - point.x) < 22 &&
-        Math.abs(h.y - 37 - point.y) < 27,
+        ((Math.abs(h.x - point.x) < 22 && Math.abs(h.y - 37 - point.y) < 27) ||
+          (h.routeIndicator &&
+            Math.abs(h.x - point.x) < 50 &&
+            point.y >= h.y - 94 &&
+            point.y <= h.y - 75)),
     ) || null;
   canvas.style.cursor =
     hoveredObject || productionBadgeAt(state, point.x, point.y) ? 'pointer' : 'default';
@@ -1910,7 +1920,15 @@ function hotspots() {
         text: 'E · Personal record · ' + record.author,
       });
   }
-  return list.filter((h) => h.show !== false);
+  return list
+    .filter((h) => h.show !== false)
+    .map((h) => {
+      const id = h.action?.startsWith('passage:') ? h.action.slice(8) : h.action;
+      const routeIndicator = routeIndicators.get(id);
+      return routeIndicator
+        ? { ...h, routeIndicator, text: h.text + ' · ' + routeIndicator.detail }
+        : h;
+    });
 }
 function nearest() {
   return hotspots()
@@ -1976,8 +1994,8 @@ canvas.addEventListener('click', (e) => {
     (p) =>
       p.y === player.floor &&
       p.from === currentSource(player.floor) &&
-      Math.abs(wx - p.x) < 28 &&
-      Math.abs(wy - (p.y - 37)) < 40,
+      ((Math.abs(wx - p.x) < 28 && Math.abs(wy - (p.y - 37)) < 40) ||
+        (routeIndicators.get(p.id) && Math.abs(wx - p.x) < 50 && wy >= p.y - 94 && wy <= p.y - 75)),
   );
   if (clickedDoor) {
     walkTarget = clickedDoor.x;
@@ -2448,8 +2466,8 @@ function drawWorld(c) {
     }
     text('◇', d.x - 8, d.y - 85, 23, '#76bdb5');
   }
-  drawPassageMarkers();
   drawRouteLandmarks();
+  drawPassageMarkers();
   drawHomeAttack();
   drawResident(c, player.x, player.y, true);
   if (

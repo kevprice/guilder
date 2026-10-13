@@ -66,6 +66,71 @@ test('a seen locked door celebrates an earned key once and keeps its read marker
   assert.equal(navigationNotices(s).Exploration.count, 0);
   assert.equal(navigationNotices(reload(s)).Exploration.count, 0);
 });
+
+test('earned keys highlight unopened doors independently of read markers and respect remaining blockers', () => {
+  const s = guild();
+  s.flags.discovered_sluice = true;
+  assert.equal(D.routeIndicator(s, 'cellDoor'), null);
+  D.investigateChamber(s, 'sluice');
+  assert.equal(D.routeIndicator(s, 'cellDoor').label, 'KEY READY');
+  D.inspectRoute(s, 'cellDoor');
+  assert.equal(D.routeIndicator(reload(s), 'cellDoor').label, 'KEY READY');
+  enter(s, 'cellDoor');
+  assert.equal(D.routeIndicator(s, 'cellDoor'), null);
+  s.flags.key_cryptKey = true;
+  assert.equal(D.routeIndicator(s, 'cryptDoor').label, 'KEY HELD');
+  assert.match(D.routeIndicator(s, 'cryptDoor').detail, /guardian/);
+  s.flags.cleared_cells = true;
+  assert.equal(D.routeIndicator(s, 'cryptDoor').label, 'KEY READY');
+  s.roster[0].status = 'away';
+  assert.equal(D.routeIndicator(s, 'cryptDoor').label, 'KEY HELD');
+  s.roster[0].status = 'home';
+  assert.equal(D.routeIndicator(s, 'cryptDoor').label, 'KEY READY');
+});
+
+test('main hatch markers distinguish an owned key from enough money and disappear after opening', () => {
+  const s = guild();
+  s.flags.tower = false;
+  s.gold = 79;
+  assert.equal(D.routeIndicator(s, 'tower').label, 'KEY HELD');
+  assert.match(D.routeIndicator(s, 'tower').detail, /80g/);
+  s.gold = 80;
+  assert.equal(D.routeIndicator(s, 'tower').label, 'KEY READY');
+  s.selected = 'rowan';
+  assert.equal(D.routeIndicator(s, 'tower').label, 'KEY READY');
+  D.interact(s, 'tower');
+  assert.equal(D.routeIndicator(reload(s), 'tower'), null);
+  s.flags.stairs = false;
+  assert.equal(D.routeIndicator(s, 'labyrinth'), null);
+  s.gold = 45;
+  assert.equal(D.routeIndicator(s, 'stairs').label, 'KEY READY');
+});
+
+test('contract keys appear on the first completion scene and in the saved report, exactly once', () => {
+  const s = guild();
+  s.flags.anchor = false;
+  s.flags.ledger = true;
+  s.guild.unlocksAnnounced = s.guild.unlocksAnnounced.filter(
+    (id) => !['towerKey', 'labyrinthKey'].includes(id),
+  );
+  D.dispatch(s, 'anchor', ['bryn', 'ivo'], true);
+  const mission = s.missions.at(-1);
+  for (let n = 0; n < 10 && mission.status === 'travelling'; n++) {
+    s.eventSeed = 97;
+    D.day(s);
+  }
+  assert.equal(mission.status, 'decision');
+  D.decide(s, mission.uid, 'safe');
+  assert.deepEqual(s.scenes[0].routeRewards, ['towerKey', 'labyrinthKey']);
+  assert.match(renderRouteRewards(s, s.scenes[0].routeRewards, helpers), /KEY RECEIVED/);
+  assert.match(s.reports[0].text, /Item received: Bell-tower key/);
+  assert.match(s.reports[0].text, /Labyrinth-gate key/);
+  const count = s.scenes.filter((n) => n.routeRewards?.includes('towerKey')).length;
+  D.refreshRouteProgress(s);
+  const loaded = reload(s);
+  assert.equal(loaded.scenes.filter((n) => n.routeRewards?.includes('towerKey')).length, count);
+  assert.throws(() => D.decide(loaded, mission.uid, 'safe'));
+});
 test('crafted winches reserve costs, refund cancellation, produce once, and secure a dry guild route', () => {
   let s = guild();
   s.flags.discovered_sluice = true;

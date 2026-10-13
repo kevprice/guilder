@@ -5,7 +5,7 @@ test('complete loop: growth, physical gates, ledger, anchor and persistence', ()
   const s = D.initial();
   D.recruit(s, 'bryn');
   s.selected = 'bryn';
-  assert.throws(() => D.interact(s, 'wall'), /Strength 7/);
+  assert.throws(() => D.interact(s, 'wall'), /Strength 8/);
   while (s.roster[0].str < 10) {
     if (!D.availableContracts(s).some((d) => d.id === 'road')) {
       s.eventSeed = 97;

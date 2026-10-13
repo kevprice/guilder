@@ -346,7 +346,7 @@ test('room pages show funding deficits, worker thresholds, policies and reusable
   const workshop = renderRooms(s, helpers, { section: 'workshop' });
   assert.match(workshop, /short by 60 gold \+ 18 scrap/);
   assert.match(workshop, /Items per new order/);
-  assert.match(workshop, /STR 7/);
+  assert.match(workshop, /STR 8/);
   assert.doesNotMatch(workshop, /Growing mode/);
   const garden = renderRooms(s, helpers, { section: 'garden' });
   assert.match(garden, /Maintain a supply reserve/);

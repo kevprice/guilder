@@ -57,6 +57,10 @@
   color: #d7b77d;
   flex-shrink: 0;
 }
+.route-reward {
+  border-color: #b89453;
+  background: #34342b;
+}
 .guild-reward .eyebrow {
   display: block;
   margin-bottom: 6px;

@@ -23,6 +23,8 @@
       <button data-branch="guard">Launch Mara defence demo</button>
       <button data-branch="patterns">Launch recipe discovery demo</button>
       <button data-branch="doors">Launch door puzzle demo</button>
+      <button data-branch="keys">Launch contract key reward demo</button>
+      <button data-branch="watch">Launch Bryn watch demo</button>
     </div>
     <p id="result" role="status"></p>
     <script type="module">
@@ -63,7 +65,7 @@
         D.recruit(s, 'bryn');
         D.recruit(s, 'ivo');
         s.roster[0].str = 10;
-        if (['house', 'guard', 'patterns', 'doors'].includes(branch)) {
+        if (['house', 'guard', 'patterns', 'doors', 'watch'].includes(branch)) {
           s.flags.discovered_sluice =
             s.flags.searched_sluice =
             s.flags.discovered_study =
@@ -136,6 +138,26 @@
           D.rememberPosition(s, 'bryn', { x: door.x, floor: door.y });
           s.guild.house.rooms.corridor.workers = [null];
           s.flags.towerCrown = true;
+        }
+        if (branch === 'watch') {
+          D.enterStore(s, 'bryn');
+          for (const id of ['shortSword', 'buckler']) {
+            const uid = D.awardEquipment(s, id, 'Watch demo');
+            D.equipItem(s, 'bryn', uid);
+          }
+          D.leaveStore(s);
+          D.assignRoomWorker(s, 'entrance', 0, 'bryn');
+          s.selected = 'bryn';
+        }
+        if (branch === 'keys') {
+          s.flags.anchor = s.flags.tower = false;
+          D.dispatch(s, 'anchor', ['bryn', 'ivo'], true);
+          const mission = s.missions.at(-1);
+          for (let n = 0; n < 10 && mission.status === 'travelling'; n++) {
+            s.eventSeed = 97;
+            D.day(s);
+          }
+          D.rememberPosition(s, 'rowan', { x: 350, floor: 380 });
         }
         if (branch === 'decision') {
           D.dispatch(s, 'survey_mill', ['bryn']);

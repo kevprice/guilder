@@ -17,11 +17,11 @@ test('automatic class growth, six branches and meaningful physical/magic vulnera
   const s = guild(),
     [b, i, n] = s.roster;
   level(b, 3);
-  assert.equal(b.str, 9);
+  assert.equal(b.str, 10);
   assert.equal(b.end, 9);
   D.specialise(s, 'bryn', 'barbarian');
   gainLevel(b);
-  assert.equal(b.str, 11);
+  assert.equal(b.str, 12);
   assert.equal(b.end, 11);
   assert.equal(personalProtection(b, 'physical'), 12);
   assert.equal(personalProtection(b, 'magical'), -10);

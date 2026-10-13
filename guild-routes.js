@@ -140,6 +140,56 @@ export function inspectRoute(s, id) {
     s.guild.readRoutes.push(id);
   return r;
 }
+// Presentation is derived from ownership, not read markers: a dismissed popup cannot hide a door.
+export function routeIndicator(s, id, c = s.roster.find((r) => r.id === s.selected)) {
+  const hatch = {
+    stairs: { item: 'cellarKey', opened: 'stairs', cost: 45 },
+    tower: {
+      item: 'towerKey',
+      opened: 'tower',
+      cost: s.roster.some((r) => r.skills.includes('stoneSong') && r.status === 'home') ? 40 : 80,
+    },
+    labyrinth: { item: 'labyrinthKey', opened: 'labyrinth', cost: 0 },
+  }[id];
+  if (hatch) {
+    const item = routeItems.find((r) => r.id === hatch.item);
+    if (!s.flags[item.flag] || s.flags[hatch.opened]) return null;
+    if (id === 'labyrinth' && !s.flags.stairs) return null;
+    const ready =
+      !!c &&
+      c.status === 'home' &&
+      !c.injury &&
+      s.gold >= hatch.cost &&
+      (c.id !== 'rowan' || !s.rowanRecovery);
+    return {
+      ready,
+      label: ready ? 'KEY READY' : 'KEY HELD',
+      detail:
+        item.name + ' held' + (hatch.cost ? ' · ' + hatch.cost + 'g repairs' : ' · ready to open'),
+    };
+  }
+  const r = routeStatus(s, id, c);
+  if (!r || !r.sourceReached || r.visited) return null;
+  const key = routeItems.find((i) => i.id === r.passage.gate.key && s.flags[i.flag]);
+  if (!key && !r.solved && !r.canSolve) return null;
+  const remaining = r.guardian
+    ? 'defeat the source-room guardian first'
+    : r.primary
+        .filter((p) => !p.met)
+        .map((p) => p.label)
+        .join(' + ');
+  return {
+    ready: r.ready,
+    label: key ? (r.ready ? 'KEY READY' : 'KEY HELD') : r.ready ? 'READY' : 'SOLUTION',
+    detail:
+      (key ? key.name + ' held' : 'Door solution earned') +
+      (r.ready
+        ? ' · ready to open'
+        : remaining
+          ? ' · still needs ' + remaining
+          : ' · inspect door'),
+  };
+}
 export function solveRoute(s, id, method, hooks) {
   const r = routeStatus(s, id),
     solution = r?.alternatives.find((o) => o.id === method);
@@ -175,16 +225,20 @@ export function unlockedItems(s) {
       .map((r) => ({ ...r, id: 'tool_' + r.routeTool })),
   ];
 }
-export function refreshRouteProgress(s, quiet = false) {
-  if (s.guild.version < 7) return;
+export function refreshRouteProgress(s, quiet = false, rewardScene = null) {
+  if (s.guild.version < 7) return [];
   const items = unlockedItems(s).filter((i) => !s.guild.unlocksAnnounced.includes(i.id));
   s.guild.unlocksAnnounced.push(...items.map((i) => i.id));
-  if (items.length && !quiet)
-    s.scenes.push({
-      title: 'Route items recovered',
-      body: 'These items are held by the guild. Their doors are listed below.',
-      routeRewards: items.map((i) => i.id),
-    });
+  if (items.length && !quiet) {
+    const ids = items.map((i) => i.id);
+    if (rewardScene) rewardScene.routeRewards = [...(rewardScene.routeRewards || []), ...ids];
+    else
+      s.scenes.push({
+        title: 'Keys and route items received',
+        body: 'Added to the guild’s keyring. Matching unopened doors are highlighted on the map; any remaining requirements are shown when you inspect them.',
+        routeRewards: ids,
+      });
+  }
   const rooms = houseRooms.filter(
     (r) =>
       (r.flag || r.kind === 'chamber') &&
@@ -217,6 +271,7 @@ export function refreshRouteProgress(s, quiet = false) {
         routeRewards: ['door_' + id],
       });
   }
+  return items.map((i) => i.id);
 }
 export function initialiseRoutes(s) {
   s.guild.mechanisms = [];

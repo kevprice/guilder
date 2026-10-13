@@ -76,7 +76,7 @@ export function renderRouteRewards(s, ids, { esc, btn }) {
         item = D.routeItems.find((r) => r.id === id),
         doors = p ? [p.id] : (tool || item)?.doors || [],
         name = p ? D.doorName(p.id) : tool?.name || item?.name;
-      return `<article class="guild-reward route-reward">${tool ? resourceIcon('craft', esc(name)) : keyIcon}<div><span class="eyebrow">${p ? 'DOOR SOLUTION EARNED' : tool ? 'MECHANISM COMPLETED' : 'KEY OR ROUTE CLUE RECOVERED'}</span><strong>${esc(name)}</strong>${tool ? '<p>' + esc(tool.purpose) + '</p>' : ''}${doors
+      return `<article class="guild-reward route-reward">${tool ? resourceIcon('craft', esc(name)) : keyIcon}<div><span class="eyebrow">${p ? 'DOOR SOLUTION EARNED' : tool ? 'MECHANISM COMPLETED' : /key/i.test(name) ? 'KEY RECEIVED' : 'ROUTE ITEM RECEIVED'}</span><strong>${esc(name)}</strong>${item ? '<p>Added to the guild’s keyring. Matching unopened doors are highlighted on the map.</p>' : tool ? '<p>' + esc(tool.purpose) + '</p>' : ''}${doors
         .map((id) => {
           const route = D.passages.find((p) => p.id === id);
           return `<p>Unlocks <strong>${esc(D.doorName(id))}</strong>${route ? ' · ' + esc(D.sourceName(route.from)) + ' → ' + esc(route.to === 'stars' ? D.chambers.find((r) => r.id === route.to).name : D.chambers.find((r) => r.id === route.to)?.name || '') : ''}.</p>${route && D.routeVisible(s, route) ? btn('Inspect door →', 'rewardRoute:' + id) : ''}`;

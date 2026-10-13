@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { useStairs } from './movement.js';
+import { gainLevel } from './classes.js';
 
 function tick(s) {
   s.eventSeed = 97;
@@ -237,6 +238,9 @@ test('personal missions require the resident; research callbacks reflect earlier
   if (!D.availableContracts(s).some((d) => d.id === 'road')) tick(s);
   D.dispatch(s, 'road', ['bryn', 'nell']);
   tick(s);
+  // Faster opening access no longer implies that Bryn has reached the personal-story gate.
+  const personal = D.contracts.find((m) => m.id === 'brynPast');
+  while (s.roster[0].level < (personal.minLevel || 4)) gainLevel(s.roster[0]);
   assert.throws(() => D.dispatch(s, 'brynPast', ['nell']), /Bryn must/);
 });
 test('v1 campaigns migrate without losing an existing decision, roster or progression', () => {

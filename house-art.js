@@ -64,9 +64,16 @@ export function paintRoomWorker(ctx, camera, s, c, position, time) {
     ctx.fillRect(x + 22, y - 27, 14, 8);
     if (kind === 'garden') line([x + 31, y - 31], [x + 31, y - 44]);
   } else if (kind === 'watch') {
-    ctx.strokeStyle = '#84c6c4';
-    ctx.strokeRect(x + 17, y - 42 + swing * 2, 12, 19);
-    line([x + 24, y - 46 + swing * 2], [x + 24, y - 16]);
+    // Keep the equipped shield visible; the watch's activity stays at ground level.
+    ctx.strokeStyle = '#84c6c466';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 3, 28, 4, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#b5d8c9';
+    ctx.beginPath();
+    ctx.ellipse(x + Math.sin(t * 0.8) * 24, y + 3, 2, 1, 0, 0, Math.PI * 2);
+    ctx.fill();
   } else {
     ctx.fillStyle = kind === 'study' ? '#89c7cc' : '#d2b88f';
     ctx.fillRect(x + 14, y - 33, 22, 13);

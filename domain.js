@@ -128,7 +128,7 @@ export const recruits = [
     id: 'bryn',
     name: 'Bryn',
     type: 'warrior',
-    str: 7,
+    str: 8,
     agi: 4,
     int: 3,
     end: 7,
@@ -394,6 +394,9 @@ const guildHooks = {
 export function inspectRoute(s, id) {
   return R.inspectRoute(s, id);
 }
+export function routeIndicator(s, id, c = home(s).find((r) => r.id === s.selected)) {
+  return R.routeIndicator(s, id, c);
+}
 export function solveRoute(s, id, method) {
   R.solveRoute(s, id, method, guildHooks);
   R.refreshRouteProgress(s);
@@ -547,6 +550,7 @@ function validateGuildExpedition(s, m) {
 export function initial() {
   return {
     version: 2,
+    openingBalanceVersion: 1,
     dungeonBalanceVersion: 1,
     guild: G.managementState(),
     openedPassages: [],
@@ -1548,6 +1552,7 @@ function legacyRisk(s, def, ids) {
 }
 function resolve(s, m, choice) {
   if (m.status === 'resolved') return;
+  const sceneStart = s.scenes.length;
   m.pendingEvent = false;
   const def = contracts.find((x) => x.id === m.id),
     party = m.party.map((id) => resident(s, id)),
@@ -1734,7 +1739,15 @@ function resolve(s, m, choice) {
   m.completedDay = s.day;
   G.reconcileAssignments(s);
   G.discoverPatterns(s);
-  R.refreshRouteProgress(s);
+  const completionScene = s.scenes.slice(sceneStart).find((n) => n.title === def.name);
+  const routeRewards = R.refreshRouteProgress(s, false, completionScene);
+  for (const id of routeRewards) {
+    const item = R.routeItems.find((i) => i.id === id);
+    if (item)
+      details.push(
+        'Item received: ' + item.name + ' · unlocks ' + item.doors.map(R.doorName).join(', ') + '.',
+      );
+  }
   s.reports.unshift({
     day: s.day,
     title: def.name,
@@ -2666,6 +2679,14 @@ export function load(raw) {
       )
     )
       throw Error('Invalid level training choices.');
+  }
+  if (s.openingBalanceVersion !== undefined && s.openingBalanceVersion !== 1)
+    throw Error('Invalid opening balance version.');
+  if (s.openingBalanceVersion === undefined) {
+    const bryn = s.roster.find((c) => c.id === 'bryn');
+    if (bryn && !bryn.undead && bryn.level <= 3 && !s.flags.breach)
+      bryn.str = Math.max(bryn.str, 7 + bryn.level);
+    s.openingBalanceVersion = 1;
   }
   if (s.dungeonBalanceVersion !== undefined && s.dungeonBalanceVersion !== 1)
     throw Error('Invalid dungeon balance version.');
