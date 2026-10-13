@@ -5,7 +5,7 @@ export function materialCost(r) {
   return (
     [
       r.gold ? r.gold + 'g' : '',
-      r.salvage ? r.salvage + ' salvage' : '',
+      r.salvage ? r.salvage + ' scrap' : '',
       r.supplies ? r.supplies + ' supplies' : '',
       ...Object.entries(r.materials || {}).map(
         ([id, n]) => n + ' ' + (D.materials.find((m) => m.id === id)?.name.toLowerCase() || id),
@@ -50,7 +50,7 @@ export function renderHouse(s, helpers, selectedRoom = null) {
     body += `<p>Fit workers add ${f.work * 2} defence strength to Mara’s home watch.</p>${btn('Manage Mara and defence', 'roomPage:mara')}`;
   else
     body += `<p>Each batch: ${Object.entries(f.role.output)
-      .map(([id, n]) => n + ' ' + id)
+      .map(([id, n]) => n + ' ' + (id === 'salvage' ? 'scrap' : id))
       .join(' + ')} / ${f.role.work} work${
       f.role.inputs
         ? ' · uses ' +
@@ -92,7 +92,7 @@ export function renderMaterials(s, helpers) {
   const active = s.guild.facilities.workshop.project;
   if (active)
     html += `<p class="stats">Workshop occupied · ${active.progress}/${active.work} work.</p>${btn('Manage current project', 'roomPage:workshop')}`;
-  for (const base of D.recipes.filter((r) => r.materials && !r.maraTier)) {
+  for (const base of D.recipes.filter((r) => r.materials && !r.maraTier && D.recipeKnown(s, r))) {
     const r = D.projectRecipe(s, 'workshop', base.id),
       equipment = r.item && D.equipment.find((e) => e.id === r.item),
       furniture = r.furniture && D.furnishings.find((d) => d.id === r.furniture);
@@ -110,7 +110,7 @@ export function renderMaterials(s, helpers) {
         r.materialOutput || r.resourceOutput
           ? '<br>Produces ' +
             Object.entries({ ...r.materialOutput, ...r.resourceOutput })
-              .map(([id, n]) => n + ' ' + id)
+              .map(([id, n]) => n + ' ' + (id === 'salvage' ? 'scrap' : id))
               .join(' + ')
           : ''
       }</p>${!active ? btn('Craft ' + name, 'project:workshop:' + r.id, !D.facilityAvailable(s, 'workshop') || !!D.resourceShortfall(s, r).length) : ''}${btn('Plan ' + name, 'queueOrder:' + r.id)}`,

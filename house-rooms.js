@@ -402,7 +402,7 @@ export function advanceHouse(s, hooks) {
       r.name +
       ': ' +
       Object.entries(f.role.output)
-        .map(([id, n]) => '+' + n + ' ' + id)
+        .map(([id, n]) => '+' + n + ' ' + (id === 'salvage' ? 'scrap' : id))
         .join(', ');
     lines.push(label);
     s.guild.completions.push({

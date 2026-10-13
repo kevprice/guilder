@@ -46,8 +46,11 @@ export function navigationNotices(s) {
       label: 'new contracts or reports awaiting a decision',
     },
     Rooms: {
-      count: s.guild.nextCompletion - s.guild.readCompletion,
-      label: 'completed room projects',
+      count:
+        s.guild.nextCompletion -
+        s.guild.readCompletion +
+        (s.guild.patterns?.filter((id) => !s.guild.readPatterns.includes(id)).length || 0),
+      label: 'completed production or new recipes',
     },
     Training: { count: levels, label: 'unspent level choices' },
     Characters: {

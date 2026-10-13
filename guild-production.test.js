@@ -39,7 +39,7 @@ test('version 1 management migrates queues and policies without replacing stocks
   s.guild.supplies = 0;
   const before = structuredClone(s),
     saved = reload(s);
-  assert.equal(saved.guild.version, 5);
+  assert.equal(saved.guild.version, 6);
   assert.deepEqual(saved.guild.facilities.workshop.queue, []);
   assert.deepEqual(saved.guild.gardenPolicy, { mode: 'continuous', reserve: 8 });
   for (const key of ['gold', 'inventory', 'roster', 'day', 'flags', 'missions'])
@@ -87,7 +87,7 @@ test('blocked orders pause without payment and resume after obtaining the requir
   assert.equal(s.gold, 0);
   assert.equal(s.guild.salvage, 0);
   assert.equal(s.guild.facilities.workshop.queue[0].remaining, 1);
-  assert.match(s.guild.dailySummary.lines[0], /waiting for 20 gold and 6 salvage/);
+  assert.match(s.guild.dailySummary.lines[0], /waiting for 20 gold and 6 scrap/);
   s.gold = 200;
   D.buyResources(s, 'salvage');
   D.buyResources(s, 'salvage');
@@ -344,7 +344,7 @@ test('room pages show funding deficits, worker thresholds, policies and reusable
   D.queueWorkshopOrder(s, 'shortSword', 3);
   assert.match(renderRooms(s, helpers, { section: 'overview' }), /3 items planned/);
   const workshop = renderRooms(s, helpers, { section: 'workshop' });
-  assert.match(workshop, /short by 60 gold \+ 18 salvage/);
+  assert.match(workshop, /short by 60 gold \+ 18 scrap/);
   assert.match(workshop, /Items per new order/);
   assert.match(workshop, /STR 7/);
   assert.doesNotMatch(workshop, /Growing mode/);

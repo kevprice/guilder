@@ -334,7 +334,7 @@ export function paintFurniture(ctx, id, footprint, camera) {
   }
   ctx.restore();
 }
-export function paintGuildFurnishings(ctx, camera, s, rooms, time) {
+export function paintGuildFurnishings(ctx, camera, s, rooms, time, labels = true) {
   for (const zone of furnishingZones(s, rooms)) {
     const f = s.guild.facilities[zone.id],
       sx = zone.x - camera;
@@ -347,6 +347,10 @@ export function paintGuildFurnishings(ctx, camera, s, rooms, time) {
     symbols.forEach((id, i) => {
       if (id) paintFurniture(ctx, id, footprints[i], camera);
     });
+    if (!labels) {
+      ctx.restore();
+      continue;
+    }
     // Work labels sit above wall decorations and leave door captions and interaction points clear.
     ctx.fillStyle = '#11262bcc';
     ctx.fillRect(sx, zone.y, zone.w, 8);

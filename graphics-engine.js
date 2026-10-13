@@ -4,15 +4,15 @@ export const VIEW = { width: 1200, height: 650, pivotX: 600, pivotY: 380 };
 export function clampZoom(value) {
   return Math.max(0.7, Math.min(3, Number(value) || 1));
 }
-export function screenToWorld(x, y, camera, cameraY, zoom) {
+export function screenToWorld(x, y, camera, cameraY, zoom, width = VIEW.width) {
   return {
-    x: (x - VIEW.pivotX) / zoom + VIEW.pivotX + camera,
+    x: (x - width / 2) / zoom + width / 2 + camera,
     y: (y - VIEW.pivotY) / zoom + VIEW.pivotY + cameraY,
   };
 }
-export function visibleBounds(camera, cameraY, zoom) {
-  const a = screenToWorld(0, 0, camera, cameraY, zoom),
-    b = screenToWorld(VIEW.width, VIEW.height, camera, cameraY, zoom);
+export function visibleBounds(camera, cameraY, zoom, width = VIEW.width) {
+  const a = screenToWorld(0, 0, camera, cameraY, zoom, width),
+    b = screenToWorld(width, VIEW.height, camera, cameraY, zoom, width);
   return { left: a.x, top: a.y, right: b.x, bottom: b.y };
 }
 export class GraphicsEngine {
@@ -23,10 +23,16 @@ export class GraphicsEngine {
     this.focus = false;
     this.reducedMotion = false;
     this.dpr = 1;
+    this.width = VIEW.width;
   }
   resize(dpr = 1) {
     this.dpr = Math.max(1, Math.min(2, dpr));
-    const width = VIEW.width * this.dpr,
+    if (this.canvas.clientWidth && this.canvas.clientHeight)
+      this.width = Math.max(
+        320,
+        Math.round((this.canvas.clientWidth / this.canvas.clientHeight) * VIEW.height),
+      );
+    const width = this.width * this.dpr,
       height = VIEW.height * this.dpr;
     if (this.canvas.width !== width || this.canvas.height !== height) {
       this.canvas.width = width;
@@ -44,14 +50,14 @@ export class GraphicsEngine {
   }
   begin(ctx) {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.clearRect(0, 0, VIEW.width, VIEW.height);
+    ctx.clearRect(0, 0, this.width, VIEW.height);
     ctx.imageSmoothingEnabled = true;
   }
   world(ctx, cameraY) {
     ctx.save();
-    ctx.translate(VIEW.pivotX, VIEW.pivotY);
+    ctx.translate(this.width / 2, VIEW.pivotY);
     ctx.scale(this.zoom, this.zoom);
-    ctx.translate(-VIEW.pivotX, -VIEW.pivotY - cameraY);
+    ctx.translate(-this.width / 2, -VIEW.pivotY - cameraY);
   }
   end(ctx) {
     ctx.restore();

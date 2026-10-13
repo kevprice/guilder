@@ -41,3 +41,31 @@ test('major room types have different furnishing and lighting identities', () =>
   assert.equal(roomTheme('Pearl infirmary')[0], 'water');
   assert.equal(roomTheme('QUARTERS')[0], 'rest');
 });
+
+test('responsive canvas fills wide and narrow viewports while clicks remain aligned with the camera', () => {
+  for (const [clientWidth, clientHeight] of [
+    [1220, 412],
+    [374, 504],
+    [980, 650],
+  ]) {
+    const canvas = { clientWidth, clientHeight, width: 0, height: 0 },
+      g = new GraphicsEngine(canvas);
+    g.resize(2);
+    assert.equal(g.width, Math.round((clientWidth / clientHeight) * 650));
+    assert.equal(canvas.width / g.width, 2);
+    const camera = 410,
+      zoom = 1.75,
+      x = 930,
+      y = 380;
+    const point = screenToWorld(
+      (x - camera - g.width / 2) * zoom + g.width / 2,
+      y,
+      camera,
+      0,
+      zoom,
+      g.width,
+    );
+    assert.ok(Math.abs(point.x - x) < 1e-8);
+    assert.equal(point.y, y);
+  }
+});

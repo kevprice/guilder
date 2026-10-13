@@ -1,4 +1,8 @@
 import { renderRooms } from './room-panel.js';
+import { renderPatternRewards } from './management-ui.js';
+import { renderNavigation, renderHudResources } from './interface-navigation.js';
+import { paintProductionBadges, productionBadgeAt } from './production-art.js';
+import { roomProduction } from './production-view.js';
 import { paintHouseFurnishings, paintRoomWorker } from './house-art.js';
 import { renderGuildRewards, paintGuildFurnishings } from './guild-art.js';
 import { renderQuestReward } from './quest-rewards.js';
@@ -45,7 +49,11 @@ const $ = (id) => document.getElementById(id),
 const graphics = new GraphicsEngine(canvas);
 graphics.resize(window.devicePixelRatio || 1);
 graphics.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-window.addEventListener('resize', () => graphics.resize(window.devicePixelRatio || 1));
+window.addEventListener('resize', () => {
+  graphics.resize(window.devicePixelRatio || 1);
+  graphics.focusKey = null;
+  updatePanelAccess();
+});
 let state = D.initial(),
   tab = null,
   keys = {},
@@ -63,11 +71,20 @@ let hoveredObject = null;
 let characterPage = null;
 let selectedRecord = null;
 let contractTab = 'all';
-let roomSection = 'overview',
+let roomSection = 'dashboard',
   workshopQuantity = 1;
 let decoratingFurniture = null;
 let houseRoom = null;
 let decorationRoom = null;
+let productionSnapshots = [];
+let moreOpen = false,
+  roomFilter = 'all',
+  roomSearch = '',
+  craftCategory = 'all',
+  craftRecipe = null,
+  craftSource = null,
+  materialId = null,
+  saleQuantity = 1;
 function renderRecords() {
   const available = D.availableRecords(state),
     pages = D.records.filter(
@@ -126,6 +143,7 @@ function scene(
   equipmentRewards = [],
   questReward = null,
   guildRewards = [],
+  recipeRewards = [],
 ) {
   const record = D.records.find((r) => r.id === recordId);
   $('scene-label').hidden = true;
@@ -133,6 +151,7 @@ function scene(
   $('scene-body').classList.remove('record-page');
   $('scene-title').textContent = title;
   $('scene-body').innerHTML =
+    renderPatternRewards(recipeRewards, { esc }) +
     renderGuildRewards(guildRewards, esc, state) +
     renderQuestReward(questReward, { esc }) +
     renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
@@ -157,6 +176,7 @@ function presentScene() {
       next.equipmentRewards,
       next.questReward,
       next.guildRewards,
+      next.recipeRewards,
     );
   }
 }
@@ -247,7 +267,7 @@ function renderStore() {
     : card('Store room', `${btn('Walk to store door', 'walk:790')}`);
   html += card(
     'Expedition resources',
-    `<p>${state.guild.salvage} salvage · ${state.guild.supplies} supplies</p><div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', state.gold < 15)}${btn('Buy 4 salvage · 60g', 'resource:salvage', state.gold < 60)}</div>`,
+    `<p>${state.guild.salvage} scrap · ${state.guild.supplies} supplies</p><div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', state.gold < 15)}${btn('Buy 4 scrap · 60g', 'resource:salvage', state.gold < 60)}</div>`,
   );
   if (state.guild.furniture.length)
     html += card(
@@ -373,7 +393,7 @@ function renderContracts() {
       total = def.days * profile.amount;
     html += card(
       def.name,
-      `<span class="tag">${esc(contractKind(def))}</span>${renderMissionImpact(def)}<p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${def.activity ? ' · ' + (def.activity === 'survey' ? '2 salvage + 1 supply + facility blueprints' : '4 salvage · two-day cooldown') : ''}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
+      `<span class="tag">${esc(contractKind(def))}</span>${renderMissionImpact(def)}<p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${def.activity ? ' · ' + (def.activity === 'survey' ? '2 scrap + 1 supply + facility blueprints' : '4 scrap · two-day cooldown') : ''}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
         .filter((c) => c.status === 'home')
         .map(
           (c) =>
@@ -397,7 +417,7 @@ function renderMissionImpact(def) {
 }
 function contractKind(def) {
   if (def.activity)
-    return def.activity === 'survey' ? 'Guild development · Survey' : 'Resources · Salvage';
+    return def.activity === 'survey' ? 'Guild development · Survey' : 'Resources · Recovery';
   if (def.homeEvent) return 'Defence';
   if (def.internal) return 'Clearing';
   if (def.lethal) return 'Lethal expedition';
@@ -687,9 +707,12 @@ function renderStories() {
   return html;
 }
 function renderUI() {
+  productionSnapshots = D.houseRooms
+    .filter((r) => r.w >= 90 && D.roomUnlocked(state, r))
+    .map((r) => roomProduction(state, r.id));
   if (tab === 'Store room' && !D.storeAvailable(state)) tab = null;
-  $('status').textContent =
-    `Day ${state.day} · ${state.gold} gold · ${state.guild.salvage} salvage · ${state.guild.supplies} supplies`;
+  $('status').textContent = `Day ${state.day}`;
+  $('hud-resources').innerHTML = renderHudResources(state, esc);
   const selected = D.home(state).find((c) => c.id === state.selected);
   const portrait = (c) =>
     `<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color || '#76BDB5'}">`;
@@ -722,27 +745,12 @@ function renderUI() {
     `Controlling ${D.home(state).find((c) => c.id === state.selected)?.name || 'Rowan'}`;
   acknowledgeNavigation(state, tab, contractTab);
   const notices = navigationNotices(state);
-  $('nav').innerHTML = [
-    'Exploration',
-    'Characters',
-    'Contracts',
-    'Rooms',
-    ...(D.storeAvailable(state) ? ['Store room'] : []),
-    'Training',
-    'Stories',
-    'Diaries',
-    'Reports',
-    'Journal',
-  ]
-    .map((t) => {
-      const notice = notices[t];
-      const badge = notice?.count
-        ? `<span class="nav-notice" aria-label="${notice.count} ${esc(notice.label)}" title="${notice.count} ${esc(notice.label)}">${notice.count}</span>`
-        : '';
-      return `<button class="${t === tab ? 'active' : ''}" data-tab="${t}">${t}${badge}</button>`;
-    })
-    .join('');
-  let html = `<div class="panel-header"><div><h2>${tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
+  $('nav').innerHTML = renderNavigation(tab, notices, {
+    esc,
+    storeAvailable: D.storeAvailable(state),
+    moreOpen,
+  });
+  let html = `<div class="panel-header"><div><h2>${{ Rooms: 'House', Characters: 'Residents', Stories: 'Story' }[tab] || tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
   if (tab === 'Options')
     html +=
       '<dl class="controls"><dt>Walk</dt><dd>A / D · ← / →</dd><dt>Jump</dt><dd>Space</dd><dt>Stairs</dt><dd>W / S</dd><dt>Interact</dt><dd>E</dd><dt>Switch resident</dt><dd>Tab</dd><dt>Zoom</dt><dd>Mouse wheel · + / −</dd><dt>Close</dt><dd>Escape</dd></dl>';
@@ -824,6 +832,14 @@ function renderUI() {
         furnitureUid: decoratingFurniture,
         houseRoom,
         decorationRoom,
+        compact: true,
+        roomFilter,
+        roomSearch,
+        craftCategory,
+        craftRecipe,
+        craftSource,
+        materialId,
+        saleQuantity,
       },
     );
   if (tab === 'Training') html += renderTraining();
@@ -865,6 +881,15 @@ function renderUI() {
   $('panel').dataset.section = tab || '';
   $('panel').innerHTML = html + '</div>';
   if (oldTab === tab) $('panel-content').scrollTop = scroll;
+  updatePanelAccess();
+}
+function updatePanelAccess() {
+  const modal = !!tab && window.innerWidth <= 700;
+  for (const element of [document.querySelector('header'), $('nav'), $('world'), $('story-rail')])
+    if (element) element.inert = modal;
+  $('panel').setAttribute('role', modal ? 'dialog' : 'complementary');
+  if (modal) $('panel').setAttribute('aria-modal', 'true');
+  else $('panel').removeAttribute('aria-modal');
 }
 function closePanel() {
   D.leaveStore(state);
@@ -903,6 +928,8 @@ document.addEventListener('click', (e) => {
   if (b.dataset.tab) {
     if (b.dataset.tab === 'Store room' && !D.storeAvailable(state)) return;
     tab = tab === b.dataset.tab ? null : b.dataset.tab;
+    if (tab === 'Rooms') roomSection = 'dashboard';
+    moreOpen = false;
     keys = {};
     walkTarget = null;
     renderUI();
@@ -911,6 +938,65 @@ document.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (!a) return;
   const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'navMore') {
+    moreOpen = !moreOpen;
+    renderUI();
+    $('nav').querySelector('[data-action="navMore"]').focus();
+    return;
+  }
+  moreOpen = false;
+  if (op === 'material') {
+    materialId = id;
+    saleQuantity = 1;
+    roomSection = 'stores';
+    tab = 'Rooms';
+    keys = {};
+    walkTarget = null;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'roomFilter') {
+    roomFilter = id;
+    renderUI();
+    return;
+  }
+  if (op === 'craftCategory') {
+    craftCategory = id;
+    renderUI();
+    return;
+  }
+  if (['craftRecipe', 'recipeOpen', 'recipeReward'].includes(op)) {
+    craftRecipe = id;
+    if (op !== 'craftRecipe') {
+      craftCategory = 'all';
+      craftSource = null;
+    }
+    if (op === 'recipeReward') $('scene').close();
+    if (state.guild.patterns.includes(id)) D.readPattern(state, id);
+    roomSection = 'recipes';
+    tab = 'Rooms';
+    persist();
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'craftSource') {
+    craftSource = id === 'all' ? null : id;
+    craftCategory = 'all';
+    roomSection = 'recipes';
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'facilitySettings') {
+    roomSection = id;
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
   if (op === 'bellDiagram') {
     act(() => D.showBellWardDiagram(state));
     return;
@@ -943,6 +1029,9 @@ document.addEventListener('click', (e) => {
   if (op === 'roomPage') {
     if (
       ![
+        'dashboard',
+        'recipes',
+        'stores',
         'overview',
         'house',
         'materials',
@@ -1049,6 +1138,12 @@ document.addEventListener('click', (e) => {
     return;
   }
   act(() => {
+    if (op === 'sellMaterial') {
+      const qty = Number($('material-sale-quantity').value);
+      D.sellResource(state, id, qty);
+      saleQuantity = 1;
+      toast('Sold ' + qty + ' ' + D.resources.find((r) => r.id === id).name.toLowerCase() + '.');
+    }
     if (op === 'roomDay') advanceGuildDay();
     if (op === 'housePause') D.setRoomProduction(state, id, value === 'resume');
     if (op === 'maraGuard') D.setMaraDefence(state, id === 'on');
@@ -1169,7 +1264,43 @@ document.addEventListener('click', (e) => {
     if (op === 'import') $('save-file').click();
   });
 });
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'room-search') {
+    roomSearch = e.target.value;
+    clearTimeout(renderUI.searchTimer);
+    const caret = e.target.selectionStart;
+    renderUI.searchTimer = setTimeout(() => {
+      renderUI();
+      const input = $('room-search');
+      if (input) {
+        input.focus();
+        input.setSelectionRange(caret, caret);
+      }
+    }, 180);
+  }
+  if (e.target.id === 'material-sale-quantity') {
+    saleQuantity = Number(e.target.value || 0);
+    const button = $('panel-content').querySelector('[data-action^="sellMaterial:"]'),
+      r = D.resources.find((r) => r.id === materialId);
+    if (button && r) {
+      button.textContent = 'Sell for ' + saleQuantity * r.sell + 'g';
+      button.disabled =
+        !Number.isSafeInteger(saleQuantity) ||
+        saleQuantity < 1 ||
+        saleQuantity > D.resourceStock(state, r.id);
+    }
+  }
+});
 document.addEventListener('change', async (e) => {
+  if (e.target.id === 'room-search') {
+    roomSearch = e.target.value;
+    renderUI();
+    $('room-search')?.focus();
+    return;
+  }
+  if (e.target.id === 'material-sale-quantity') {
+    return;
+  }
   if (e.target.id === 'workshop-quantity') {
     const quantity = Number(e.target.value);
     if (Number.isInteger(quantity) && quantity >= 1 && quantity <= 99) workshopQuantity = quantity;
@@ -1349,7 +1480,7 @@ $('wide-view').onclick = () => {
 $('focus-room').onclick = () => {
   graphics.focus = true;
   const room = visualRoom();
-  setZoom(Math.min(2.5, 960 / (room?.w || 500)));
+  setZoom(Math.min(2.5, (graphics.width * 0.8) / (room?.w || 500)));
 };
 canvas.addEventListener(
   'wheel',
@@ -1367,13 +1498,14 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
   const b = canvas.getBoundingClientRect(),
-    scale = Math.min(b.width / 1200, b.height / 650);
+    scale = Math.min(b.width / graphics.width, b.height / 650);
   const point = screenToWorld(
-    (e.clientX - b.left - (b.width - 1200 * scale) / 2) / scale,
+    (e.clientX - b.left - (b.width - graphics.width * scale) / 2) / scale,
     (e.clientY - b.top - (b.height - 650 * scale) / 2) / scale,
     camera,
     cameraY,
     graphics.zoom,
+    graphics.width,
   );
   hoveredObject =
     hotspots().find(
@@ -1384,7 +1516,8 @@ canvas.addEventListener('mousemove', (e) => {
         Math.abs(h.x - point.x) < 22 &&
         Math.abs(h.y - 37 - point.y) < 27,
     ) || null;
-  canvas.style.cursor = hoveredObject ? 'pointer' : 'default';
+  canvas.style.cursor =
+    hoveredObject || productionBadgeAt(state, point.x, point.y) ? 'pointer' : 'default';
 });
 canvas.addEventListener('mouseleave', () => {
   hoveredObject = null;
@@ -1654,10 +1787,9 @@ function stair(direction) {
 }
 canvas.tabIndex = 0;
 canvas.addEventListener('click', (e) => {
-  if (tab) return;
   const bounds = canvas.getBoundingClientRect();
-  const scale = Math.min(bounds.width / 1200, bounds.height / 650);
-  const inset = (bounds.width - 1200 * scale) / 2;
+  const scale = Math.min(bounds.width / graphics.width, bounds.height / 650);
+  const inset = (bounds.width - graphics.width * scale) / 2;
   const insetY = (bounds.height - 650 * scale) / 2;
   const point = screenToWorld(
       (e.clientX - bounds.left - inset) / scale,
@@ -1665,9 +1797,22 @@ canvas.addEventListener('click', (e) => {
       camera,
       cameraY,
       graphics.zoom,
+      graphics.width,
     ),
     wx = point.x,
     wy = point.y;
+  const selectedRoom = productionBadgeAt(state, wx, wy);
+  if (selectedRoom) {
+    houseRoom = selectedRoom.id;
+    roomSection = 'house';
+    tab = 'Rooms';
+    keys = {};
+    walkTarget = null;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (tab) return;
   const route = [
     { x: 400, y: 380, to: 350 },
     { x: 505, y: 380, to: 505 },
@@ -1682,11 +1827,24 @@ canvas.addEventListener('click', (e) => {
   canvas.focus();
 });
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && moreOpen) {
+    moreOpen = false;
+    renderUI();
+    $('nav').querySelector('[data-action="navMore"]').focus();
+    return;
+  }
   if (e.key === 'Escape' && tab) {
     closePanel();
     return;
   }
-  if (tab || $('scene').open || ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (
+    tab ||
+    moreOpen ||
+    $('scene').open ||
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) ||
+    (e.target.closest('button,a,summary') && ['Tab', ' '].includes(e.key))
+  )
+    return;
   if (['Tab', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key))
     e.preventDefault();
   const key = e.key.toLowerCase();
@@ -1851,7 +2009,7 @@ function text(t, x, y, size = 14, color = '#adbaab') {
   ctx.fillText(t, x - camera, y);
 }
 function drawRoom(x, w, name, restored, details) {
-  const view = visibleBounds(camera, cameraY, graphics.zoom);
+  const view = visibleBounds(camera, cameraY, graphics.zoom, graphics.width);
   if (x + w < view.left - 50 || x > view.right + 50) return;
   paintInterior(ctx, camera, x, w, name, restored, graphics.reducedMotion ? 0 : last / 1000);
   paintRoomIdentity(ctx, camera, x, w, name, restored, graphics.reducedMotion ? 0 : last / 1000);
@@ -1885,11 +2043,13 @@ function drawWorld(c) {
     const key = player.floor + ':' + activeRoom.x;
     if (graphics.focusKey !== key) {
       graphics.focusKey = key;
-      setZoom(Math.min(2.5, 960 / activeRoom.w));
+      setZoom(Math.min(2.5, (graphics.width * 0.8) / activeRoom.w));
     }
   }
   const target =
-    graphics.focus && activeRoom ? activeRoom.x + activeRoom.w / 2 - 600 : player.x - 600;
+    graphics.focus && activeRoom
+      ? activeRoom.x + activeRoom.w / 2 - graphics.width / 2
+      : player.x - graphics.width / 2;
   camera += (target - camera) * 0.08;
   cameraY += (player.floor - 380 - (graphics.focus ? 55 : 0) - cameraY) * 0.09;
   graphics.begin(ctx);
@@ -1898,6 +2058,7 @@ function drawWorld(c) {
     cameraY,
     floor: player.floor,
     time: graphics.reducedMotion ? 0 : last / 1000,
+    width: graphics.width,
   };
   paintSky(ctx, ambience);
   graphics.world(ctx, cameraY);
@@ -1946,7 +2107,7 @@ function drawWorld(c) {
     rect(1175, 360, 16, 22, '#a78a61');
     rect(1175, 348, 5, 20, '#a78a61');
   } else missingRoom(975, 290, 'A MISSING LANDING', 'An anchor might bring it home');
-  const view = visibleBounds(camera, cameraY, graphics.zoom);
+  const view = visibleBounds(camera, cameraY, graphics.zoom, graphics.width);
   for (const r of D.rooms) {
     if (r.x + r.w < view.left - 50 || r.x > view.right + 50) continue;
     if (state.flags[r.anchor]) {
@@ -2007,7 +2168,14 @@ function drawWorld(c) {
           : 'Its destination is not yet known',
       );
   }
-  paintGuildFurnishings(ctx, camera, state, D.rooms, graphics.reducedMotion ? 0 : last / 1000);
+  paintGuildFurnishings(
+    ctx,
+    camera,
+    state,
+    D.rooms,
+    graphics.reducedMotion ? 0 : last / 1000,
+    false,
+  );
   rect(430, 435, 390, 145, '#252e38');
   for (let ry = 440; ry < 574; ry += 18)
     for (let rx = 435; rx < 815; rx += 44) {
@@ -2062,6 +2230,7 @@ function drawWorld(c) {
   ))
     paintChamber(ctx, camera, r, state, ambience.time);
   paintHouseFurnishings(ctx, camera, state);
+  paintProductionBadges(ctx, camera, state, productionSnapshots);
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
     const position = D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);

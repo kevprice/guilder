@@ -249,8 +249,8 @@ export function contractLabel(def) {
       kind: def.activity === 'survey' ? 'GUILD DEVELOPMENT' : 'RESOURCE EXPEDITION',
       detail:
         def.activity === 'survey'
-          ? 'Facility blueprints, salvage and supplies'
-          : 'Salvage, gold and experience',
+          ? 'Facility blueprints, scrap and supplies'
+          : 'Scrap, gold and experience',
       priority: 4,
     };
   if (def.homeEvent)

@@ -8,6 +8,13 @@ import {
   renderCrew,
   materialCost,
 } from './house-panel.js';
+import {
+  managementHeader,
+  renderRoomDashboard,
+  renderRoomInspector,
+  renderCrafting,
+  renderStores,
+} from './management-ui.js';
 
 export function renderRooms(
   s,
@@ -18,9 +25,27 @@ export function renderRooms(
     furnitureUid = null,
     houseRoom = null,
     decorationRoom = null,
+    compact = false,
+    roomFilter = 'all',
+    roomSearch = '',
+    craftCategory = 'all',
+    craftRecipe = null,
+    craftSource = null,
+    materialId = null,
+    saleQuantity = 1,
   } = {},
 ) {
   const g = s.guild;
+  const header = managementHeader(s, section, { esc });
+  if (section === 'dashboard')
+    return header + renderRoomDashboard(s, { esc, card, btn }, { roomFilter, roomSearch });
+  if (section === 'house') return header + renderRoomInspector(s, { esc, card, btn }, houseRoom);
+  if (section === 'recipes')
+    return (
+      header + renderCrafting(s, { esc, card, btn }, { craftCategory, craftRecipe, craftSource })
+    );
+  if (section === 'stores')
+    return header + renderStores(s, { esc, card, btn }, { materialId, saleQuantity });
   const sections = [
     ['overview', 'Overview'],
     ['house', 'House rooms'],
@@ -64,9 +89,18 @@ export function renderRooms(
       .join(' · ');
   };
   const shortfallText = (missing) =>
-    missing.map((r) => r.amount + ' ' + (r.resource === 'gold' ? 'gold' : r.resource)).join(' + ');
+    missing
+      .map(
+        (r) =>
+          r.amount +
+          ' ' +
+          (D.resources.find((d) => d.id === r.resource)?.name.toLowerCase() || r.resource),
+      )
+      .join(' + ');
   const suppliesText = (n) => n + (n === 1 ? ' supply' : ' supplies');
-  let html = `<div class="room-tabs" role="group" aria-label="Room pages">${sections.map(([id, name]) => `<button data-action="roomPage:${id}" aria-pressed="${section === id}">${name}</button>`).join('')}</div><div class="resource-stock"><span>Gold <strong>${s.gold}</strong></span><span>Salvage <strong>${g.salvage}</strong></span><span>Supplies <strong>${g.supplies}</strong></span></div>`;
+  let html = compact
+    ? header
+    : `<div class="room-tabs" role="group" aria-label="Room pages">${sections.map(([id, name]) => `<button data-action="roomPage:${id}" aria-pressed="${section === id}">${name}</button>`).join('')}</div><div class="resource-stock"><span>Gold <strong>${s.gold}</strong></span><span>Scrap <strong>${g.salvage}</strong></span><span>Supplies <strong>${g.supplies}</strong></span></div>`;
   html += `<div class="room-day-controls"><span class="stats">Day ${s.day} · rooms, recovery and expeditions</span>${btn('Advance guild day →', 'roomDay')}</div>`;
   if (section === 'house') return html + renderHouse(s, { esc, card, btn }, houseRoom);
   if (section === 'materials') return html + renderMaterials(s, { esc, card, btn });
@@ -96,7 +130,7 @@ export function renderRooms(
   if (['all', 'overview'].includes(section))
     html += card(
       'Quartermaster resources',
-      `<div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', s.gold < 15)}${btn('Buy 4 salvage · 60g', 'resource:salvage', s.gold < 60)}</div>`,
+      `<div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', s.gold < 15)}${btn('Buy 4 scrap · 60g', 'resource:salvage', s.gold < 60)}</div>`,
     );
   const care = D.carePlan(s);
   if (
@@ -142,7 +176,7 @@ export function renderRooms(
     html += btn('Craft furniture in the workshop', 'roomPage:workshop');
     html += btn('Place and move furnishings →', 'roomPage:decorate');
     html +=
-      '<p class="stats">Spare stored pieces can be reclaimed for salvage in the workshop. Placed furnishings and earned trophies are kept intact.</p>';
+      '<p class="stats">Spare stored pieces can be reclaimed for scrap in the workshop. Placed furnishings and earned trophies are kept intact.</p>';
     return html;
   }
   for (const def of D.facilities.filter((f) => ['all', 'overview', f.id].includes(section))) {
@@ -209,7 +243,7 @@ export function renderRooms(
           p.source.kind === 'equipment'
             ? D.equipment.find((e) => e.id === p.source.item.id)
             : D.furnishings.find((d) => d.id === p.source.item.id);
-        body += `<p class="conversion-held">Held: ${esc(input.name)} · #${p.source.item.uid.split('-').at(-1)}. ${r.reclaim ? 'Completion dismantles it for ' + p.yield + ' salvage.' : 'Completion replaces it with ' + esc(D.equipment.find((e) => e.id === r.item).name) + '.'} Cancel to return this piece and all paid inputs.</p>`;
+        body += `<p class="conversion-held">Held: ${esc(input.name)} · #${p.source.item.uid.split('-').at(-1)}. ${r.reclaim ? 'Completion dismantles it for ' + p.yield + ' scrap.' : 'Completion replaces it with ' + esc(D.equipment.find((e) => e.id === r.item).name) + '.'} Cancel to return this piece and all paid inputs.</p>`;
       }
     } else if (def.id === 'garden') {
       const crop = D.projectRecipe(s, 'garden', 'crop');
@@ -278,45 +312,46 @@ export function renderRooms(
         '</div><label class="order-quantity">Items per new order<input id="workshop-quantity" type="number" min="1" max="99" step="1" value="' +
         orderQuantity +
         '" aria-label="Items per new order"></label>';
-      body +=
-        '<details open><summary>Craft equipment</summary><div class="room-recipes">' +
-        D.recipes
-          .filter(
-            (r) =>
-              r.item &&
-              !r.materials &&
-              !r.sourceEquipment &&
-              (!r.blueprint || g.blueprints.includes(r.blueprint)),
-          )
-          .map((base) => {
-            const r = D.projectRecipe(s, def.id, base.id),
-              item = D.equipment.find((e) => e.id === r.item);
-            return `<div class="room-recipe"><strong>${esc(item.name)}</strong><p class="stats">${esc(item.slot)} · ${Object.entries(
-              item.stats,
+      if (!compact)
+        body +=
+          '<details open><summary>Craft equipment</summary><div class="room-recipes">' +
+          D.recipes
+            .filter(
+              (r) =>
+                r.item &&
+                !r.materials &&
+                !r.sourceEquipment &&
+                (!r.blueprint || g.blueprints.includes(r.blueprint)),
             )
-              .map(([stat, n]) => stat.toUpperCase() + ' +' + n)
-              .join(
-                ' · ',
-              )}<br>${cost(r)} / ${r.work} work${r.item ? '<br>' + (s.inventory || []).filter((i) => i.id === r.item).length + ' already owned' : ''}</p>${!f.project && !f.queue.length ? btn('Craft ' + item.name, 'project:workshop:' + r.id, !available || !canAfford(r)) : ''}${btn('Add order: ' + item.name, 'queueOrder:' + r.id)}</div>`;
-          })
-          .join('') +
-        '</div></details><details><summary>Craft furniture</summary><div class="room-recipes">' +
-        D.recipes
-          .filter(
-            (r) =>
-              r.furniture && !r.materials && (!r.blueprint || g.blueprints.includes(r.blueprint)),
-          )
-          .map((base) => {
-            const r = D.projectRecipe(s, def.id, base.id),
-              item = D.furnishings.find((f) => f.id === r.furniture);
-            return `<div class="room-recipe">${furnitureIcon(item.id, esc)}<strong>${esc(item.name)}</strong><p class="stats">${esc(item.effect)}<br>${cost(r)} / ${r.work} work</p>${!f.project && !f.queue.length ? btn('Craft ' + item.name, 'project:workshop:' + r.id, !available || !canAfford(r)) : ''}${btn('Add order: ' + item.name, 'queueOrder:' + r.id)}</div>`;
-          })
-          .join('') +
-        '</div></details>';
+            .map((base) => {
+              const r = D.projectRecipe(s, def.id, base.id),
+                item = D.equipment.find((e) => e.id === r.item);
+              return `<div class="room-recipe"><strong>${esc(item.name)}</strong><p class="stats">${esc(item.slot)} · ${Object.entries(
+                item.stats,
+              )
+                .map(([stat, n]) => stat.toUpperCase() + ' +' + n)
+                .join(
+                  ' · ',
+                )}<br>${cost(r)} / ${r.work} work${r.item ? '<br>' + (s.inventory || []).filter((i) => i.id === r.item).length + ' already owned' : ''}</p>${!f.project && !f.queue.length ? btn('Craft ' + item.name, 'project:workshop:' + r.id, !available || !canAfford(r)) : ''}${btn('Add order: ' + item.name, 'queueOrder:' + r.id)}</div>`;
+            })
+            .join('') +
+          '</div></details><details><summary>Craft furniture</summary><div class="room-recipes">' +
+          D.recipes
+            .filter(
+              (r) =>
+                r.furniture && !r.materials && (!r.blueprint || g.blueprints.includes(r.blueprint)),
+            )
+            .map((base) => {
+              const r = D.projectRecipe(s, def.id, base.id),
+                item = D.furnishings.find((f) => f.id === r.furniture);
+              return `<div class="room-recipe">${furnitureIcon(item.id, esc)}<strong>${esc(item.name)}</strong><p class="stats">${esc(item.effect)}<br>${cost(r)} / ${r.work} work</p>${!f.project && !f.queue.length ? btn('Craft ' + item.name, 'project:workshop:' + r.id, !available || !canAfford(r)) : ''}${btn('Add order: ' + item.name, 'queueOrder:' + r.id)}</div>`;
+            })
+            .join('') +
+          '</div></details>';
       const conversions = D.workshopConversions(s);
       for (const reclaim of [false, true]) {
         const options = conversions.filter((r) => !!r.reclaim === reclaim);
-        body += `<details class="workshop-conversions"><summary>${reclaim ? 'Reclaim spare equipment and furniture' : 'Refit stored equipment'}</summary><p class="stats">${reclaim ? 'Dismantle a stored piece for salvage. No gold cost. Rare equipment, equipped gear, placed furniture and trophies are kept intact.' : 'Reuse a stored short sword or padded coat to make sturdier equipment. Survey the mill road to discover these patterns.'} Each project reserves its exact item. Cancellation returns the piece and paid inputs. Started projects take priority over planned orders.</p>`;
+        body += `<details class="workshop-conversions"><summary>${reclaim ? 'Reclaim spare equipment and furniture' : 'Refit stored equipment'}</summary><p class="stats">${reclaim ? 'Dismantle a stored piece for scrap. No gold cost. Rare equipment, equipped gear, placed furniture and trophies are kept intact.' : 'Reuse a stored short sword or padded coat to make sturdier equipment. Survey the mill road to discover these patterns.'} Each project reserves its exact item. Cancellation returns the piece and paid inputs. Started projects take priority over planned orders.</p>`;
         if (!options.length)
           body += `<p class="stats">${reclaim ? 'No spare stored pieces available.' : !g.blueprints.includes('mill') ? 'Survey the mill road to unlock refit patterns.' : 'Store a short sword or padded coat to use these patterns.'}</p>`;
         body +=
@@ -336,7 +371,7 @@ export function renderRooms(
                     Object.entries(output.stats)
                       .map(([stat, n]) => stat.toUpperCase() + ' +' + n)
                       .join(' · ')
-                  : '+' + r.yield + ' salvage'
+                  : '+' + r.yield + ' scrap'
               }<br>${cost(r)} / ${r.work} work${r.days ? ' · ' + r.days + (r.days === 1 ? ' game day' : ' game days') : ''}</p>${btn((r.reclaim ? 'Start reclaim: ' : 'Start refit: ') + r.inputName + ' #' + r.uid.split('-').at(-1), 'workshopConversion:' + r.id + ':' + r.uid, !available || !!f.project || !canAfford(r))}</div>`;
             })
             .join('') +
@@ -372,7 +407,7 @@ export function renderRooms(
         : '');
     if (f.tier === 1)
       body += btn(
-        'Upgrade to tier 2 · 40g + 6 salvage · +1 work/day',
+        'Upgrade to tier 2 · 40g + 6 scrap · +1 work/day',
         'upgradeRoom:' + def.id,
         !available || s.gold < 40 || g.salvage < 6,
       );

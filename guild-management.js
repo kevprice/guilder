@@ -1,6 +1,8 @@
 import { equipmentBonus, itemDefinition } from './equipment.js';
 import { classWorkFactor, talentValue } from './classes.js';
 import * as H from './house-rooms.js';
+import * as E from './guild-economy.js';
+export { resources, resourceStock, recipeKnown, patternRecipes } from './guild-economy.js';
 export {
   houseRooms,
   materials,
@@ -48,7 +50,7 @@ export const furnishings = [
     id: 'outfitter',
     name: 'Outfitter’s bench',
     facility: 'workshop',
-    effect: 'Armour and footwear cost 1 less salvage.',
+    effect: 'Armour and footwear cost 1 less scrap.',
     blueprint: 'mill',
   },
   {
@@ -112,6 +114,7 @@ const equipmentRecipes = [
   ['leatherArmour', 12, 70, 6, 'armour', 'mill'],
 ];
 export const recipes = [
+  ...E.patternRecipes,
   ...H.materialRecipes,
   ...equipmentRecipes.map(([item, salvage, gold, work, category, blueprint]) => ({
     id: item,
@@ -229,7 +232,7 @@ export const guildMissions = expeditionAreas.flatMap((area) =>
     id: activity + '_' + area.id,
     area: area.id,
     activity,
-    name: (activity === 'survey' ? 'Survey: ' : 'Salvage: ') + area.name,
+    name: (activity === 'survey' ? 'Survey: ' : 'Recovery: ') + area.name,
     days: 2,
     capacity: 3,
     injuryDays: 1,
@@ -248,8 +251,8 @@ export const guildMissions = expeditionAreas.flatMap((area) =>
     ],
     desc:
       activity === 'survey'
-        ? 'Guild development · discover facility blueprints. Two base working days, with a decision after the first. Nonlethal; waiting at camp is safe. Rewards: 2 salvage, 1 supply and 25 XP per survivor.'
-        : 'Resource expedition · recover 4 salvage, 10 gold and 25 XP per survivor. Two base working days with a decision after the first. Nonlethal; two-day cooldown after completion.',
+        ? 'Guild development · discover facility blueprints. Two base working days, with a decision after the first. Nonlethal; waiting at camp is safe. Rewards: 2 scrap, 1 supply and 25 XP per survivor.'
+        : 'Resource expedition · recover 4 scrap, 10 gold and 25 XP per survivor. Two base working days with a decision after the first. Nonlethal; two-day cooldown after completion.',
     result: area.lead,
   })),
 );
@@ -270,7 +273,9 @@ export const guildProfiles = Object.fromEntries(
 
 export function managementState() {
   return {
-    version: 5,
+    version: 6,
+    patterns: [],
+    readPatterns: [],
     house: H.houseState(),
     salvage: 6,
     supplies: 4,
@@ -328,6 +333,7 @@ export function grantTrophies(s) {
 }
 export function migrateManagement(s) {
   if (s.guild === undefined) s.guild = managementState();
+  const legacy = s.guild.version < 6;
   validateManagement(s);
   if (s.guild.version === 1) {
     s.guild.nextOrder = 0;
@@ -345,8 +351,20 @@ export function migrateManagement(s) {
     H.migrateHouse(s);
     s.guild.version = 5;
   }
+  if (s.guild.version === 5) {
+    s.guild.patterns = [];
+    s.guild.readPatterns = [];
+    s.guild.version = 6;
+  }
   reconcileAssignments(s);
   grantTrophies(s);
+  if (legacy) E.discoverPatterns(s, true);
+}
+export function discoverPatterns(s, quiet = false) {
+  return E.discoverPatterns(s, quiet);
+}
+export function sellResource(s, id, quantity, hooks) {
+  E.sellResource(s, id, quantity, hooks);
 }
 export function effectiveWorkStat(c, stat) {
   return Math.floor(
@@ -638,7 +656,14 @@ function startQueuedProject(s, hooks) {
   if (shortfall.length)
     return (
       'Workshop: order waiting for ' +
-      shortfall.map((r) => r.amount + ' ' + r.resource).join(' and ') +
+      shortfall
+        .map(
+          (r) =>
+            r.amount +
+            ' ' +
+            (E.resources.find((d) => d.id === r.resource)?.name.toLowerCase() || r.resource),
+        )
+        .join(' and ') +
       '.'
     );
   startProject(s, 'workshop', order.recipe, null, hooks);
@@ -648,8 +673,7 @@ function startQueuedProject(s, hooks) {
 }
 export function projectRecipe(s, id, recipeId, source = s.guild.facilities[id]?.project?.source) {
   const r = recipes.find((r) => r.id === recipeId && r.facility === id);
-  if (!r || (r.blueprint && !s.guild.blueprints.includes(r.blueprint)))
-    throw Error('Discover this project’s blueprint first.');
+  if (!r || !E.recipeKnown(s, r)) throw Error('Discover this project’s blueprint first.');
   if (r.maraTier && r.maraTier !== s.guild.house?.mara.tier + 1)
     throw Error('Build Mara’s upgrades in order.');
   const utility = utilityDefinition(s, id)?.id;
@@ -842,7 +866,18 @@ function requireFacility(s, id) {
 function spendInputs(s, inputs, pay, why) {
   const missing = resourceShortfall(s, inputs);
   if (missing.length)
-    throw Error('Need ' + missing.map((m) => m.amount + ' ' + m.resource).join(' + ') + '.');
+    throw Error(
+      'Need ' +
+        missing
+          .map(
+            (m) =>
+              m.amount +
+              ' ' +
+              (E.resources.find((r) => r.id === m.resource)?.name.toLowerCase() || m.resource),
+          )
+          .join(' + ') +
+        '.',
+    );
   if (inputs.gold) pay(s, inputs.gold, why);
   s.guild.salvage -= inputs.salvage;
   s.guild.supplies -= inputs.supplies;
@@ -1040,7 +1075,11 @@ export function moveFurniture(s, id, slot, uid) {
 }
 export function buyResources(s, type, hooks) {
   if (!['supplies', 'salvage'].includes(type)) throw Error('Unknown resource.');
-  hooks.pay(s, type === 'supplies' ? 15 : 60, 'Quartermaster: ' + type);
+  hooks.pay(
+    s,
+    type === 'supplies' ? 15 : 60,
+    'Quartermaster: ' + E.resources.find((r) => r.id === type).name.toLowerCase(),
+  );
   s.guild[type] += type === 'supplies' ? 2 : 4;
 }
 export function medicalKitSupplyCost(s) {
@@ -1066,7 +1105,7 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     for (const [id, n] of Object.entries(r.materialOutput || {})) s.guild.house.materials[id] += n;
     for (const [id, n] of Object.entries(r.resourceOutput || {})) s.guild[id] += n;
     label = Object.entries({ ...r.materialOutput, ...r.resourceOutput })
-      .map(([id, n]) => '+' + n + ' ' + id)
+      .map(([id, n]) => '+' + n + ' ' + (id === 'salvage' ? 'scrap' : id))
       .join(', ');
   } else if (r.item) {
     hooks.awardEquipment(s, r.item, r.sourceEquipment ? 'Guild workshop refit' : 'Guild workshop');
@@ -1085,7 +1124,7 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
       p.source.kind === 'equipment'
         ? hooks.itemName(p.source.item.id)
         : furnishings.find((f) => f.id === p.source.item.id).name;
-    label = name + ' reclaimed → +' + p.yield + ' salvage';
+    label = name + ' reclaimed → +' + p.yield + ' scrap';
   } else if (r.category === 'crop') {
     s.guild.supplies += p.yield;
     label = '+' + p.yield + ' supplies harvested';
@@ -1106,6 +1145,7 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
   return label;
 }
 export function advanceRooms(s, hooks) {
+  E.discoverPatterns(s);
   reconcileAssignments(s);
   s.guild.homeXP = { day: s.day, workers: [] };
   const lines = [];
@@ -1189,7 +1229,7 @@ export function expeditionDecision(s, mission, def) {
     0,
   );
   const sufficient = total >= area.target;
-  const bonus = def.activity === 'survey' ? '2 supplies' : '2 salvage';
+  const bonus = def.activity === 'survey' ? '2 supplies' : '2 scrap';
   return {
     title: area.title,
     body: area.decision + '\nThe party is safely camped. Other work continues until you choose.',
@@ -1230,7 +1270,7 @@ export function validateManagement(s) {
   };
   if (
     !g ||
-    ![1, 2, 3, 4, 5].includes(g.version) ||
+    ![1, 2, 3, 4, 5, 6].includes(g.version) ||
     !['salvage', 'supplies', 'nextFurniture', 'nextCompletion', 'readCompletion'].every((k) =>
       nonnegativeInt(g[k]),
     ) ||
@@ -1253,6 +1293,24 @@ export function validateManagement(s) {
     !g.facilities ||
     Array.isArray(g.facilities) ||
     Object.keys(g.facilities).length !== facilities.length
+  )
+    bad();
+  if (
+    g.version >= 6 &&
+    (!Array.isArray(g.patterns) ||
+      !Array.isArray(g.readPatterns) ||
+      new Set(g.patterns).size !== g.patterns.length ||
+      new Set(g.readPatterns).size !== g.readPatterns.length ||
+      g.patterns.some(
+        (id) =>
+          !E.patternRecipes.some(
+            (r) =>
+              r.id === id &&
+              (!r.sourceFlag || s.flags[r.sourceFlag]) &&
+              (!r.blueprint || g.blueprints.includes(r.blueprint)),
+          ),
+      ) ||
+      g.readPatterns.some((id) => !g.patterns.includes(id)))
   )
     bad();
   if (
@@ -1292,6 +1350,7 @@ export function validateManagement(s) {
               !r.sourceEquipment &&
               !r.reclaim &&
               !r.maraTier &&
+              (!r.pattern || g.patterns?.includes(r.id)) &&
               (!r.blueprint || g.blueprints.includes(r.blueprint)),
           ),
       ))

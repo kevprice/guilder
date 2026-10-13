@@ -361,6 +361,10 @@ export {
   maraPower,
   furnitureTarget,
   workerContribution,
+  resources,
+  resourceStock,
+  recipeKnown,
+  patternRecipes,
 } from './guild-management.js';
 const guildHooks = {
   pay,
@@ -433,6 +437,16 @@ export function moveFurniture(s, id, slot, uid) {
 }
 export function buyResources(s, type) {
   G.buyResources(s, type, guildHooks);
+}
+export function sellResource(s, id, quantity) {
+  G.sellResource(s, id, quantity, guildHooks);
+}
+export function discoverPatterns(s) {
+  return G.discoverPatterns(s);
+}
+export function readPattern(s, id) {
+  if (!s.guild.patterns.includes(id)) throw Error('Discover this pattern first.');
+  if (!s.guild.readPatterns.includes(id)) s.guild.readPatterns.push(id);
 }
 export function expeditionDecision(s, uid) {
   const m = s.missions.find((m) => m.uid === uid && m.status === 'travelling');
@@ -734,6 +748,7 @@ export function investigateChamber(s, id) {
   if (r.encounter && !s.flags['cleared_' + id]) throw Error('Clear the room’s creature first.');
   if (r.trap && !trapDisarmed(s, r)) disarmChamberTrap(s, id);
   s.flags['searched_' + id] = true;
+  G.discoverPatterns(s);
   if (r.key) s.flags['key_' + r.key] = true;
   if (r.id === 'potions') showBellWardDiagram(s);
   if (r.item) awardEquipment(s, r.item, r.name);
@@ -1616,7 +1631,7 @@ function resolve(s, m, choice) {
     details.push(
       'Rewards: ' +
         salvage +
-        ' salvage · ' +
+        ' scrap · ' +
         supplies +
         ' supplies · ' +
         reward +
@@ -1630,7 +1645,7 @@ function resolve(s, m, choice) {
               .map((f) => f.name)
               .join(', ') +
             (def.area === 'mill' ? ', long sword, leather armour' : '')
-          : '\nNext salvage trip available on day ' + (s.day + def.cooldown) + '.'),
+          : '\nNext recovery trip available on day ' + (s.day + def.cooldown) + '.'),
     );
     m.resourceRewards = { salvage, supplies };
   }
@@ -1680,6 +1695,7 @@ function resolve(s, m, choice) {
   m.status = 'resolved';
   m.completedDay = s.day;
   G.reconcileAssignments(s);
+  G.discoverPatterns(s);
   s.reports.unshift({
     day: s.day,
     title: def.name,
@@ -2360,7 +2376,7 @@ export function characterRecap(s, id) {
   return { title: node.title, text: node.choices.find((c) => c.id === s.choices[key]).result };
 }
 export function save(s) {
-  if (s.guild?.version === 5) refreshHomeDefence(s);
+  if (s.guild?.version >= 5) refreshHomeDefence(s);
   return JSON.stringify(s);
 }
 export function load(raw) {
@@ -2404,6 +2420,9 @@ export function load(raw) {
       (n) =>
         typeof n.title !== 'string' ||
         typeof n.body !== 'string' ||
+        (n.recipeRewards !== undefined &&
+          (!Array.isArray(n.recipeRewards) ||
+            n.recipeRewards.some((id) => !G.patternRecipes.some((r) => r.id === id)))) ||
         (n.guildRewards !== undefined &&
           (!Array.isArray(n.guildRewards) ||
             n.guildRewards.some((id) => !G.furnishings.some((f) => f.id === id)))) ||

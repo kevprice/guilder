@@ -21,6 +21,7 @@
       <button data-branch="furniture">Launch furniture crafting demo</button>
       <button data-branch="house">Launch house production demo</button>
       <button data-branch="guard">Launch Mara defence demo</button>
+      <button data-branch="patterns">Launch recipe discovery demo</button>
     </div>
     <p id="result" role="status"></p>
     <script type="module">
@@ -61,7 +62,7 @@
         D.recruit(s, 'bryn');
         D.recruit(s, 'ivo');
         s.roster[0].str = 10;
-        if (['house', 'guard'].includes(branch)) {
+        if (['house', 'guard', 'patterns'].includes(branch)) {
           s.flags.discovered_sluice =
             s.flags.searched_sluice =
             s.flags.discovered_study =
@@ -118,10 +119,17 @@
           }
         }
         D.rememberPosition(s, 'rowan', { x: branch === 'hospice' ? 1670 : 860, floor: 380 });
+        if (branch === 'patterns') {
+          const study = D.chambers.find((r) => r.id === 'study');
+          s.flags.searched_study = false;
+          s.selected = 'ivo';
+          D.rememberPosition(s, 'ivo', { x: study.x + 135, floor: study.y });
+        }
         if (branch === 'decision') {
           D.dispatch(s, 'survey_mill', ['bryn']);
           D.day(s);
         }
+        D.discoverPatterns(s);
         s.scenes = [];
         localStorage.setItem('bound-house-auto', D.save(D.load(D.save(s))));
         location.href = '/';

@@ -45,8 +45,9 @@ test('care stays manual by default and version 3 migration preserves active rese
   delete s.guild.carePolicy;
   const before = structuredClone(s),
     loaded = reload(s);
-  before.guild.version = 5;
+  before.guild.version = 6;
   before.guild.carePolicy = { mode: 'manual', priority: 'longest', reserve: 2 };
+  before.guild.patterns = ['pattern_longSword'];
   assert.deepEqual(loaded, before);
   assert.deepEqual(reload(loaded), loaded);
   tick(loaded);
@@ -332,7 +333,9 @@ test('overview and infirmary expose reserve conflicts, treatment benefits and un
   assert.match(panel, /With treatment: 2 days · returns 2 days earlier/);
   assert.match(panel, /Set garden target · 4 supplies/);
   tick(s, 2);
-  assert.equal(navigationNotices(s).Rooms.count, 1);
+  assert.equal(navigationNotices(s).Rooms.count, 2);
   acknowledgeNavigation(s, 'Rooms');
+  assert.equal(navigationNotices(s).Rooms.count, 1);
+  D.readPattern(s, 'pattern_longSword');
   assert.equal(navigationNotices(reload(s)).Rooms.count, 0);
 });

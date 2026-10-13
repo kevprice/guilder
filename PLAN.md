@@ -8,14 +8,17 @@
 - Quadratic XP growth, exclusive level choices, six class branches, skills, restoration and reanimation.
 - Visible home defence, daily danger, room damage, injury stages, lethal adventures and conscious retreat.
 - Shared equipment storage and individual ownership.
-- Working workshop, garden and infirmary facilities, with salvage, supplies, workers, upgrades and reusable utility/decorative furnishings.
+- Working workshop, garden and infirmary facilities, with scrap, supplies, workers, upgrades and reusable utility/decorative furnishings.
 - Jobs and crew capacities across all 68 house rooms, physical leave-to-work assignments, stat-based output, six material stocks and work animations.
 - All-room decorating with a room picker, reusable physical furnishings across floors and reserved doors/stairs.
 - Material crafting chains, brass components and three Mara defence upgrades, with home-watch crews and defence-party support.
+- Compact navigation, room production cards and direct cutaway inspectors, with accurate batch rates and average daily output.
+- Unified crafting, resource uses and sale prices, surplus trading and six exploration-gated material patterns.
+- Responsive canvas and phone drawers, keyboard access, grouped recipe variants and persisted discovery notices.
 - Workshop batch orders and priority changes, automatic collection, safe refunds, crop reserve targets and preserved paused progress.
 - Reclamation of spare stored equipment and furnishings, blueprint refits, exact item reservations and cancellation returns.
 - Optional automatic infirmary care, patient priorities, protected supplies, recovery forecasts and garden funding controls.
-- Survey and salvage expeditions, facility blueprints, safe mid-journey decisions, repeat cooldowns and guardian trophies.
+- Survey and recovery expeditions, facility blueprints, safe mid-journey decisions, repeat cooldowns and guardian trophies.
 - Room overview and facility pages, shared furniture storage, worker stat forecasts and expedition preparation budgets.
 - A sprawling tower and underworld with keys, traps, secret passages and distinct chambers.
 - Room focus, zoom, themed interiors, personal decoration, visible weapons, magical effects and creature silhouettes.

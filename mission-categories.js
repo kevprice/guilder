@@ -8,7 +8,7 @@ export const missionTabs = [
   ['defence', 'Home defence'],
   ['optional', 'Optional jobs'],
   ['survey', 'Survey'],
-  ['salvage', 'Salvage'],
+  ['salvage', 'Recovery'],
   ['work', 'Daily work'],
 ];
 export function missionCategory(def) {
@@ -47,7 +47,7 @@ export function missionImpact(def) {
     detail: def.activity
       ? def.activity === 'survey'
         ? 'Facility blueprints and resources · one-time survey'
-        : 'Salvage and gold · repeatable after a two-day cooldown'
+        : 'Scrap and gold · repeatable after a two-day cooldown'
       : category === 'optional' && def.region
         ? 'Optional regional hunt · gold and experience'
         : label.detail,

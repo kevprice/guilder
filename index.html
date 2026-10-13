@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>The Bound House</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="management.css" />
   </head>
   <body>
     <header>
@@ -13,16 +14,16 @@
         <h1>The Bound House</h1>
       </div>
       <button id="status" title="Open the gold ledger"></button>
+      <div id="hud-resources" aria-label="Guild resources"></div>
       <div class="header-actions">
-        <button data-tab="Journal">Journal</button><button data-tab="Options">Options</button
-        ><button id="day">Advance day →</button>
+        <button id="day">Next day →</button>
       </div>
     </header>
     <nav id="nav" aria-label="Guild management"></nav>
     <main>
       <section id="world">
         <canvas id="game" width="1200" height="650" aria-label="Explorable cutaway estate"></canvas>
-        <button id="overview" class="overview-button" data-tab="Overview">◇ House overview</button>
+        <button id="overview" class="overview-button" data-tab="Rooms">▦ Manage rooms</button>
         <div id="expeditions"></div>
         <div id="hint"></div>
         <div id="character-hud"></div>

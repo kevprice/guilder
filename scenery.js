@@ -8,17 +8,17 @@ function glow(ctx, x, y, r, color) {
   ctx.fillStyle = g;
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
-function hill(ctx, base, amplitude, phase, color) {
+function hill(ctx, base, amplitude, phase, color, width = 1200) {
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(0, 650);
   ctx.lineTo(0, base);
-  for (let x = 0; x <= 1240; x += 25)
+  for (let x = 0; x <= width + 40; x += 25)
     ctx.lineTo(
       x,
       base + Math.sin(x / 190 + phase) * amplitude + Math.sin(x / 83 + phase) * amplitude * 0.22,
     );
-  ctx.lineTo(1240, 650);
+  ctx.lineTo(width + 40, 650);
   ctx.fill();
 }
 function tree(ctx, x, y, h, color) {
@@ -45,19 +45,19 @@ function tree(ctx, x, y, h, color) {
     ctx.fill();
   }
 }
-export function paintSky(ctx, { camera, floor, time }) {
+export function paintSky(ctx, { camera, floor, time, width = 1200 }) {
   const high = floor < 380,
     deep = floor > 420,
     mystery = Math.min(1, Math.max(0, camera / 950));
-  const g = ctx.createLinearGradient(0, 0, 1200, 650);
+  const g = ctx.createLinearGradient(0, 0, width, 650);
   g.addColorStop(0, deep ? '#101c2a' : high ? '#101a38' : '#172c38');
   g.addColorStop(0.5, deep ? '#172635' : high ? '#343252' : mystery > 0.35 ? '#283553' : '#294447');
   g.addColorStop(1, deep ? '#111a26' : '#111f2d');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1200, 650);
+  ctx.fillRect(0, 0, width, 650);
   if (deep) {
     for (let i = 0; i < 20; i++) {
-      const x = (i * 137 - camera * 0.09 + 2400) % 1200,
+      const x = (((i * 137 - camera * 0.09) % width) + width) % width,
         y = (i * 89) % 650;
       glow(ctx, x, y, 45, i % 2 ? '#43798618' : '#6e549420');
     }
@@ -67,12 +67,12 @@ export function paintSky(ctx, { camera, floor, time }) {
   // A quiet, broad veil of northern light becomes stronger at the tower crown.
   for (let band = 0; band < 3; band++) {
     ctx.beginPath();
-    for (let x = -30; x < 1240; x += 20) {
+    for (let x = -30; x < width + 40; x += 20) {
       const y = 95 + band * 35 + Math.sin(x / 240 + time * 0.07 + band) * 26;
       if (x === -30) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
-    for (let x = 1220; x >= -30; x -= 20)
+    for (let x = width + 20; x >= -30; x -= 20)
       ctx.lineTo(x, 145 + band * 35 + Math.sin(x / 240 + time * 0.07 + band) * 26);
     ctx.closePath();
     const a = ctx.createLinearGradient(0, 65, 0, 270);
@@ -82,14 +82,14 @@ export function paintSky(ctx, { camera, floor, time }) {
     ctx.fill();
   }
   for (let i = 0; i < (high ? 105 : 65); i++) {
-    const x = (((i * 173 - camera * 0.045) % 1200) + 1200) % 1200,
+    const x = (((i * 173 - camera * 0.045) % width) + width) % width,
       y = (i * 47) % 255;
     ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(time * 0.6 + i));
     ctx.fillStyle = i % 3 ? '#c2d7df' : '#d8c4a0';
     ctx.fillRect(x, y, i % 13 === 0 ? 2 : 1, i % 13 === 0 ? 2 : 1);
   }
   ctx.globalAlpha = 1;
-  const mx = 1010 - camera * 0.09,
+  const mx = width - 190 - camera * 0.09,
     my = high ? 95 : 88;
   glow(ctx, mx, my, 95, '#b9ebdd25');
   ctx.fillStyle = '#d2e6d6';
@@ -117,8 +117,8 @@ export function paintSky(ctx, { camera, floor, time }) {
     }
     ctx.stroke();
   }
-  hill(ctx, high ? 460 : 280, 44, camera * 0.001, '#2d44504a');
-  hill(ctx, high ? 520 : 330, 33, 2 + camera * 0.002, '#1a383f');
+  hill(ctx, high ? 460 : 280, 44, camera * 0.001, '#2d44504a', width);
+  hill(ctx, high ? 520 : 330, 33, 2 + camera * 0.002, '#1a383f', width);
   for (let i = 0; i < 18; i++) {
     const x = ((((i * 117 - camera * 0.23) % 1500) + 1500) % 1500) - 130;
     tree(

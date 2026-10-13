@@ -31,8 +31,8 @@ test('management version 2 upgrades without producing work, replacing stocks or 
   s.guild.version = 2;
   const before = structuredClone(s),
     copy = reload(s);
-  assert.equal(copy.guild.version, 5);
-  before.guild.version = 5;
+  assert.equal(copy.guild.version, 6);
+  before.guild.version = 6;
   assert.deepEqual(copy, before);
   assert.deepEqual(reload(copy), copy);
 });
@@ -56,7 +56,7 @@ test('reclamation reserves one physical item, saves its partial work and awards 
   assert.equal(s.guild.salvage, 23);
   assert.equal(s.guild.facilities.workshop.project, null);
   assert.equal(s.guild.nextCompletion, 1);
-  assert.match(s.guild.dailySummary.lines[0], /Short sword reclaimed → \+3 salvage/);
+  assert.match(s.guild.dailySummary.lines[0], /Short sword reclaimed → \+3 scrap/);
   s = reload(s);
   tick(s, 3);
   assert.equal(s.guild.salvage, 23);
@@ -315,8 +315,8 @@ test('workshop shows specific inputs, resulting stats, funding limits and a held
   };
   const html = renderRooms(s, helpers, { section: 'workshop' });
   assert.match(html, /Result: Long sword · STR \+2/);
-  assert.match(html, /Result: \+3 salvage/);
-  assert.match(html, /50g \+ 6 salvage \/ 4 work/);
+  assert.match(html, /Result: \+3 scrap/);
+  assert.match(html, /50g \+ 6 scrap \/ 4 work/);
   assert.match(html, /workshopConversion:refitSword:item-1/);
   D.startWorkshopConversion(s, 'refitSword', sword);
   const held = renderRooms(reload(s), helpers, { section: 'workshop' });

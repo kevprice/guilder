@@ -338,7 +338,7 @@ test('supply decisions and salvage bonuses are itemized, applied once and respec
     m = finishTrip(loaded, uid);
   assert.deepEqual(m.resourceRewards, { salvage: 6, supplies: 0 });
   assert.match(loaded.reports[0].text, /spent 1 supply/);
-  assert.match(loaded.reports[0].text, /6 salvage/);
+  assert.match(loaded.reports[0].text, /6 scrap/);
   assert(!D.availableContracts(loaded).some((d) => d.id === 'salvage_mill'));
   tick(loaded);
   assert(!D.availableContracts(loaded).some((d) => d.id === 'salvage_mill'));

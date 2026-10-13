@@ -447,7 +447,7 @@ test('version 4 migration preserves legacy projects, leads, decorations, campaig
   delete s.guild.house;
   const before = structuredClone(s),
     loaded = reload(s);
-  assert.equal(loaded.guild.version, 5);
+  assert.equal(loaded.guild.version, 6);
   assert.equal(room(loaded, 'service').workers[0], 'bryn');
   for (const key of ['gold', 'roster', 'flags', 'missions', 'inventory', 'residentPositions'])
     assert.deepEqual(loaded[key], before[key]);
