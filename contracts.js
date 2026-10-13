@@ -1,3 +1,4 @@
+import { guildProfiles } from './guild-management.js';
 import { advancementAbilityDefinitions } from './advancement-abilities.js';
 import { dungeonProfiles } from './sprawl.js';
 import { openingProfiles } from './opening-contracts.js';
@@ -21,6 +22,7 @@ export const abilityNames = {
 };
 // Contract work and daily hazard rules are independent of the campaign story.
 export const profiles = {
+  ...guildProfiles,
   ...openingProfiles,
   ...expansionProfiles,
   ...dungeonProfiles,

@@ -1,3 +1,4 @@
+import * as G from './guild-management.js';
 import { questRewards } from './quest-rewards.js';
 import { advancementAbilities } from './advancement-abilities.js';
 import {
@@ -248,6 +249,7 @@ export const contracts = [
   ...expansionMissions,
   ...lethalBounties,
   ...dungeonContracts,
+  ...G.guildMissions,
 ];
 for (const m of contracts) m.threat = m.checks.map((c) => c.label).join('; or ') + '.';
 
@@ -323,10 +325,155 @@ const knownFlags = new Set([
   ...sleepers.flatMap((c) => ['found_' + c.id, 'awakened_' + c.id]),
 ]);
 
+export {
+  facilities,
+  furnishings,
+  recipes,
+  expeditionAreas,
+  facilitySite,
+  facilityAvailable,
+  dailyWork,
+  workBreakdown,
+  projectForecast,
+  roomWorkAbsence,
+  resourceShortfall,
+  productionPause,
+  workshopQueueForecast,
+  workshopConversions,
+  projectRecipe,
+  eligiblePatients,
+  utilityDefinition,
+  medicalKitSupplyCost,
+} from './guild-management.js';
+const guildHooks = {
+  pay,
+  earn,
+  note,
+  awardEquipment,
+  itemName: (id) => itemDefinition(id).name,
+  awardXP: (s, c, xp) => {
+    if (awardExperience(c, xp))
+      note(
+        s,
+        c.name + ' reached level ' + c.level + '. Choose an advancement in Training.',
+        'Level gained',
+      );
+  },
+};
+export function assignWorker(s, id, worker) {
+  G.assignWorker(s, id, worker);
+}
+export function queueWorkshopOrder(s, recipe, quantity = 1) {
+  return G.queueWorkshopOrder(s, recipe, quantity);
+}
+export function removeWorkshopOrder(s, uid) {
+  G.removeWorkshopOrder(s, uid);
+}
+export function moveWorkshopOrder(s, uid, direction) {
+  G.moveWorkshopOrder(s, uid, direction);
+}
+export function setGardenPolicy(s, mode, reserve) {
+  G.setGardenPolicy(s, mode, reserve);
+}
+export function startRoomProject(s, id, recipe, patient = null) {
+  G.startProject(s, id, recipe, patient, guildHooks);
+}
+export function startWorkshopConversion(s, recipe, uid) {
+  G.startWorkshopConversion(s, recipe, uid, guildHooks);
+}
+export function cancelRoomProject(s, id) {
+  G.cancelProject(s, id, guildHooks);
+}
+export function upgradeFacility(s, id) {
+  G.upgradeFacility(s, id, guildHooks);
+}
+export function placeFurniture(s, id, slot, uid) {
+  G.placeFurniture(s, id, slot, uid);
+}
+export function buyResources(s, type) {
+  G.buyResources(s, type, guildHooks);
+}
+export function expeditionDecision(s, uid) {
+  const m = s.missions.find((m) => m.uid === uid && m.status === 'travelling');
+  const def = m && contracts.find((d) => d.id === m.id);
+  return m && def ? G.expeditionDecision(s, m, def) : null;
+}
+export function resolveExpeditionDecision(s, uid, option) {
+  const m = s.missions.find((m) => m.uid === uid),
+    decision = expeditionDecision(s, uid);
+  if (!decision || !decision.options.some((o) => o.id === option && !o.disabled))
+    throw Error('No available expedition decision.');
+  const def = contracts.find((d) => d.id === m.id);
+  if (option === 'supply') s.guild.supplies--;
+  const harmed = option === 'risk' && !decision.sufficient && random(s) < 20;
+  if (harmed) applyMissionHarm(s, m, def);
+  m.eventChoice = { id: option, day: s.day, bonus: option !== 'normal', harmed };
+  m.pendingEvent = false;
+  const a = assessContract(
+    def,
+    m.party.map((id) => resident(s, id)),
+    m.progress,
+  );
+  m.remaining = a.days || 0;
+  m.stalled = !a.rate && m.progress < a.work;
+  note(
+    s,
+    def.name +
+      ': ' +
+      decision.options.find((o) => o.id === option).label +
+      (harmed ? '. One harm event occurred.' : '.'),
+    'Expedition decision',
+  );
+  if (m.progress === a.work) resolve(s, m);
+}
+function validateGuildExpedition(s, m) {
+  const def = contracts.find((d) => d.id === m.id);
+  if (m.pendingEvent !== undefined && typeof m.pendingEvent !== 'boolean')
+    throw Error('Invalid pending expedition decision.');
+  if (
+    m.kitPayment !== undefined &&
+    (!['none', 'gold', 'supplies'].includes(m.kitPayment) ||
+      !Number.isInteger(m.kitSupplies) ||
+      m.kitSupplies < 0 ||
+      m.kitSupplies > 2)
+  )
+    throw Error('Invalid medical-kit payment.');
+  if (!def.activity) {
+    if (m.pendingEvent || m.eventChoice || m.resourceRewards)
+      throw Error('Unexpected development decision.');
+    return;
+  }
+  if (
+    m.simulation !== 'daily' ||
+    (m.pendingEvent && (m.status !== 'travelling' || m.elapsed < 1 || m.eventChoice)) ||
+    (m.eventChoice &&
+      (!['normal', 'supply', 'risk'].includes(m.eventChoice.id) ||
+        !Number.isInteger(m.eventChoice.day) ||
+        m.eventChoice.day < 1 ||
+        m.eventChoice.day > s.day ||
+        typeof m.eventChoice.bonus !== 'boolean' ||
+        m.eventChoice.bonus !== (m.eventChoice.id !== 'normal') ||
+        typeof m.eventChoice.harmed !== 'boolean')) ||
+    (m.status === 'travelling' && m.elapsed >= 1 && !m.pendingEvent && !m.eventChoice) ||
+    (m.status === 'resolved' &&
+      (!Number.isInteger(m.completedDay) ||
+        m.completedDay < 1 ||
+        m.completedDay > s.day ||
+        !m.eventChoice ||
+        !m.resourceRewards ||
+        m.resourceRewards.salvage !==
+          (def.activity === 'survey' ? 2 : 4 + (m.eventChoice.bonus ? 2 : 0)) ||
+        m.resourceRewards.supplies !==
+          (def.activity === 'survey' ? 1 + (m.eventChoice.bonus ? 2 : 0) : 0)))
+  )
+    throw Error('Invalid development expedition data.');
+}
+
 export function initial() {
   return {
     version: 2,
     dungeonBalanceVersion: 1,
+    guild: G.managementState(),
     openedPassages: [],
     disarmedTraps: [],
     day: 1,
@@ -940,6 +1087,7 @@ export function applyHarm(s, c, def) {
     c.bodyRecovered = !!def.internal;
     c.status = 'dead';
     c.recovery = 0;
+    G.reconcileAssignments(s);
     note(
       s,
       c.name + ' died on ' + def.name + '. Their name remains in the guild register.',
@@ -987,6 +1135,10 @@ export function availableContracts(s) {
     (m) =>
       (!m.choices || !damagedRooms(s).length) &&
       requirements(s, m) &&
+      (!m.cooldown ||
+        !s.missions.some(
+          (x) => x.id === m.id && x.status === 'resolved' && s.day < x.completedDay + m.cooldown,
+        )) &&
       !s.missions.some((x) => x.id === m.id && activeMission(x)) &&
       (!m.choices || !s.missions.some((x) => x.id === m.id && x.status === 'resolved')) &&
       (m.id !== 'dragon' || !s.flags.dragonSlain) &&
@@ -1059,8 +1211,17 @@ export function dispatch(s, id, ids, supplies = false) {
         assessment.requirement.stat.toUpperCase() +
         '. It cannot make progress.',
     );
-  const cost = missionCost(s, def) + (supplies ? 10 : 0);
-  if (cost) pay(s, cost, `${def.name}: preparation${supplies ? ' and one medical kit' : ''}`);
+  const kitPayment =
+    typeof supplies === 'boolean' ? (supplies ? 'gold' : 'none') : supplies?.medicalKit;
+  if (!['none', 'gold', 'supplies'].includes(kitPayment))
+    throw Error('Unknown medical-kit payment.');
+  const kitSupplies = kitPayment === 'supplies' ? G.medicalKitSupplyCost(s) : 0;
+  if (s.guild.supplies < kitSupplies) throw Error('Not enough supplies for a medical kit.');
+  const hasKit = kitPayment !== 'none';
+  const cost = missionCost(s, def) + (kitPayment === 'gold' ? 10 : 0);
+  if (cost)
+    pay(s, cost, `${def.name}: preparation${kitPayment === 'gold' ? ' and one medical kit' : ''}`);
+  s.guild.supplies -= kitSupplies;
   if (def.internal) {
     s.threats ||= {};
     s.threats[id] ||= { progress: 0 };
@@ -1098,14 +1259,16 @@ export function dispatch(s, id, ids, supplies = false) {
     participants: [...ids],
     remaining: assessment.days,
     status: 'travelling',
-    supplies,
+    supplies: hasKit,
+    kitPayment,
+    kitSupplies,
     roll,
     cost,
     simulation: 'daily',
     progress: def.internal ? s.threats[id].progress : 0,
     elapsed: 0,
     harm: [],
-    kits: supplies ? 1 : 0,
+    kits: hasKit ? 1 : 0,
   });
   party.forEach((c) => (c.status = def.internal ? 'assigned' : 'away'));
   if (ids.includes(s.selected)) s.selected = 'rowan';
@@ -1140,6 +1303,7 @@ export function withdraw(s, uid, ids = null) {
     throw Error('Nobody is conscious enough to lead a withdrawal.');
   if (!def.internal) {
     if (ids) throw Error('An external party must retreat together, carrying its wounded.');
+    m.pendingEvent = false;
     m.status = 'returning';
     m.remaining = 1;
     m.retreat = true;
@@ -1251,13 +1415,14 @@ function legacyRisk(s, def, ids) {
 }
 function resolve(s, m, choice) {
   if (m.status === 'resolved') return;
+  m.pendingEvent = false;
   const def = contracts.find((x) => x.id === m.id),
     party = m.party.map((id) => resident(s, id)),
     assessment = m.simulation === 'daily' ? risk(s, m.id, m.party) : legacyRisk(s, def, m.party);
   let reward = def.reward,
     details = [],
     outcome = '';
-  if (!def.homeEvent) {
+  if (!def.homeEvent && !def.activity) {
     const loot = party.reduce((n, c) => n + talentValue(c, 'loot'), 0);
     reward += loot;
     if (loot) details.push('Class salvage skills recovered ' + loot + ' extra gold.');
@@ -1340,8 +1505,62 @@ function resolve(s, m, choice) {
     setFlags(s, def.sets);
     details.push(def.result);
     note(s, def.result, 'Contract completed');
-    s.scenes.push({ title: def.name, body: def.result });
+    if (!def.activity) s.scenes.push({ title: def.name, body: def.result });
   }
+  if (def.activity) {
+    const bonus = m.eventChoice?.bonus ? 2 : 0;
+    const salvage = def.activity === 'survey' ? 2 : 4 + bonus;
+    const supplies = def.activity === 'survey' ? 1 + bonus : 0;
+    s.guild.salvage += salvage;
+    s.guild.supplies += supplies;
+    const area = G.expeditionAreas.find((a) => a.id === def.area);
+    if (def.activity === 'survey' && !s.guild.blueprints.includes(def.area)) {
+      s.guild.blueprints.push(def.area);
+      s.scenes.push({
+        title: 'Facility blueprints discovered',
+        body: area.lead + '\nOpen Rooms to craft and place these furnishings.',
+        guildRewards: G.furnishings.filter((f) => f.blueprint === def.area).map((f) => f.id),
+      });
+    }
+    details.push(
+      'Decision: ' +
+        ({
+          normal: 'followed the safe route',
+          supply: 'spent 1 supply to secure the bonus',
+          risk: 'attempted the cache using party capabilities',
+        }[m.eventChoice?.id] || 'safe route') +
+        '.',
+    );
+    if (m.eventChoice?.harmed)
+      details.push('Recovering the bonus cache caused one extra harm event.');
+    details.push(
+      'Rewards: ' +
+        salvage +
+        ' salvage · ' +
+        supplies +
+        ' supplies · ' +
+        reward +
+        ' gold · ' +
+        def.xp +
+        ' XP per survivor.' +
+        (def.activity === 'survey'
+          ? '\nBlueprints: ' +
+            G.furnishings
+              .filter((f) => f.blueprint === def.area)
+              .map((f) => f.name)
+              .join(', ') +
+            (def.area === 'mill' ? ', long sword, leather armour' : '')
+          : '\nNext salvage trip available on day ' + (s.day + def.cooldown) + '.'),
+    );
+    m.resourceRewards = { salvage, supplies };
+  }
+  for (const id of G.grantTrophies(s))
+    s.scenes.push({
+      title: 'A trophy for the guild',
+      body:
+        G.furnishings.find((f) => f.id === id).name + ' is now owned. Open Rooms to display it.',
+      guildRewards: [id],
+    });
   if (def.item) awardEquipment(s, def.item, def.name);
   if (choice?.item) awardEquipment(s, choice.item, def.name);
   recoverFallenEquipment(s, m);
@@ -1380,6 +1599,7 @@ function resolve(s, m, choice) {
   }
   m.status = 'resolved';
   m.completedDay = s.day;
+  G.reconcileAssignments(s);
   s.reports.unshift({
     day: s.day,
     title: def.name,
@@ -1493,8 +1713,52 @@ export function homeDanger(s) {
   if (!homeAttacksEnabled(s)) return null;
   return homeThreats.find((d) => s.threats?.[d.id]?.active) || null;
 }
+function applyMissionHarm(s, m, def) {
+  const targets = m.party.filter((id) => resident(s, id).status !== 'dead');
+  const target = targets[Math.floor((random(s) * targets.length) / 100)],
+    c = resident(s, target),
+    treated = m.kits > 0,
+    injuryDays = Math.max(1, def.injuryDays - (s.flags.hospice ? 1 : 0));
+  let warded = false;
+  if (treated) m.kits--;
+  else {
+    const ward =
+      m.party.map((id) => resident(s, id)).find((p) => hasTalent(p, 'partyDeathWard')) ||
+      ((c.talents || []).some((id) => talents.find((t) => t.id === id)?.effects.deathWard)
+        ? c
+        : null);
+    if (c.injury === 4 && def.lethal && ward && !(m.wardsUsed || []).includes(ward.id)) {
+      m.wardsUsed ||= [];
+      m.wardsUsed.push(ward.id);
+      warded = true;
+      note(
+        s,
+        ward.name +
+          ' prevented a fatal blow to ' +
+          c.name +
+          '. This ward is spent for the assignment.',
+        'Death ward',
+      );
+    } else applyHarm(s, c, def);
+  }
+  m.harm.push({
+    day: s.day,
+    id: target,
+    injuryDays: treated || warded ? 0 : injuryDays,
+    treated,
+    warded,
+    level: injuryLevel(c),
+  });
+  note(
+    s,
+    `${c.name}: ${injuryNames[injuryLevel(c)]} on ${def.name}${treated ? '; the medical kit treated the injury' : warded ? '; a death ward prevented the fatal blow' : `; ${c.status === 'dead' ? 0 : injuryDays} recovery days added`}.`,
+    'Daily harm',
+  );
+}
+
 export function day(s) {
   s.day++;
+  G.advanceRooms(s, guildHooks);
   if (s.rowanRecovery > 0) s.rowanRecovery--;
   s.roster
     .filter((c) => c.status === 'injured' && !c.undead)
@@ -1527,6 +1791,7 @@ export function day(s) {
       continue;
     }
     const def = contracts.find((d) => d.id === m.id);
+    if (m.pendingEvent) continue;
     if (def.homeEvent && !homeAttacksEnabled(s)) continue;
     if (m.simulation !== 'daily') {
       if (--m.remaining <= 0) {
@@ -1542,48 +1807,7 @@ export function day(s) {
     );
     m.elapsed++;
     m.progress = Math.min(assessment.work, Math.round((m.progress + assessment.rate) * 100) / 100);
-    if (random(s) < assessment.threat) {
-      const targets = m.party.filter((id) => resident(s, id).status !== 'dead');
-      const target = targets[Math.floor((random(s) * targets.length) / 100)],
-        c = resident(s, target),
-        treated = m.kits > 0,
-        injuryDays = Math.max(1, def.injuryDays - (s.flags.hospice ? 1 : 0));
-      let warded = false;
-      if (treated) m.kits--;
-      else {
-        const ward =
-          m.party.map((id) => resident(s, id)).find((p) => hasTalent(p, 'partyDeathWard')) ||
-          ((c.talents || []).some((id) => talents.find((t) => t.id === id)?.effects.deathWard)
-            ? c
-            : null);
-        if (c.injury === 4 && def.lethal && ward && !(m.wardsUsed || []).includes(ward.id)) {
-          m.wardsUsed ||= [];
-          m.wardsUsed.push(ward.id);
-          warded = true;
-          note(
-            s,
-            ward.name +
-              ' prevented a fatal blow to ' +
-              c.name +
-              '. This ward is spent for the assignment.',
-            'Death ward',
-          );
-        } else applyHarm(s, c, def);
-      }
-      m.harm.push({
-        day: s.day,
-        id: target,
-        injuryDays: treated || warded ? 0 : injuryDays,
-        treated,
-        warded,
-        level: injuryLevel(c),
-      });
-      note(
-        s,
-        `${c.name}: ${injuryNames[injuryLevel(c)]} on ${def.name}${treated ? '; the medical kit treated the injury' : warded ? '; a death ward prevented the fatal blow' : `; ${c.status === 'dead' ? 0 : injuryDays} recovery days added`}.`,
-        'Daily harm',
-      );
-    }
+    if (random(s) < assessment.threat) applyMissionHarm(s, m, def);
     const next = assessContract(
       def,
       m.party.map((id) => resident(s, id)),
@@ -1618,7 +1842,22 @@ export function day(s) {
         'Rescue',
       );
     }
-    if (m.remaining === 0 && !m.stalled) {
+    if (
+      def.activity &&
+      m.elapsed >= 1 &&
+      !m.eventChoice &&
+      m.status === 'travelling' &&
+      !m.stalled
+    ) {
+      m.pendingEvent = true;
+      note(
+        s,
+        def.name + ': the party is safely camped awaiting a decision in Contracts.',
+        'Expedition decision',
+      );
+      continue;
+    }
+    if (m.remaining === 0 && !m.stalled && m.status === 'travelling') {
       if (def.choices) m.status = 'decision';
       else resolve(s, m);
     }
@@ -1667,6 +1906,7 @@ export function narrativeChoice(s, id, option) {
   if (!choice || !requirements(s, choice)) throw Error('Choice prerequisites not met.');
   const outcome = applyChoice(s, id, choice);
   if (id.startsWith('homecoming-')) releaseCompanion(s, node.who);
+  G.reconcileAssignments(s);
   setFlags(s, node.sets);
   s.scenes.push({ title: node.title, body: outcome });
 }
@@ -2049,6 +2289,9 @@ export function load(raw) {
       (n) =>
         typeof n.title !== 'string' ||
         typeof n.body !== 'string' ||
+        (n.guildRewards !== undefined &&
+          (!Array.isArray(n.guildRewards) ||
+            n.guildRewards.some((id) => !G.furnishings.some((f) => f.id === id)))) ||
         (n.questReward !== undefined &&
           (typeof n.questReward !== 'string' || !Object.hasOwn(questRewards, n.questReward))) ||
         (n.equipmentRewards !== undefined &&
@@ -2369,7 +2612,7 @@ export function load(raw) {
       );
       if (
         (!a.rate ? !m.stalled || m.remaining !== 0 : m.remaining !== a.days) ||
-        m.progress === work
+        (m.progress === work && !m.pendingEvent)
       )
         throw Error('Invalid daily contract timing.');
     } else if (
@@ -2418,6 +2661,8 @@ export function load(raw) {
     )
   )
     throw Error('Invalid equipment inventory.');
+  G.migrateManagement(s);
+  for (const m of s.missions) validateGuildExpedition(s, m);
   delete s.storeVisitor;
   if (
     s.roster.some(

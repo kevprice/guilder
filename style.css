@@ -1347,6 +1347,218 @@ select:focus-visible {
   border-radius: 12px;
   background: linear-gradient(135deg, #253c47, #202b30);
 }
+
+.resource-stock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #12252a;
+}
+.room-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.room-tabs button {
+  font-size: 13px;
+  padding: 8px 11px;
+  min-height: 44px;
+}
+.room-tabs [aria-pressed='true'] {
+  border-color: var(--gold);
+  background: #38443d;
+}
+.room-day-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.room-day-controls button {
+  min-height: 44px;
+  font-size: 14px;
+  background: #3b493b;
+}
+.workshop-orders,
+.garden-policy {
+  padding: 14px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #14232a;
+}
+.workshop-orders h4,
+.garden-policy h4 {
+  margin: 0 0 10px;
+}
+.workshop-conversions {
+  margin: 18px 0;
+}
+.workshop-conversions summary {
+  padding: 12px 0;
+}
+.workshop-conversions button {
+  min-height: 44px;
+}
+.conversion-held {
+  border-left: 3px solid var(--gold);
+  padding: 10px 12px;
+  background: #242e39;
+}
+.workshop-order {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.workshop-order button {
+  font-size: 12px;
+  padding: 8px;
+}
+.order-quantity,
+.garden-policy label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.order-quantity input,
+.garden-policy input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #242e39;
+  color: var(--paper);
+  font: inherit;
+}
+.production-paused {
+  color: #dfc494;
+}
+.room-assignment-impact {
+  padding: 12px;
+  margin-top: 12px;
+  border-left: 3px solid var(--teal);
+  background: #11252b;
+}
+.room-assignment-impact p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+.room-assignment-impact small {
+  font-size: 12px;
+  letter-spacing: normal;
+  line-height: 1.6;
+}
+.resource-stock strong {
+  color: #e9cd91;
+  font-size: 1.2rem;
+  margin-left: 8px;
+}
+.room-worker {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.room-project {
+  padding: 16px;
+  margin: 16px 0;
+  background: #102329;
+  border-left: 3px solid var(--teal);
+}
+.room-recipes,
+.furniture-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.room-recipe,
+.furniture-slot {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+  background: #1b2930;
+}
+.room-recipe button {
+  width: 100%;
+}
+.furniture-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.furniture-slot small {
+  font-size: 12px;
+  letter-spacing: normal;
+  line-height: 1.6;
+}
+.furniture-slot select,
+.room-worker select,
+#panel select {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+}
+.furniture-icon {
+  display: block;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.empty-furniture {
+  display: grid;
+  place-items: center;
+  height: 64px;
+  color: #8c9d9b;
+  font-size: 28px;
+}
+.guild-reward {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #c7ac72;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #354334, #202b30);
+}
+.guild-reward strong {
+  color: #efd7a6;
+  font-size: 1.15rem;
+}
+.guild-reward p {
+  margin: 5px 0 0;
+}
+.work-summary {
+  padding-left: 18px;
+  line-height: 1.7;
+}
+@media (max-width: 550px) {
+  .furniture-slots {
+    grid-template-columns: 1fr;
+  }
+  .room-recipes {
+    grid-template-columns: 1fr;
+  }
+  .guild-reward {
+    gap: 12px;
+  }
+  #status {
+    line-height: 1.7;
+  }
+  #panel[data-section='Rooms'],
+  #panel[data-section='Contracts'] {
+    position: fixed;
+    inset: 12px;
+    width: auto;
+    z-index: 5;
+    background: var(--ink);
+  }
+}
 .quest-reward-heading {
   display: flex;
   align-items: center;

@@ -24,6 +24,7 @@ export function acknowledgeNavigation(s, tab, contractTab = 'all') {
     ];
   }
   if (tab === 'Stories') read.stories = storyChoices(s).map((n) => n.id);
+  if (tab === 'Rooms') s.guild.readCompletion = s.guild.nextCompletion;
   if (tab === 'Reports') read.reports = s.reports.length;
   if (tab === 'Journal') read.journal = s.journal.length;
 }
@@ -32,7 +33,9 @@ export function navigationNotices(s) {
   const levels = s.roster
     .filter((c) => !['dead', 'departed'].includes(c.status))
     .reduce((sum, c) => sum + D.unspentLevels(c).length, 0);
-  const awaiting = D.activeMissions(s).filter((m) => m.status === 'decision').length;
+  const awaiting = D.activeMissions(s).filter(
+    (m) => m.status === 'decision' || m.pendingEvent,
+  ).length;
   return {
     Contracts: {
       count:
@@ -41,6 +44,10 @@ export function navigationNotices(s) {
           read.contracts,
         ) + awaiting,
       label: 'new contracts or reports awaiting a decision',
+    },
+    Rooms: {
+      count: s.guild.nextCompletion - s.guild.readCompletion,
+      label: 'completed room projects',
     },
     Training: { count: levels, label: 'unspent level choices' },
     Characters: {

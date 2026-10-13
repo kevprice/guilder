@@ -7,9 +7,12 @@ export const missionTabs = [
   ['exploration', 'Exploration'],
   ['defence', 'Home defence'],
   ['optional', 'Optional jobs'],
+  ['survey', 'Survey'],
+  ['salvage', 'Salvage'],
   ['work', 'Daily work'],
 ];
 export function missionCategory(def) {
+  if (def.activity) return def.activity;
   if (def.homeEvent) return 'defence';
   if (def.personal) return 'companion';
   if (def.internal) return 'exploration';
@@ -34,13 +37,18 @@ export function missionImpact(def) {
     exploration: 'Unlocks exploration and records · optional to the main plot',
     defence: 'Protects the guild · does not advance the plot',
     optional: 'Optional job · does not advance the plot',
+    survey: 'Guild development · does not advance the plot',
+    salvage: 'Resource expedition · does not advance the plot',
     work: 'Repeatable work · does not advance the plot',
   }[category];
   return {
     category,
     impact,
-    detail:
-      category === 'optional' && def.region
+    detail: def.activity
+      ? def.activity === 'survey'
+        ? 'Facility blueprints and resources · one-time survey'
+        : 'Salvage and gold · repeatable after a two-day cooldown'
+      : category === 'optional' && def.region
         ? 'Optional regional hunt · gold and experience'
         : label.detail,
   };

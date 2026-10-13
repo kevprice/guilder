@@ -244,6 +244,15 @@ const rewards = {
   outsideArchivist: 'Seal diagrams · opens archive and awakens sealed residents',
 };
 export function contractLabel(def) {
+  if (def.activity)
+    return {
+      kind: def.activity === 'survey' ? 'GUILD DEVELOPMENT' : 'RESOURCE EXPEDITION',
+      detail:
+        def.activity === 'survey'
+          ? 'Facility blueprints, salvage and supplies'
+          : 'Salvage, gold and experience',
+      priority: 4,
+    };
   if (def.homeEvent)
     return { kind: 'HOME DEFENCE', detail: 'Protects residents and rooms', priority: 0 };
   if (def.category)

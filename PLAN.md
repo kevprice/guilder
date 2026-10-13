@@ -8,6 +8,11 @@
 - Quadratic XP growth, exclusive level choices, six class branches, skills, restoration and reanimation.
 - Visible home defence, daily danger, room damage, injury stages, lethal adventures and conscious retreat.
 - Shared equipment storage and individual ownership.
+- Working workshop, garden and infirmary facilities, with salvage, supplies, workers, upgrades and reusable utility/decorative furnishings.
+- Workshop batch orders and priority changes, automatic collection, safe refunds, crop reserve targets and preserved paused progress.
+- Reclamation of spare stored equipment and furnishings, blueprint refits, exact item reservations and cancellation returns.
+- Survey and salvage expeditions, facility blueprints, safe mid-journey decisions, repeat cooldowns and guardian trophies.
+- Room overview and facility pages, shared furniture storage, worker stat forecasts and expedition preparation budgets.
 - A sprawling tower and underworld with keys, traps, secret passages and distinct chambers.
 - Room focus, zoom, themed interiors, personal decoration, visible weapons, magical effects and creature silhouettes.
 - Independent saved character positions, individual character/training/diary pages and contextual object affordances.

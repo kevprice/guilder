@@ -1,3 +1,5 @@
+import { renderRooms } from './room-panel.js';
+import { renderGuildRewards, paintGuildFurnishings } from './guild-art.js';
 import { renderQuestReward } from './quest-rewards.js';
 import { renderEquipmentRewards, equipmentIcon } from './equipment-rewards.js';
 import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
@@ -60,6 +62,8 @@ let hoveredObject = null;
 let characterPage = null;
 let selectedRecord = null;
 let contractTab = 'all';
+let roomSection = 'overview',
+  workshopQuantity = 1;
 function renderRecords() {
   const available = D.availableRecords(state),
     pages = D.records.filter(
@@ -117,6 +121,7 @@ function scene(
   recordId = null,
   equipmentRewards = [],
   questReward = null,
+  guildRewards = [],
 ) {
   const record = D.records.find((r) => r.id === recordId);
   $('scene-label').hidden = true;
@@ -124,6 +129,7 @@ function scene(
   $('scene-body').classList.remove('record-page');
   $('scene-title').textContent = title;
   $('scene-body').innerHTML =
+    renderGuildRewards(guildRewards, esc) +
     renderQuestReward(questReward, { esc }) +
     renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
     (questReward ? '' : record ? renderRecordPage(record) : paragraphs(body));
@@ -139,7 +145,15 @@ function presentScene() {
   const next = state.scenes.shift();
   if (next) {
     persist();
-    scene(next.title, next.body, [], next.recordId, next.equipmentRewards, next.questReward);
+    scene(
+      next.title,
+      next.body,
+      [],
+      next.recordId,
+      next.equipmentRewards,
+      next.questReward,
+      next.guildRewards,
+    );
   }
 }
 $('dismiss-scene').onclick = () => {
@@ -191,6 +205,15 @@ function openMission(uid) {
     def.choices.map((c) => ({ ...c, action: `decide:${uid}:${c.id}` })),
   );
 }
+function openExpeditionDecision(uid) {
+  const decision = D.expeditionDecision(state, uid);
+  if (!decision) return;
+  scene(
+    decision.title,
+    decision.body,
+    decision.options.map((o) => ({ ...o, action: 'expeditionDecision:' + uid + ':' + o.id })),
+  );
+}
 function card(title, body) {
   return `<div class="card">${title ? `<h3>${esc(title)}</h3>` : ''}${body}</div>`;
 }
@@ -218,7 +241,19 @@ function renderStore() {
           .join(''),
       )
     : card('Store room', `${btn('Walk to store door', 'walk:790')}`);
+  html += card(
+    'Expedition resources',
+    `<p>${state.guild.salvage} salvage · ${state.guild.supplies} supplies</p><div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', state.gold < 15)}${btn('Buy 4 salvage · 60g', 'resource:salvage', state.gold < 60)}</div>`,
+  );
   html += '<h3>Guild inventory</h3>';
+  const heldProject = state.guild.facilities.workshop.project;
+  if (heldProject?.source?.kind === 'equipment') {
+    const held = D.equipment.find((e) => e.id === heldProject.source.item.id);
+    html += card(
+      held.name + ' · Held at the workshop',
+      `${equipmentIcon(held, esc)}<p>This piece is reserved for ${heldProject.recipe.startsWith('refit') ? 'a refit' : 'reclamation'} (${heldProject.progress}/${heldProject.work} work). Open Rooms → Workshop to follow progress or cancel and return it to storage.</p>`,
+    );
+  }
   for (const item of state.inventory || []) {
     const def = D.equipment.find((e) => e.id === item.id),
       owner = state.roster.find((c) => c.id === item.owner);
@@ -300,7 +335,7 @@ function renderContracts() {
         })
         .join(
           ', ',
-        )} · ${m.status === 'decision' ? 'Report waiting' : m.status === 'returning' ? 'Retreat · home tomorrow' : m.stalled ? 'No conscious workers · stranded' : m.remaining + ' days remaining'}</p>${
+        )} · ${m.pendingEvent ? 'Safely camped · decision waiting' : m.status === 'decision' ? 'Report waiting' : m.status === 'returning' ? 'Retreat · home tomorrow' : m.stalled ? 'No conscious workers · stranded' : m.remaining + ' days remaining'}</p>${
         progress !== null
           ? `<label class="stats">${def.internal ? 'Clearing progress' : 'Work'} · ${progress}%<progress value="${m.progress}" max="${total}"></progress></label><p class="stats">${m.elapsed} days worked · ${m.harm.length} harm events · ${m.kits} medical kits remaining${
               m.harm.length
@@ -315,7 +350,7 @@ function renderContracts() {
                 : ''
             }</p>`
           : '<p class="stats">The expedition is underway.</p>'
-      }${m.status === 'travelling' && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div>` : ''}`,
+      }${m.status === 'travelling' && !m.pendingEvent && m.simulation === 'daily' ? `<p class="threat-badge">⚠ ${assessment.threat}% harm chance each day</p>` : ''}${m.pendingEvent ? btn('Choose the expedition’s next step', 'expeditionEvent:' + m.uid) : ''}${m.status === 'decision' ? btn('Read the expedition letter', 'letter:' + m.uid) : ''}${['travelling', 'decision'].includes(m.status) ? `<div class="row">${def.internal ? btn('Watch fight', 'watch:' + m.uid) : ''}${btn(def.internal ? 'Withdraw entire party' : 'Retreat · return tomorrow', 'withdraw:' + m.uid, !def.internal && !D.canWithdraw(state, m))}${(def.internal ? m.party : []).map((id) => btn('Withdraw ' + state.roster.find((c) => c.id === id).name, 'withdraw:' + m.uid + ':' + id)).join('')}</div>` : ''}`,
     );
   }
   html += `<h3>${esc(missionTabs.find(([id]) => id === contractTab)[1])} · Available missions</h3>`;
@@ -329,7 +364,7 @@ function renderContracts() {
       total = def.days * profile.amount;
     html += card(
       def.name,
-      `<span class="tag">${esc(contractKind(def))}</span>${renderMissionImpact(def)}<p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
+      `<span class="tag">${esc(contractKind(def))}</span>${renderMissionImpact(def)}<p>${esc(def.desc)}</p>${def.lethal ? '<p class="threat-badge">LETHAL</p>' : ''}<div class="contract-target"><strong>Party ${profile.stat.toUpperCase()} ${profile.amount}</strong><span>${def.days} base days · ${profile.threat}% base daily threat · ${D.risk(state, def.id, []).damageType} harm</span></div><p class="stats">${def.homeEvent ? '' + def.xp + ' defence XP per resident' : def.hiddenReward ? 'Reward and XP unknown until cleared' : rewardSummary(def.reward, def.xp)}${def.activity ? ' · ' + (def.activity === 'survey' ? '2 salvage + 1 supply + facility blueprints' : '4 salvage · two-day cooldown') : ''}${cost ? ' · ' + cost + 'g preparation' : ''} · Up to ${def.capacity} residents</p>${saved ? `<label class="stats">Damage preserved · ${Math.floor((saved / total) * 100)}%<progress value="${saved}" max="${total}"></progress></label>` : ''}${def.personal ? `<p>${D.recruits.find((c) => c.id === def.personal).name} must join.</p>` : ''}<div class="party-picker">${state.roster
         .filter((c) => c.status === 'home')
         .map(
           (c) =>
@@ -337,7 +372,7 @@ function renderContracts() {
         )
         .join(
           '',
-        )}</div><div class="party-preview" data-risk="${def.id}">—</div><label class="stats"><input type="checkbox" id="supply-${def.id}"> Medical kit · 10g · one treatment</label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
+        )}</div><div class="party-preview" data-risk="${def.id}">—</div><label class="stats">Medical kit · one treatment<select id="kit-${def.id}" aria-label="Medical kit for ${esc(def.name)}"><option value="none">No kit · no cost</option><option value="gold" ${state.gold < cost + 10 ? 'disabled' : ''}>Pay 10g</option><option value="supplies" ${state.guild.supplies < D.medicalKitSupplyCost(state) ? 'disabled' : ''}>Use ${D.medicalKitSupplyCost(state)} supplies</option></select></label>${btn(def.internal ? 'Assign clearing party' : 'Dispatch party', 'dispatch:' + def.id, true)}`,
     );
   }
   if (['all', 'work'].includes(contractTab))
@@ -352,6 +387,8 @@ function renderMissionImpact(def) {
   return `<p class="mission-impact mission-impact-${category}"><strong>${esc(impact)}</strong><br><span>${esc(detail)}</span></p>`;
 }
 function contractKind(def) {
+  if (def.activity)
+    return def.activity === 'survey' ? 'Guild development · Survey' : 'Resources · Salvage';
   if (def.homeEvent) return 'Defence';
   if (def.internal) return 'Clearing';
   if (def.lethal) return 'Lethal expedition';
@@ -371,8 +408,19 @@ function updatePartyPreview(id) {
   const r = D.risk(state, id, ids),
     def = D.contracts.find((d) => d.id === id);
   target.innerHTML = `<strong>Combined ${r.requirement.stat.toUpperCase()} ${r.combined} / ${r.requirement.amount}</strong><p>${r.days === null ? 'No progress' : r.days + ' days'}${r.combined < r.requirement.amount ? ' · below target; longer exposure' : ''} · <strong>${r.threat}% chance of harm each day</strong></p><p class="stats">${r.damageType} harm · ${r.workBonus}% class work bonus<br>${r.baseThreat}% base threat${r.reductions.length ? ' − ' + r.reductions.map((x) => esc(x.label) + ' (' + (x.amount < 0 ? 'adds ' + Math.abs(Math.round(x.amount * 10) / 10) + ' risk points' : Math.round(x.amount * 10) / 10 + ' points') + ')').join(' − ') : ''}<br>${r.exposure}% risk over assignment</p>`;
+  const kit = $('kit-' + id).value;
+  const goldCost = D.missionCost(state, def) + (kit === 'gold' ? 10 : 0),
+    supplyCost = kit === 'supplies' ? D.medicalKitSupplyCost(state) : 0;
+  target.innerHTML += `<p class="stats">Preparation: ${goldCost}g + ${supplyCost} supplies · remaining stocks: ${Math.max(0, state.gold - goldCost)}g, ${Math.max(0, state.guild.supplies - supplyCost)} supplies</p>`;
+  const homeWork = D.roomWorkAbsence(state, ids);
+  if (homeWork.length)
+    target.innerHTML += `<div class="room-assignment-impact"><strong>Room work while this party is away</strong>${homeWork.map((f) => `<p>${esc(f.name)}: ${f.before} → ${f.after} work/day${f.beforeDays === null ? '' : ' · ' + esc(f.scope) + ' ' + f.beforeDays + ' → ' + f.afterDays + ' days'}</p>`).join('')}<small>Mara continues. Worker assignments resume when companions return fit.</small></div>`;
   button.disabled =
-    !r.rate || ids.length > def.capacity || (def.personal && !ids.includes(def.personal));
+    !r.rate ||
+    ids.length > def.capacity ||
+    (def.personal && !ids.includes(def.personal)) ||
+    state.gold < goldCost ||
+    state.guild.supplies < supplyCost;
 }
 function renderTraining() {
   if (!state.roster.length)
@@ -631,7 +679,8 @@ function renderStories() {
 }
 function renderUI() {
   if (tab === 'Store room' && !D.storeAvailable(state)) tab = null;
-  $('status').textContent = `Day ${state.day} · ${state.gold} gold`;
+  $('status').textContent =
+    `Day ${state.day} · ${state.gold} gold · ${state.guild.salvage} salvage · ${state.guild.supplies} supplies`;
   const selected = D.home(state).find((c) => c.id === state.selected);
   const portrait = (c) =>
     `<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color || '#76BDB5'}">`;
@@ -656,7 +705,7 @@ function renderUI() {
     D.activeMissions(state)
       .map(
         (m) =>
-          `<button data-tab="Contracts"><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
+          `<button data-tab="Contracts"><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.pendingEvent ? 'Safely camped · decision due' : m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
       )
       .join('');
   $('panel').hidden = !tab;
@@ -668,6 +717,7 @@ function renderUI() {
     'Exploration',
     'Characters',
     'Contracts',
+    'Rooms',
     ...(D.storeAvailable(state) ? ['Store room'] : []),
     'Training',
     'Stories',
@@ -755,6 +805,12 @@ function renderUI() {
   if (tab === 'Store room') html += renderStore();
   if (tab === 'Guild' || tab === 'Characters') html += renderGuild();
   if (tab === 'Contracts') html += renderContracts();
+  if (tab === 'Rooms')
+    html += renderRooms(
+      state,
+      { esc, card, btn },
+      { section: roomSection, orderQuantity: workshopQuantity },
+    );
   if (tab === 'Training') html += renderTraining();
   if (tab === 'Stories') html += renderStories();
   if (tab === 'Diaries') html += renderRecords();
@@ -854,6 +910,14 @@ document.addEventListener('click', (e) => {
     $('panel-content').scrollTop = 0;
     return;
   }
+  if (op === 'roomPage') {
+    if (!['overview', 'workshop', 'garden', 'infirmary', 'storage'].includes(id)) return;
+    roomSection = id;
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
   if (op === 'trainingPage') {
     trainingSection = id;
     renderUI();
@@ -866,6 +930,10 @@ document.addEventListener('click', (e) => {
   }
   if (op === 'talk') {
     openChoice(id);
+    return;
+  }
+  if (op === 'expeditionEvent') {
+    openExpeditionDecision(id);
     return;
   }
   if (op === 'letter') {
@@ -916,6 +984,29 @@ document.addEventListener('click', (e) => {
     return;
   }
   act(() => {
+    if (op === 'roomDay') advanceGuildDay();
+    if (op === 'queueOrder') {
+      const quantity = Number($('workshop-quantity').value);
+      D.queueWorkshopOrder(state, id, quantity);
+      workshopQuantity = quantity;
+    }
+    if (op === 'removeOrder') D.removeWorkshopOrder(state, id);
+    if (op === 'moveOrder') D.moveWorkshopOrder(state, id, value);
+    if (op === 'gardenPolicy')
+      D.setGardenPolicy(
+        state,
+        $('garden-policy-mode').value,
+        Number($('garden-policy-reserve').value),
+      );
+    if (op === 'project') D.startRoomProject(state, id, value, choiceLevel || null);
+    if (op === 'workshopConversion') D.startWorkshopConversion(state, id, value);
+    if (op === 'cancelProject') D.cancelRoomProject(state, id);
+    if (op === 'upgradeRoom') D.upgradeFacility(state, id);
+    if (op === 'resource') D.buyResources(state, id);
+    if (op === 'expeditionDecision') {
+      D.resolveExpeditionDecision(state, id, value);
+      $('scene').close();
+    }
     if (op === 'record') D.recoverRecord(state, id);
     if (op === 'new') {
       if (!confirm('Start a new guild? Export your current save first to keep it.')) return;
@@ -954,7 +1045,7 @@ document.addEventListener('click', (e) => {
         state,
         id,
         [...document.querySelectorAll(`[data-party="${id}"]:checked`)].map((x) => x.value),
-        $('supply-' + id).checked,
+        { medicalKit: $('kit-' + id).value },
       );
     if (op === 'decide') {
       D.decide(state, id, value);
@@ -991,6 +1082,34 @@ document.addEventListener('click', (e) => {
   });
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.id === 'workshop-quantity') {
+    const quantity = Number(e.target.value);
+    if (Number.isInteger(quantity) && quantity >= 1 && quantity <= 99) workshopQuantity = quantity;
+    else {
+      toast('Choose between 1 and 99 items per order.');
+      e.target.value = workshopQuantity;
+    }
+    return;
+  }
+  if (e.target.id.startsWith('kit-')) {
+    updatePartyPreview(e.target.id.slice(4));
+    return;
+  }
+  if (e.target.dataset.roomWorker) {
+    act(() => D.assignWorker(state, e.target.dataset.roomWorker, e.target.value || null));
+    return;
+  }
+  if (e.target.dataset.furnitureFacility) {
+    act(() =>
+      D.placeFurniture(
+        state,
+        e.target.dataset.furnitureFacility,
+        e.target.dataset.furnitureSlot,
+        e.target.value || null,
+      ),
+    );
+    return;
+  }
   if (e.target.id === 'personal-record') {
     selectedRecord = e.target.value;
     renderUI();
@@ -1033,12 +1152,17 @@ document.addEventListener('change', async (e) => {
     }
   }
 });
-$('day').onclick = () =>
-  act(() => {
-    D.day(state);
-    const m = state.missions.find((m) => m.status === 'decision');
-    if (m) toast('An expedition letter is waiting in Contracts.');
-  });
+function advanceGuildDay() {
+  D.day(state);
+  const m = state.missions.find((m) => m.status === 'decision' || m.pendingEvent);
+  const summary = state.guild.dailySummary?.lines || [];
+  if (summary.length || m)
+    toast(
+      (summary.length ? summary.join(' · ') : '') +
+        (m ? ' · An expedition decision is waiting in Contracts.' : ''),
+    );
+}
+$('day').onclick = () => act(advanceGuildDay);
 
 function choiceLocation(id) {
   if (id === 'landingPurpose') return 1185;
@@ -1741,6 +1865,7 @@ function drawWorld(c) {
           : 'Its destination is not yet known',
       );
   }
+  paintGuildFurnishings(ctx, camera, state, D.rooms, graphics.reducedMotion ? 0 : last / 1000);
   rect(430, 435, 390, 145, '#252e38');
   for (let ry = 440; ry < 574; ry += 18)
     for (let rx = 435; rx < 815; rx += 44) {

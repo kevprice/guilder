@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guild management verification</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body style="max-width: 750px; padding: 30px; margin: auto">
+    <h1>Guild management verification</h1>
+    <p>
+      Launch a disposable local demo on port 4174 to check the full game UI. Each launch replaces
+      only the demo origin’s save.
+    </p>
+    <div class="row">
+      <button data-branch="hospice">Launch hospice demo</button>
+      <button data-branch="laboratory">Launch laboratory demo</button>
+      <button data-branch="decision">Launch expedition decision demo</button>
+      <button data-branch="workshop">Launch refit and reclamation demo</button>
+    </div>
+    <p id="result" role="status"></p>
+    <script type="module">
+      import * as D from './domain.js';
+      import { grantFurniture } from './guild-management.js';
+      document.addEventListener('click', (event) => {
+        const branch = event.target.dataset.branch;
+        if (!branch) return;
+        if (location.port !== '4174') {
+          document.getElementById('result').textContent =
+            'Use the isolated local preview at http://127.0.0.1:4174/guild-management-preview.html';
+          return;
+        }
+        const s = D.initial();
+        s.flags.opening =
+          s.flags.breach =
+          s.flags.repaired =
+          s.flags.ledger =
+          s.flags.stairs =
+          s.flags.wallSurveyed =
+            true;
+        s.flags.anchor =
+          s.flags.tower =
+          s.flags.gardenAnchor =
+          s.flags.garden =
+          s.flags.searched_sluice =
+            true;
+        s.flags.archiveSeal = s.flags.library = s.flags.libraryOpened = true;
+        s.flags[branch === 'laboratory' ? 'laboratory' : 'hospice'] = true;
+        if (branch === 'laboratory') s.flags.fenRoom2Ready = true;
+        // The regional room's actual anchor is established by its existing definition.
+        if (branch === 'laboratory')
+          s.flags[D.rooms.find((r) => r.id === 'fenRoom2').anchor] = true;
+        s.gold = 600;
+        s.guild.salvage = 30;
+        s.guild.supplies = 8;
+        s.guild.blueprints = ['mill', 'drains', 'tower'];
+        D.recruit(s, 'bryn');
+        D.recruit(s, 'ivo');
+        s.roster[0].str = 10;
+        if (branch === 'laboratory') {
+          s.roster[1].status = 'injured';
+          s.roster[1].injury = 2;
+          s.roster[1].recovery = 5;
+        }
+        for (const id of ['forge', 'banner', 'rug', 'plant', 'raisedBeds', 'medicalCabinet'])
+          grantFurniture(s, id);
+        if (branch === 'workshop') {
+          for (const id of ['shortSword', 'paddedCoat', 'buckler'])
+            D.awardEquipment(s, id, 'Demo stores');
+        }
+        D.rememberPosition(s, 'rowan', { x: branch === 'hospice' ? 1670 : 860, floor: 380 });
+        if (branch === 'decision') {
+          D.dispatch(s, 'survey_mill', ['bryn']);
+          D.day(s);
+        }
+        s.scenes = [];
+        localStorage.setItem('bound-house-auto', D.save(D.load(D.save(s))));
+        location.href = '/';
+      });
+    </script>
+  </body>
+</html>
