@@ -111,7 +111,7 @@ export function recipeName(r) {
   );
 }
 export function productionBadge(r) {
-  const w = r.id === 'quarters' ? 68 : Math.min(132, r.w - 12);
+  const w = Math.min(68, r.w - 12);
   return {
     x: r.id === 'quarters' ? 395 : r.id === 'garden' ? r.x + 125 : r.x + (r.w - w) / 2,
     y: r.y - 150,

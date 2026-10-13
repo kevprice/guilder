@@ -1,3 +1,4 @@
+import { resourceIcon, paintIcon } from './resource-icons.js';
 import { renderRooms } from './room-panel.js';
 import { renderPatternRewards } from './management-ui.js';
 import { renderNavigation, renderHudResources } from './interface-navigation.js';
@@ -781,34 +782,42 @@ function renderUI() {
     ]),
   );
   if (tab === 'Store room' && !D.storeAvailable(state)) tab = null;
-  $('status').textContent = `Day ${state.day}`;
+  $('status').innerHTML = `${resourceIcon('day', 'Day')}<strong>${state.day}</strong>`;
+  $('status').title = `Day ${state.day} - Open journal`;
+  $('status').setAttribute('aria-label', $('status').title);
   $('hud-resources').innerHTML = renderHudResources(state, esc);
   const selected = D.home(state).find((c) => c.id === state.selected);
   const portrait = (c) =>
     `<img class="portrait" src="${portraits[c.id]}" alt="${esc(c.name)} portrait" style="--accent:${c.color || '#76BDB5'}">`;
   const chamber = D.roomAt(player.floor);
   const investigation = roomInvestigation();
+  $('day').innerHTML = resourceIcon('next', 'Advance one day');
+  $('overview').innerHTML = resourceIcon('house', 'Manage house');
   $('chapter-label').textContent = '';
+  $('story-rail').title = investigation.title + ': ' + (investigation.next || '');
   $('objective').textContent = investigation.title;
   $('story-event').textContent = investigation.next || '';
   $('character-hud').innerHTML = selected
-    ? `${portrait(selected)}<div><strong>${esc(selected.name)}</strong><span class="stats">${selected.id === 'rowan' ? (state.flags.gateOpen ? 'Unbound · House sight' : state.flags.anchor ? 'Bound · House sight' : 'Bound') : 'Home · Level ' + selected.level}</span></div>`
+    ? `${portrait(selected)}<div><span class="stats">${resourceIcon(selected.id === 'rowan' ? 'aether' : 'residents', esc(selected.name))}${selected.level || ''}</span></div>`
     : '';
   $('home-strip').innerHTML = D.home(state)
     .map(
       (c) =>
-        `<span class="home-resident ${c.points ? 'has-training' : ''}"><button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}" title="${esc(residentWalks.has(c.id) ? 'Walking to ' + residentWalks.get(c.id).room : D.assignedRoom(state, c.id) ? 'Assigned to ' + D.assignedRoom(state, c.id).name : 'Select ' + c.name)}">${portrait(c)}${esc(c.name)}</button>${c.points ? `<button class="level-up" data-action="trainingOpen:${c.id}" aria-label="Train ${esc(c.name)}" title="${esc(c.name)} · ${c.points} unspent training ${c.points === 1 ? 'choice' : 'choices'}">↑</button>` : ''}</span>`,
+        `<span class="home-resident ${c.points ? 'has-training' : ''}"><button aria-label="Select ${esc(c.name)}" data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}" title="${esc(c.name + ': ' + (residentWalks.has(c.id) ? 'Walking to ' + residentWalks.get(c.id).room : D.assignedRoom(state, c.id) ? 'Assigned to ' + D.assignedRoom(state, c.id).name : 'Select ' + c.name))}">${portrait(c)}</button>${c.points ? `<button class="level-up" data-action="trainingOpen:${c.id}" aria-label="Train ${esc(c.name)}" title="${esc(c.name)} · ${c.points} unspent training ${c.points === 1 ? 'choice' : 'choices'}">${resourceIcon('plus', 'Train')}</button>` : ''}</span>`,
     )
     .join('');
   $('expeditions').innerHTML =
     (D.homeDanger(state)
-      ? `<button class="threat-badge" data-tab="Contracts"><strong>HOME UNDER ATTACK</strong>${esc(D.homeDanger(state).name)}<br>${D.activeMissions(state).some((m) => m.id === D.homeDanger(state).id) ? 'Defence in progress' : D.maraPower(state) > 0 ? 'Mara and the home watch defending' : 'Assign defenders'}</button>`
+      ? `<button class="threat-badge" data-tab="Contracts" title="Home under attack: ${esc(D.homeDanger(state).name)}" aria-label="Home under attack. Open contracts">${resourceIcon('guard', 'Home under attack')}</button>`
       : '') +
     D.activeMissions(state)
-      .map(
-        (m) =>
-          `<button ${m.pendingEvent ? 'data-action="expeditionEvent:' + m.uid + '"' : m.status === 'decision' ? 'data-action="letter:' + m.uid + '"' : 'data-tab="Contracts"'}><strong>${esc(D.contracts.find((d) => d.id === m.id).name)}</strong>${m.party.map((id) => esc(state.roster.find((c) => c.id === id).name)).join(', ')}<br>${m.pendingEvent ? 'Safely camped · decision due' : m.status === 'decision' ? 'Decision due' : m.remaining + ' days remaining'}</button>`,
-      )
+      .map((m) => {
+        const decision = m.pendingEvent || m.status === 'decision';
+        const name = D.contracts.find((d) => d.id === m.id).name;
+        const label =
+          name + ': ' + (decision ? 'Decision waiting' : m.remaining + ' days remaining');
+        return `<button title="${esc(label)}" aria-label="${esc(label)}" ${m.pendingEvent ? 'data-action="expeditionEvent:' + m.uid + '"' : m.status === 'decision' ? 'data-action="letter:' + m.uid + '"' : 'data-tab="Contracts"'}>${resourceIcon(decision ? 'story' : 'contracts', esc(name))}<strong>${decision ? '!' : m.remaining}</strong></button>`;
+      })
       .join('');
   $('panel').hidden = !tab;
   $('resident').textContent =
@@ -1640,8 +1649,10 @@ const zoomControls = document.createElement('div');
 zoomControls.className = 'zoom-controls';
 zoomControls.setAttribute('aria-label', 'Room camera');
 zoomControls.innerHTML =
-  '<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-room">Focus room</button><button id="wide-view">Wide view</button>';
+  '<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-room" title="Focus room" aria-label="Focus room"></button><button id="wide-view" title="Wide view" aria-label="Wide view"></button>';
 $('world').append(zoomControls);
+$('focus-room').innerHTML = resourceIcon('focus', 'Focus room');
+$('wide-view').innerHTML = resourceIcon('wide', 'Wide view');
 function setZoom(value) {
   graphics.setZoom(value);
   $('zoom-level').textContent = Math.round(graphics.targetZoom * 100) + '%';
@@ -1984,6 +1995,115 @@ function stair(direction) {
   persist();
   renderUI();
 }
+function interactNearby() {
+  if (tab || moreOpen || $('scene').open) return;
+  if (residentWalks.has(state.selected)) {
+    toast('This companion is walking to their assigned room.');
+    return;
+  }
+  const h = nearest();
+  if (h && !h.done) {
+    if (h.action?.startsWith('recover:')) {
+      act(() => D.recoverResident(state, h.action.slice(8), { x: player.x, floor: player.floor }));
+      return;
+    }
+    if (h.action?.startsWith('passage:')) {
+      inspectDoor(h.action.split(':')[1]);
+      return;
+    }
+    if (h.action?.startsWith('leave:')) {
+      act(() => {
+        player = D.leaveChamber(state, h.action.split(':')[1]);
+        walkTarget = null;
+        grounded = true;
+      });
+      return;
+    }
+    if (h.action?.startsWith('record:')) {
+      act(() => D.recoverRecord(state, h.action.slice(7)));
+      return;
+    }
+    if (h.action?.startsWith('disarm:')) {
+      act(() => D.disarmChamberTrap(state, h.action.split(':')[1]));
+      return;
+    }
+    if (h.action?.startsWith('search:')) {
+      act(() => D.investigateChamber(state, h.action.split(':')[1]));
+      return;
+    }
+    if (h.action === 'storeEnter') {
+      if (state.selected === 'rowan') {
+        toast('Control a fit recruit to visit the store.');
+        return;
+      }
+      act(() => D.enterStore(state, state.selected));
+      if (state.storeVisitor) {
+        player = { x: 865, y: 140, floor: 140, vy: 0 };
+        tab = 'Store room';
+        renderUI();
+      }
+      return;
+    }
+    if (h.action === 'storeOpen') {
+      act(() => {
+        D.enterStore(state, state.selected);
+        tab = 'Store room';
+      });
+      return;
+    }
+    if (h.action === 'storeExit') {
+      D.leaveStore(state);
+      player = { x: 865, y: 380, floor: 380, vy: 0 };
+      return;
+    }
+    if (h.action === 'furnace') {
+      act(() => D.interact(state, 'dragon'));
+      player = { x: 350, y: 1250, floor: 1250, vy: 0 };
+      keys = {};
+      walkTarget = null;
+      return;
+    }
+    if (h.action === 'leaveFurnace') {
+      player = { x: 875, y: 1020, floor: 1020, vy: 0 };
+      keys = {};
+      walkTarget = null;
+      return;
+    }
+    if (h.action === 'enterLabyrinth') {
+      player = { x: 530, y: 790, vy: 0, floor: 790 };
+      keys = {};
+      walkTarget = null;
+      return;
+    }
+    if (h.choice) openChoice(h.choice);
+    else
+      act(
+        () => {
+          D.interact(state, h.action);
+          toast(
+            h.action === 'wall'
+              ? 'The wall opens. Restoration is a separate job.'
+              : h.action === 'ledger'
+                ? 'A new expedition lead is in Contracts.'
+                : h.action === 'mara'
+                  ? 'Mara sets the kettle down to listen.'
+                  : 'The house has changed.',
+          );
+        },
+        ['wall', 'repair', 'tower', 'stairs', 'labyrinth', 'drain'].includes(h.action) ||
+          h.action.startsWith('room:')
+          ? 'Door requirement not met'
+          : null,
+      );
+  }
+}
+$('hint').onclick = () => {
+  const h = nearest();
+  if (!h) return;
+  if (/^[WS]/.test(h.text || '')) stair(h.text[0] === 'W' ? 'up' : 'down');
+  else interactNearby();
+  canvas.focus();
+};
 canvas.tabIndex = 0;
 canvas.addEventListener('click', (e) => {
   const bounds = canvas.getBoundingClientRect();
@@ -2068,109 +2188,7 @@ document.addEventListener('keydown', (e) => {
         chooseResident(list[(list.findIndex((c) => c.id === state.selected) + 1) % list.length].id),
       );
     }
-    if (key === 'e') {
-      if (residentWalks.has(state.selected)) {
-        toast('This companion is walking to their assigned room.');
-        return;
-      }
-      const h = nearest();
-      if (h && !h.done) {
-        if (h.action?.startsWith('recover:')) {
-          act(() =>
-            D.recoverResident(state, h.action.slice(8), { x: player.x, floor: player.floor }),
-          );
-          return;
-        }
-        if (h.action?.startsWith('passage:')) {
-          inspectDoor(h.action.split(':')[1]);
-          return;
-        }
-        if (h.action?.startsWith('leave:')) {
-          act(() => {
-            player = D.leaveChamber(state, h.action.split(':')[1]);
-            walkTarget = null;
-            grounded = true;
-          });
-          return;
-        }
-        if (h.action?.startsWith('record:')) {
-          act(() => D.recoverRecord(state, h.action.slice(7)));
-          return;
-        }
-        if (h.action?.startsWith('disarm:')) {
-          act(() => D.disarmChamberTrap(state, h.action.split(':')[1]));
-          return;
-        }
-        if (h.action?.startsWith('search:')) {
-          act(() => D.investigateChamber(state, h.action.split(':')[1]));
-          return;
-        }
-        if (h.action === 'storeEnter') {
-          if (state.selected === 'rowan') {
-            toast('Control a fit recruit to visit the store.');
-            return;
-          }
-          act(() => D.enterStore(state, state.selected));
-          if (state.storeVisitor) {
-            player = { x: 865, y: 140, floor: 140, vy: 0 };
-            tab = 'Store room';
-            renderUI();
-          }
-          return;
-        }
-        if (h.action === 'storeOpen') {
-          act(() => {
-            D.enterStore(state, state.selected);
-            tab = 'Store room';
-          });
-          return;
-        }
-        if (h.action === 'storeExit') {
-          D.leaveStore(state);
-          player = { x: 865, y: 380, floor: 380, vy: 0 };
-          return;
-        }
-        if (h.action === 'furnace') {
-          act(() => D.interact(state, 'dragon'));
-          player = { x: 350, y: 1250, floor: 1250, vy: 0 };
-          keys = {};
-          walkTarget = null;
-          return;
-        }
-        if (h.action === 'leaveFurnace') {
-          player = { x: 875, y: 1020, floor: 1020, vy: 0 };
-          keys = {};
-          walkTarget = null;
-          return;
-        }
-        if (h.action === 'enterLabyrinth') {
-          player = { x: 530, y: 790, vy: 0, floor: 790 };
-          keys = {};
-          walkTarget = null;
-          return;
-        }
-        if (h.choice) openChoice(h.choice);
-        else
-          act(
-            () => {
-              D.interact(state, h.action);
-              toast(
-                h.action === 'wall'
-                  ? 'The wall opens. Restoration is a separate job.'
-                  : h.action === 'ledger'
-                    ? 'A new expedition lead is in Contracts.'
-                    : h.action === 'mara'
-                      ? 'Mara sets the kettle down to listen.'
-                      : 'The house has changed.',
-              );
-            },
-            ['wall', 'repair', 'tower', 'stairs', 'labyrinth', 'drain'].includes(h.action) ||
-              h.action.startsWith('room:')
-              ? 'Door requirement not met'
-              : null,
-          );
-      }
-    }
+    if (key === 'e') interactNearby();
     if (key === 'w' || key === 'arrowup') stair('up');
     if (key === 's' || key === 'arrowdown') stair('down');
     if (e.key === ' ' && grounded) {
@@ -2246,6 +2264,22 @@ function rect(x, y, w, h, color) {
   ctx.fillRect(x - camera, y, w, h);
 }
 function text(t, x, y, size = 14, color = '#adbaab') {
+  if (/[a-zA-Z]/.test(t)) {
+    const symbol = /^STR/.test(t)
+      ? 'guard'
+      : t === 'UNCONSCIOUS'
+        ? 'care'
+        : /LITERACY/.test(t)
+          ? 'story'
+          : /SOCKET|FITTING/.test(t)
+            ? 'components'
+            : null;
+    if (symbol) {
+      ctx.strokeStyle = color;
+      paintIcon(ctx, symbol, x - camera, y - 18, 18);
+    }
+    return;
+  }
   ctx.fillStyle = color;
   ctx.font = `${size}px Georgia`;
   ctx.fillText(t, x - camera, y);
@@ -2544,20 +2578,6 @@ function drawPassageMarkers() {
       graphics.reducedMotion ? 0 : last / 1000,
       h.action === active?.action && h.choice === active?.choice && h.x === active?.x,
     );
-    if (D.roomAt(player.floor)?.id === 'study' && /^(passage|leave):/.test(h.action || '')) {
-      const label =
-        h.action === 'passage:shelfStair'
-          ? 'Potion kitchen'
-          : h.action === 'passage:mirrorDoor'
-            ? 'Reflection stair · Echo sight'
-            : 'Return passage';
-      ctx.save();
-      ctx.font = '11px system-ui';
-      ctx.fillStyle = '#e4d7ab';
-      ctx.textAlign = 'center';
-      ctx.fillText(label, h.x - camera, h.y + 16);
-      ctx.restore();
-    }
   }
 }
 function drawHomeAttack() {
@@ -2884,8 +2904,15 @@ function frame(now) {
     }
   }
   drawWorld(c);
-  const h = hoveredObject || nearest();
-  $('hint').textContent = h ? h.text : '';
+  const h = nearest();
+  $('hint').hidden = !h;
+  $('hint').title = h?.text || '';
+  $('hint').setAttribute('aria-label', h?.text || '');
+  const hintKey = h ? (/^[WS]/.test(h.text || '') ? h.text[0] : 'E') : '';
+  if ($('hint').dataset.key !== hintKey) {
+    $('hint').dataset.key = hintKey;
+    $('hint').innerHTML = h ? resourceIcon('focus', 'Interact') + '<kbd>' + hintKey + '</kbd>' : '';
+  }
   $('position').textContent =
     visualRoom()?.name ||
     (player.floor === 140 && player.x > 705

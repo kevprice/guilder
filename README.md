@@ -13,7 +13,7 @@ Open http://127.0.0.1:4173/. Node.js 20 or newer runs the game and tests. Instal
 ## Play
 
 - A/D or arrow keys move; Space jumps; W/S use stairs; E interacts.
-- Click an object to approach it. Its description appears below the canvas; nearby objects show an interaction key.
+- Click an object to approach it. Nearby objects show an interaction icon; hover its control for the description, or tap it to interact.
 - Switch characters through the home strip or Tab while the playfield is focused. Each person keeps their own room and position.
 - Use Focus room, Wide view, +/− or the mouse wheel to adjust the camera.
 - Characters, Training and Diaries use individual pages. Stories follows the investigation; Reports records completed expeditions.
@@ -24,7 +24,7 @@ The wall survey, mason's tool recovery and another opening request can bring Bry
 
 ## Current game systems
 
-The main interface uses House, Residents, Contracts and Story, with Equipment, Training, Exploration, Diaries, Reports and Journal under More. The resource HUD opens material details directly. House has five pages: Rooms, Craft, Stores, Decorate and Mara. Room production badges on the cutaway open the same inspector as the room cards. Active workplaces appear first; filters and live search help manage a larger house. Inspectors show batch output, the average per game day, the next completion and worker slots, with production rules and advanced policies inside expandable details. The canvas adapts to screen width without stretching characters; phone management opens a full drawer and keeps keyboard focus out of the background.
+The main interface uses matching vector icons for House, Residents, Contracts and Story, with Equipment, Training, Exploration, Diaries, Reports and Journal under More. The resource HUD opens material details directly. The estate stays free of persistent prose: portraits identify residents, room badges pair the same resource icons with output and completion counts, and progress bars show ongoing work. Gold uses amber, ready actions use teal, and threats use copper. Inspection panels retain names, requirements and narrative. House has five pages: Rooms, Craft, Stores, Decorate and Mara. Room production badges on the cutaway open the same inspector as the room cards. Active workplaces appear first; filters and live search help manage a larger house. Inspectors show batch output, the average per game day, the next completion and worker slots, with production rules and advanced policies inside expandable details. The canvas adapts to screen width without stretching characters; phone management opens a full drawer and keeps keyboard focus out of the background.
 
 Craft groups material and scrap variants under one equipment or furnishing design. Choosing an ingredient opens its stock, uses, known recipes, production sources and sale value. Surplus can be sold in exact quantities: timber 1g, ore and herbs 2g, cloth/scrap/supplies 3g, aether 6g, and brass components 8g per unit. Sales remove stock and add one gold-ledger payment. No resources are sold automatically.
 

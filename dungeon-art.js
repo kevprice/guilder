@@ -1,3 +1,4 @@
+import { paintIcon } from './resource-icons.js';
 import { chamberTreasureX } from './sprawl.js';
 // Deliberately different silhouettes and props; no repeated domestic windows below ground.
 import { glow } from './graphics-engine.js';
@@ -62,23 +63,19 @@ export function paintChamber(ctx, camera, r, s, time) {
   paintMaterial(ctx, x, y, w, 18, 'stone', Math.floor(r.x));
   ctx.fillStyle = accent + '77';
   ctx.fillRect(x, y, w, 4);
-  ctx.fillStyle = accent;
-  ctx.font = '16px Georgia';
-  ctx.fillText(r.name, x + 22, top + 38);
-  ctx.font = '10px sans-serif';
-  ctx.fillText(
-    'DEPTH ' +
-      r.depth +
-      ' · ' +
-      (s.flags['searched_' + r.id]
-        ? 'RECORDS RECOVERED'
-        : r.encounter && !s.flags['cleared_' + r.id]
-          ? 'CREATURE IN ROOM'
-          : r.trap
-            ? 'TRAPPED MECHANISM'
-            : 'UNEXPLORED RECORDS'),
+  ctx.strokeStyle = accent;
+  paintIcon(
+    ctx,
+    s.flags['searched_' + r.id]
+      ? 'story'
+      : r.encounter && !s.flags['cleared_' + r.id]
+        ? 'guard'
+        : r.trap
+          ? 'lock'
+          : 'focus',
     x + 22,
-    top + 57,
+    top + 20,
+    24,
   );
   const box = (px, py, pw, ph, color = accent) => {
     ctx.fillStyle = color;

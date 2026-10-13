@@ -67,7 +67,7 @@ export function managementHeader(s, section, { esc }) {
         ? 'stores'
         : section;
   const unread = s.guild.patterns?.filter((id) => !s.guild.readPatterns.includes(id)).length || 0;
-  return `<div class="management-tabs" role="group" aria-label="House management">${managementPages.map(([id, label]) => `<button data-action="roomPage:${id}" aria-pressed="${id === active}" ${id === active ? 'class="selected"' : ''}>${label}${id === 'recipes' && unread ? '<span class="nav-notice">' + unread + '</span>' : ''}</button>`).join('')}</div><div class="stock-strip">${['gold', 'salvage', 'supplies'].map((id) => chip(s, id, esc)).join('')}</div>`;
+  return `<div class="management-tabs" role="group" aria-label="House management">${managementPages.map(([id, label]) => `<button data-action="roomPage:${id}" aria-pressed="${id === active}" ${id === active ? 'class="selected"' : ''} title="${label}" aria-label="${label}">${resourceIcon({ dashboard: 'house', recipes: 'craft', stores: 'salvage', decorate: 'components', mara: 'guard' }[id], label)}${id === 'recipes' && unread ? '<span class="nav-notice">' + unread + '</span>' : ''}</button>`).join('')}</div><div class="stock-strip">${['gold', 'salvage', 'supplies'].map((id) => chip(s, id, esc)).join('')}</div>`;
 }
 function outputButtons(p, { esc }) {
   if (p.recipe?.item || p.recipe?.furniture)
@@ -104,7 +104,7 @@ export function renderRoomDashboard(s, helpers, { roomFilter = 'all', roomSearch
         (roomFilter === 'paused' && ['paused', 'blocked'].includes(p.status))) &&
       p.room.name.toLowerCase().includes(roomSearch.toLowerCase()),
   );
-  let html = `<div class="management-heading"><div><h3>Your house</h3><p>${known.filter((p) => p.status === 'working').length} producing · ${known.filter((p) => !p.assigned).length} need a crew</p></div>${btn('Next day →', 'roomDay')}</div><div class="room-filters" role="group" aria-label="Filter rooms">${[
+  let html = `<div class="management-heading"><div><h3>Your house</h3><p>${known.filter((p) => p.status === 'working').length} producing · ${known.filter((p) => !p.assigned).length} need a crew</p></div><button data-action="roomDay" title="Advance one day" aria-label="Advance one day">${resourceIcon('next', 'Advance one day')}</button></div><div class="room-filters" role="group" aria-label="Filter rooms">${[
     ['all', 'All rooms'],
     ['working', 'Working'],
     ['empty', 'Needs crew'],

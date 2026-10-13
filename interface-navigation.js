@@ -6,10 +6,10 @@ export function renderNavigation(tab, notices, { esc, storeAvailable, moreOpen =
       ? `<span class="nav-notice" aria-label="${notices[t].count} ${esc(notices[t].label)}">${notices[t].count}</span>`
       : '';
   const primary = [
-    ['Rooms', 'House', '▦'],
-    ['Characters', 'Residents', '♙'],
-    ['Contracts', 'Contracts', '⌖'],
-    ['Stories', 'Story', '◇'],
+    ['Rooms', 'House', 'house'],
+    ['Characters', 'Residents', 'residents'],
+    ['Contracts', 'Contracts', 'contracts'],
+    ['Stories', 'Story', 'story'],
   ];
   const secondary = [
     ...(storeAvailable ? ['Store room'] : []),
@@ -25,10 +25,10 @@ export function renderNavigation(tab, notices, { esc, storeAvailable, moreOpen =
     primary
       .map(
         ([t, label, icon]) =>
-          `<button data-tab="${t}" class="${t === tab ? 'active' : ''}" ${t === tab ? 'aria-current="page"' : ''}><span aria-hidden="true">${icon}</span><span class="nav-label">${label}</span>${badge(t)}</button>`,
+          `<button data-tab="${t}" title="${label}" aria-label="${label}" class="${t === tab ? 'active' : ''}" ${t === tab ? 'aria-current="page"' : ''}>${resourceIcon(icon, label)}<span class="nav-label">${label}</span>${badge(t)}</button>`,
       )
       .join('') +
-    `<div class="nav-more"><button data-action="navMore" aria-expanded="${moreOpen}" aria-controls="nav-more-menu" class="${secondary.includes(tab) ? 'active' : ''}"><span aria-hidden="true">•••</span><span class="nav-label">More</span>${moreCount ? '<span class="nav-notice">' + moreCount + '</span>' : ''}</button>${moreOpen ? '<div id="nav-more-menu" class="more-menu" role="group" aria-label="More game pages">' + secondary.map((t) => `<button data-tab="${t}">${t === 'Store room' ? 'Equipment' : t}${badge(t)}</button>`).join('') + '</div>' : ''}</div>`
+    `<div class="nav-more"><button data-action="navMore" title="More" aria-label="More game pages" aria-expanded="${moreOpen}" aria-controls="nav-more-menu" class="${secondary.includes(tab) ? 'active' : ''}">${resourceIcon('more', 'More')}<span class="nav-label">More</span>${moreCount ? '<span class="nav-notice">' + moreCount + '</span>' : ''}</button>${moreOpen ? '<div id="nav-more-menu" class="more-menu" role="group" aria-label="More game pages">' + secondary.map((t) => `<button data-tab="${t}">${t === 'Store room' ? 'Equipment' : t}${badge(t)}</button>`).join('') + '</div>' : ''}</div>`
   );
 }
 export function renderHudResources(s, esc) {

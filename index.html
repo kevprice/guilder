@@ -6,6 +6,7 @@
     <title>The Bound House</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="management.css" />
+    <link rel="stylesheet" href="hud.css" />
   </head>
   <body>
     <header>
@@ -13,19 +14,27 @@
         <small>THE OLD GUILD ESTATE</small>
         <h1>The Bound House</h1>
       </div>
-      <button id="status" title="Open the gold ledger"></button>
+      <button id="status" title="Open journal"></button>
       <div id="hud-resources" aria-label="Guild resources"></div>
       <div class="header-actions">
-        <button id="day">Next day →</button>
+        <button id="day" title="Advance one day" aria-label="Advance one day"></button>
       </div>
     </header>
     <nav id="nav" aria-label="Guild management"></nav>
     <main>
       <section id="world">
         <canvas id="game" width="1200" height="650" aria-label="Explorable cutaway estate"></canvas>
-        <button id="overview" class="overview-button" data-tab="Rooms">▦ Manage rooms</button>
+        <button
+          id="overview"
+          class="overview-button"
+          data-tab="Rooms"
+          title="Manage house"
+          aria-label="Manage house"
+        >
+          ▦ Manage rooms
+        </button>
         <div id="expeditions"></div>
-        <div id="hint"></div>
+        <button id="hint" hidden aria-label="Interact with nearby object"></button>
         <div id="character-hud"></div>
         <div id="home-strip" aria-label="Home residents"></div>
         <footer><span id="resident" hidden></span><span id="position" class="stats"></span></footer>
@@ -34,7 +43,21 @@
         <small id="chapter-label"></small>
         <h2 id="objective"></h2>
         <p id="story-event"></p>
-        <button data-tab="Stories">Stories</button>
+        <button
+          data-tab="Stories"
+          title="Current investigation"
+          aria-label="Open current investigation"
+        >
+          <svg
+            class="resource-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+          >
+            <path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-2-1-6-2-10 1zm0 0v15" />
+          </svg>
+        </button>
       </section>
       <aside id="panel" hidden aria-label="Guild ledger"></aside>
     </main>

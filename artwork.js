@@ -218,7 +218,7 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing, motion 
   ctx.fillStyle = controlled ? '#fff0d0' : '#dfd3bd';
   ctx.font = '12px Georgia';
   ctx.textAlign = 'center';
-  ctx.fillText(c.name, sx, y - 66);
+
   ctx.textAlign = 'left';
   if (controlled) {
     ctx.strokeStyle = '#e4c580';

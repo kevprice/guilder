@@ -1,3 +1,4 @@
+import { paintIcon } from './resource-icons.js';
 import * as D from './domain.js';
 import { roomProduction, productionBadge } from './production-view.js';
 export function productionBadgeAt(s, x, y) {
@@ -22,26 +23,25 @@ export function paintProductionBadges(ctx, camera, s, snapshots = null) {
     ctx.fillRect(x, b.y, b.w, b.h);
     ctx.strokeStyle = p.status === 'working' ? '#76bdb5' : '#7b817f';
     ctx.strokeRect(x, b.y, b.w, b.h);
-    ctx.fillStyle = D.resources.find((r) => r.id === p.resource)?.color || '#a9d3ca';
-    ctx.font = 'bold 9px sans-serif';
-    const symbol =
-      D.materials.find((m) => m.id === p.resource)?.symbol ||
-      { gold: '●', salvage: '▣', supplies: '✚', guard: '◇', care: '✚', craft: '⚒' }[p.resource];
-    ctx.fillText(symbol, x + 5, b.y + 12);
+    ctx.strokeStyle = D.resources.find((r) => r.id === p.resource)?.color || '#a9d3ca';
+    paintIcon(ctx, p.resource, x + 5, b.y + 2, 15);
     ctx.fillStyle = '#e5e9df';
-    ctx.font = '9px sans-serif';
-    const label = p.reason
-      ? p.status === 'blocked'
-        ? 'Secure room'
-        : p.status === 'idle'
-          ? 'Assign / manage'
-          : 'Paused'
-      : p.watch
-        ? '+' + p.work * 2 + ' defence/day'
-        : p.recipe && !Object.keys(p.outputs).length
-          ? 'Craft · ' + (p.nextDays || '—') + 'd'
-          : p.amount + ' ' + p.resourceName.toLowerCase() + ' / ' + p.cycleDays + 'd';
-    ctx.fillText(label, x + 19, b.y + 12, b.w - 25);
+    ctx.font = 'bold 10px sans-serif';
+    if (p.reason) {
+      ctx.strokeStyle = p.status === 'blocked' ? '#d6b67a' : '#99aaa6';
+      paintIcon(
+        ctx,
+        p.status === 'blocked' ? 'lock' : p.status === 'idle' ? 'plus' : 'pause',
+        x + 27,
+        b.y + 2,
+        15,
+      );
+    } else {
+      ctx.fillText(String(p.watch ? p.work * 2 : p.amount), x + 25, b.y + 13);
+      ctx.strokeStyle = '#99aaa6';
+      paintIcon(ctx, 'clock', x + b.w - 35, b.y + 3, 13);
+      ctx.fillText(String(p.nextDays ?? p.cycleDays ?? 0), x + b.w - 18, b.y + 13);
+    }
     if (p.target && !p.reason) {
       ctx.fillStyle = '#76bdb5';
       ctx.fillRect(x, b.y + b.h - 2, (b.w * p.progress) / p.target, 2);

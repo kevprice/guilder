@@ -767,7 +767,7 @@ export function paintAffordance(ctx, camera, h, time, near = false) {
   if (indicator) {
     ctx.globalAlpha = 1;
     ctx.font = 'bold 9px system-ui';
-    const width = ctx.measureText(indicator.label).width + 30;
+    const width = 26;
     ctx.fillStyle = '#172831';
     ctx.fillRect(x - width / 2, h.y - 94, width, 19);
     ctx.strokeStyle = color;
@@ -782,7 +782,6 @@ export function paintAffordance(ctx, camera, h, time, near = false) {
     ctx.stroke();
     ctx.fillStyle = color;
     ctx.textAlign = 'left';
-    ctx.fillText(indicator.label, x - width / 2 + 21, h.y - 81);
   }
   ctx.restore();
 }
