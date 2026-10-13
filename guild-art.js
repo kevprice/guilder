@@ -5,6 +5,7 @@ import {
   utilityDefinition,
   dailyWork,
   productionPause,
+  furniturePlacement,
 } from './guild-management.js';
 
 const art = {
@@ -36,11 +37,14 @@ export function furnitureIcon(id, esc = (s) => s) {
   const def = furnishings.find((f) => f.id === id);
   return `<svg class="furniture-icon" viewBox="0 0 64 64" role="img" aria-label="${esc(def?.name || 'Furniture')}">${art[id] || ''}</svg>`;
 }
-export function renderGuildRewards(ids, esc) {
+export function renderGuildRewards(ids, esc, s = null) {
   return (ids || [])
     .map((id) => {
       const f = furnishings.find((f) => f.id === id);
-      return `<div class="guild-reward">${furnitureIcon(id, esc)}<div><strong>${esc(f.name)}</strong><p>${esc(f.effect)}</p></div></div>`;
+      const available = s?.guild.furniture
+        .filter((i) => i.id === id && !furniturePlacement(s, i.uid))
+        .at(-1);
+      return `<div class="guild-reward">${furnitureIcon(id, esc)}<div><strong>${esc(f.name)}</strong><p>${esc(f.effect)}</p>${available ? `<p>Added to furniture storage · ready to place.</p><button data-action="rewardFurniture:${available.uid}">Place ${esc(f.name)} →</button>` : ''}</div></div>`;
     })
     .join('');
 }
@@ -58,9 +62,9 @@ export function furnishingZones(s, rooms) {
       id,
       site,
       x,
-      y: 248,
+      y: 231,
       w: site === 'service' ? 102 : site === 'garden' && id === 'infirmary' ? 76 : 90,
-      h: 64,
+      h: 18,
     });
   }
   return zones;
@@ -85,7 +89,7 @@ export function furnitureFootprints(zone) {
     { x: roomX + 153, y: 250, w: 25, h: 45 },
   ];
 }
-function paintFurniture(ctx, id, footprint, camera) {
+export function paintFurniture(ctx, id, footprint, camera) {
   ctx.save();
   ctx.translate(footprint.x - camera, footprint.y);
   ctx.scale(footprint.w / 64, footprint.h / 64);
@@ -343,13 +347,13 @@ export function paintGuildFurnishings(ctx, camera, s, rooms, time) {
     symbols.forEach((id, i) => {
       if (id) paintFurniture(ctx, id, footprints[i], camera);
     });
-    // Thin work labels leave the furnishings visible and stay above story interaction areas.
+    // Work labels sit above wall decorations and leave door captions and interaction points clear.
     ctx.fillStyle = '#11262bcc';
-    ctx.fillRect(sx, zone.y, zone.w, 15);
-    ctx.fillRect(sx, zone.y + 46, zone.w, 15);
-    ctx.font = '8px sans-serif';
+    ctx.fillRect(sx, zone.y, zone.w, 8);
+    ctx.fillRect(sx, zone.y + 10, zone.w, 8);
+    ctx.font = '7px sans-serif';
     ctx.fillStyle = '#e4d3ae';
-    ctx.fillText(zone.id.toUpperCase() + ' · T' + f.tier, sx + 4, zone.y + 11);
+    ctx.fillText(zone.id.toUpperCase() + ' · T' + f.tier, sx + 4, zone.y + 7);
     ctx.fillStyle = facilityAvailable(s, zone.id) ? '#b1d9cc' : '#d2a597';
     const active = !!f.project,
       paused = productionPause(s, zone.id);
@@ -366,12 +370,12 @@ export function paintGuildFurnishings(ctx, camera, s, rooms, time) {
             ? 'NEXT CROP READY'
             : 'READY FOR WORK',
       sx + 4,
-      zone.y + 56,
+      zone.y + 17,
     );
     if (active && dailyWork(s, zone.id) > 0) {
       ctx.fillStyle = '#e6c78b';
       ctx.beginPath();
-      ctx.arc(sx + zone.w - 7, zone.y + 10, 2 + Math.sin(time * 3) * 0.5, 0, Math.PI * 2);
+      ctx.arc(sx + zone.w - 7, zone.y + 4, 2 + Math.sin(time * 3) * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();

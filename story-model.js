@@ -2,6 +2,7 @@ import { regions, expansionMissions } from './expansion.js';
 import { storyMissions } from './narrative.js';
 import { homeThreats } from './contracts.js';
 import { activeMission } from './contracts.js';
+import { maraPower } from './house-rooms.js';
 // Player-facing accounts are reconstructed from saved events, never from generic roster placeholders.
 function mission(s, id) {
   return s.missions.find((m) => m.id === id && activeMission(m));
@@ -40,6 +41,7 @@ export function currentInvestigation(s) {
       tab: 'Contracts',
     };
   const attack = homeThreats.find((d) => s.threats?.[d.id]?.active)?.id;
+  const watch = s.guild?.house ? maraPower(s) : 0;
   if (attack)
     return {
       title: 'Defend the guild',
@@ -50,7 +52,11 @@ export function currentInvestigation(s) {
         ' Away residents cannot defend the house.',
       next: s.missions.some((m) => m.id === attack && activeMission(m))
         ? 'Defenders are fighting at home. Advance a day to continue; inspect daily injuries or withdraw residents from Contracts.'
-        : 'Open Contracts and assign fit residents currently at home. Defence uses party stats and daily harm rolls.',
+        : watch > 0
+          ? 'Mara and the home watch contribute ' +
+            watch +
+            ' defence work each game day. Check Rooms → Mara for progress and the strength needed to prevent damage, or assign an additional defence party in Contracts.'
+          : 'Open Contracts and assign fit residents currently at home. Defence uses party stats and daily harm rolls.',
       tab: 'Contracts',
     };
   if (f.dragonFound && !f.dragonSlain) {

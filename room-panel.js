@@ -1,26 +1,39 @@
 import * as D from './domain.js';
 import { furnitureIcon } from './guild-art.js';
 import { equipmentIcon } from './equipment-rewards.js';
+import {
+  renderHouse,
+  renderMaterials,
+  renderMara,
+  renderCrew,
+  materialCost,
+} from './house-panel.js';
 
-export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuantity = 1 } = {}) {
+export function renderRooms(
+  s,
+  { esc, card, btn },
+  {
+    section = 'all',
+    orderQuantity = 1,
+    furnitureUid = null,
+    houseRoom = null,
+    decorationRoom = null,
+  } = {},
+) {
   const g = s.guild;
   const sections = [
     ['overview', 'Overview'],
+    ['house', 'House rooms'],
     ['workshop', 'Workshop'],
     ['garden', 'Garden'],
     ['infirmary', 'Infirmary'],
+    ['decorate', 'Decorate'],
     ['storage', 'Furniture storage'],
+    ['materials', 'Materials'],
+    ['mara', 'Mara'],
   ];
-  const cost = (r) =>
-    [
-      r.gold ? r.gold + 'g' : '',
-      r.salvage ? r.salvage + ' salvage' : '',
-      r.supplies ? r.supplies + ' supply' : '',
-    ]
-      .filter(Boolean)
-      .join(' + ') || 'No additional resources';
-  const canAfford = (r) =>
-    s.gold >= r.gold && g.salvage >= r.salvage && g.supplies >= (r.supplies || 0);
+  const cost = materialCost;
+  const canAfford = (r) => !D.resourceShortfall(s, r).length;
   const recipeName = (r) =>
     r.name
       ? r.name
@@ -38,12 +51,13 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
     return [
       'Mara 1',
       w.upgrade ? 'tier bonus +' + w.upgrade : '',
-      worker
-        ? worker.name +
-          (w.workerFit
-            ? ' +' + (w.worker + w.stat) + ' · ' + stat + ' ' + w.workerStat + '/10'
-            : ' · ' + worker.status + ' · bonus paused')
-        : '',
+      ...w.crew.map(
+        (c) =>
+          c.name +
+          (c.fit
+            ? ' +' + c.work + ' · ' + stat + ' ' + c.stat
+            : '/ ' + c.status + ' · bonus paused'),
+      ),
       w.utility ? 'forge +1' : '',
     ]
       .filter(Boolean)
@@ -51,11 +65,27 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
   };
   const shortfallText = (missing) =>
     missing.map((r) => r.amount + ' ' + (r.resource === 'gold' ? 'gold' : r.resource)).join(' + ');
+  const suppliesText = (n) => n + (n === 1 ? ' supply' : ' supplies');
   let html = `<div class="room-tabs" role="group" aria-label="Room pages">${sections.map(([id, name]) => `<button data-action="roomPage:${id}" aria-pressed="${section === id}">${name}</button>`).join('')}</div><div class="resource-stock"><span>Gold <strong>${s.gold}</strong></span><span>Salvage <strong>${g.salvage}</strong></span><span>Supplies <strong>${g.supplies}</strong></span></div>`;
   html += `<div class="room-day-controls"><span class="stats">Day ${s.day} · rooms, recovery and expeditions</span>${btn('Advance guild day →', 'roomDay')}</div>`;
+  if (section === 'house') return html + renderHouse(s, { esc, card, btn }, houseRoom);
+  if (section === 'materials') return html + renderMaterials(s, { esc, card, btn });
+  if (section === 'mara') return html + renderMara(s, { esc, card, btn });
+  if (section === 'decorate')
+    return html + renderDecorating(s, { esc, card, btn }, furnitureUid, decorationRoom);
   if (['all', 'overview'].includes(section))
     html +=
       '<p class="stats">Mara keeps room work moving while adventurers travel. Workers gain 5 XP on a staffed completion; home work does not count as an expedition visit.</p>';
+  if (['all', 'overview'].includes(section))
+    html += card(
+      'Work throughout the house',
+      `<p>${D.houseRooms.filter((r) => D.roomUnlocked(s, r)).length} discovered workplaces · ${s.roster.filter((c) => D.assignedRoom(s, c.id)).length} companions assigned. Room workers produce timber, ore, herbs, cloth, aether and fittings, or guard the home.</p><div class="row">${btn('Assign room crews', 'roomPage:house')}${btn('Materials and crafting', 'roomPage:materials')}${btn('Upgrade Mara', 'roomPage:mara')}</div>`,
+    );
+  if (['all', 'overview'].includes(section) && g.furniture.length)
+    html += card(
+      'Decorate your rooms',
+      `<p>${g.furniture.length} owned furnishings. Place banners, rugs, plants and shelves throughout the house, or move pieces between rooms.</p>${btn('Place and move furnishings →', 'roomPage:decorate')}`,
+    );
   if (['all', 'overview'].includes(section) && g.dailySummary?.lines.length)
     html += card(
       'Day ' + g.dailySummary.day + ' · Room work',
@@ -68,6 +98,18 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
       'Quartermaster resources',
       `<div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', s.gold < 15)}${btn('Buy 4 salvage · 60g', 'resource:salvage', s.gold < 60)}</div>`,
     );
+  const care = D.carePlan(s);
+  if (
+    ['all', 'overview'].includes(section) &&
+    D.facilitySite(s, 'infirmary') &&
+    care.mode === 'auto'
+  ) {
+    const crop = D.projectForecast(s, 'garden');
+    html += card(
+      'Supply plan',
+      `<p>${suppliesText(care.reserve)} protected from automatic care · ${care.aboveReserve} available above the reserve.</p><p class="stats">${g.facilities.infirmary.project ? 'A paid treatment is already in progress.' : care.next ? 'Next patient: ' + esc(care.next.name) + ' · 1 supply' + (care.waiting ? ' · ' + esc(care.waiting.toLowerCase()) : ' · starts next game day') : 'No eligible patients waiting.'}${D.facilitySite(s, 'garden') ? '<br>Garden: ' + (crop.days === null ? esc(crop.paused || 'Waiting') : 'next harvest in ' + crop.days + (crop.days === 1 ? ' day' : ' days')) : ''}</p>${care.gardenConflict ? '<p class="production-paused">The garden target cannot build a surplus above your care reserve. Raise its target to fund automatic treatment.</p>' : ''}${btn('Manage care plan', 'roomPage:infirmary')}`,
+    );
+  }
   if (section === 'storage') {
     const project = g.facilities.workshop.project;
     if (project?.source?.kind === 'furniture') {
@@ -78,9 +120,7 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
       );
     }
     const placed = new Set(
-      Object.values(g.facilities)
-        .flatMap((f) => [f.utility, ...f.decorations])
-        .filter(Boolean),
+      g.furniture.filter((i) => D.furniturePlacement(s, i.uid)).map((i) => i.uid),
     );
     html +=
       '<h3>Owned furnishings</h3><p class="stats">Stored pieces are available to every compatible room. Removing a furnishing returns it here.</p>';
@@ -100,6 +140,7 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
       );
     }
     html += btn('Craft furniture in the workshop', 'roomPage:workshop');
+    html += btn('Place and move furnishings →', 'roomPage:decorate');
     html +=
       '<p class="stats">Spare stored pieces can be reclaimed for salvage in the workshop. Placed furnishings and earned trophies are kept intact.</p>';
     return html;
@@ -137,6 +178,8 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
           first = queue[0];
         overview += `<p class="stats">${queue.reduce((n, o) => n + o.remaining, 0)} items planned${first.affordableUnits === 0 && first.shortfall.length ? ' · waiting for resources' : ''}</p>`;
       }
+      if (def.id === 'infirmary')
+        overview += `<p class="stats">${care.mode === 'manual' ? 'Manual care' : 'Automatic care · ' + (care.priority === 'longest' ? 'longest recovery first' : 'soonest home first') + ' · protects ' + suppliesText(care.reserve)}${!f.project && care.mode === 'auto' ? '<br>' + esc(care.waiting || 'Next: ' + care.next.name) : ''}</p>`;
       overview += btn('Manage ' + def.name, 'roomPage:' + def.id);
       html += card(def.name, overview);
       continue;
@@ -144,7 +187,7 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
     let body = `<span class="tag">${esc(name)} · Tier ${f.tier}</span><p class="stats">${work} work per day<br>${esc(breakdown(def.id, r))}</p>`;
     if (!available)
       body += `<p class="threat-badge">Room damaged · production paused</p>${btn('Repair room · 30g', 'repairDamage:' + site, s.gold < 30)}`;
-    body += `<label class="room-worker">Assigned resident<select data-room-worker="${def.id}" aria-label="${def.name} worker" ${available ? '' : 'disabled'}><option value="">Mara only</option>${s.roster
+    body += `<label class="room-worker">Lead resident<select data-room-worker="${def.id}" aria-label="${def.name} worker" ${available ? '' : 'disabled'}><option value="">Empty lead slot</option>${s.roster
       .filter((c) => !['dead', 'departed'].includes(c.status))
       .map((c) =>
         (() => {
@@ -152,10 +195,11 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
             other = D.facilities.find(
               (other) => other.id !== def.id && g.facilities[other.id].worker === c.id,
             );
-          return `<option value="${c.id}" ${f.worker === c.id ? 'selected' : ''}>${esc(c.name)} · ${esc(c.status)} · ${def.stat.toUpperCase()} ${candidate.workerStat} · ${candidate.workerFit ? '+' + (candidate.worker + candidate.stat) + ' work' : 'bonus paused'}${candidate.days === null ? '' : ' · ' + candidate.scope + ' ' + candidate.days + (candidate.days === 1 ? ' day' : ' days')}${other ? ' · moves from ' + other.name : ''}</option>`;
+          return `<option value="${c.id}" ${f.worker === c.id ? 'selected' : ''}>${esc(c.name)} · ${esc(c.status)} · ${def.stat.toUpperCase()} ${candidate.workerStat} · ${candidate.workerFit ? '+' + candidate.leadWork + ' work' : 'bonus paused'}${candidate.days === null ? '' : ' · ' + candidate.scope + ' ' + candidate.days + (candidate.days === 1 ? ' day' : ' days')}${other ? ' · moves from ' + other.name : ''}</option>`;
         })(),
       )
       .join('')}</select></label>`;
+    body += renderCrew(s, D.facilityRoom(s, def.id), { esc }, true);
     if (f.project) {
       const p = f.project,
         days = work ? Math.ceil((p.work - p.progress) / work) : null;
@@ -170,24 +214,41 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
     } else if (def.id === 'garden') {
       const crop = D.projectRecipe(s, 'garden', 'crop');
       body += `<p>Automatic crop · ${crop.work} work → ${crop.yield} supplies. The next crop starts when you advance a day.</p>`;
-    } else if (def.id === 'infirmary') {
+    }
+    if (def.id === 'infirmary') {
       const treatment = D.projectRecipe(s, 'infirmary', 'treatment'),
-        patients = D.eligiblePatients(s);
+        patients = D.eligiblePatients(s).filter((c) => c.id !== f.project?.patient);
+      body += `<div class="care-policy"><h4>Care plan</h4><label>Care mode<select id="care-policy-mode" aria-label="Infirmary care mode"><option value="manual" ${care.mode === 'manual' ? 'selected' : ''}>Manual · choose each treatment</option><option value="auto" ${care.mode === 'auto' ? 'selected' : ''}>Automatic · treat when useful</option></select></label><label>Patient priority<select id="care-policy-priority" aria-label="Automatic care priority"><option value="longest" ${care.priority === 'longest' ? 'selected' : ''}>Longest recovery first</option><option value="soonest" ${care.priority === 'soonest' ? 'selected' : ''}>Soonest home first</option></select></label><label>Protected supplies<input id="care-policy-reserve" aria-label="Protected supplies" type="number" min="0" step="1" value="${care.reserve}"></label><p class="stats">Automatic care spends 1 supply only when a new treatment starts, keeping ${suppliesText(care.reserve)} available for expeditions. Paid work continues if you change the plan. Manual treatment can use the reserve.</p>${btn('Apply care plan', 'carePolicy')}<p class="stats">${esc(care.waiting || 'Next: ' + care.next.name + ' · starts when you advance a day')}.</p>${care.mode === 'auto' ? '<p class="stats">' + suppliesText(care.aboveReserve) + ' above the reserve.</p>' : ''}${care.gardenConflict ? '<p class="production-paused">The garden target is too low to fund care above this reserve.</p>' : ''}${care.mode === 'auto' && D.facilitySite(s, 'garden') ? '<p class="stats">Grow a buffer for treatment while keeping the reserve available for trips.</p>' + btn('Set garden target · ' + care.gardenTarget + ' supplies', 'careGarden') : ''}</div>`;
       body += `<p>Treatment · 1 supply / ${treatment.work} work · removes two recovery days. Natural recovery continues.</p>`;
-      body += patients.length
-        ? patients
-            .map((c) =>
-              btn(
-                'Treat ' + c.name + ' · ' + c.recovery + ' recovery days left',
-                'project:infirmary:treatment:' + c.id,
-                !available || !canAfford(treatment),
-              ),
-            )
-            .join('')
-        : '<p class="stats">No eligible patients. Treatment is offered when it can finish before natural recovery.</p>';
-      if (patients.length && !g.supplies)
+      body +=
+        !f.project && patients.length
+          ? patients
+              .map((c) =>
+                btn(
+                  'Treat ' + c.name + ' · ' + c.recovery + ' recovery days left',
+                  'project:infirmary:treatment:' + c.id,
+                  !available || !canAfford(treatment),
+                ),
+              )
+              .join('')
+          : !f.project
+            ? '<p class="stats">No eligible patients. Treatment is offered when it can finish before natural recovery.</p>'
+            : '';
+      if (!f.project && patients.length && !g.supplies)
         body +=
           '<p class="stats">Waiting for supplies · harvest crops or buy from the quartermaster.</p>';
+      const recovering = s.roster.filter(
+        (c) => c.recovery > 0 && !['dead', 'departed'].includes(c.status),
+      );
+      if (recovering.length) {
+        body +=
+          '<h4>Recovery forecast</h4><p class="stats">Compare one course of treatment with natural recovery, using current staff. Waiting time and further injuries can change these estimates.</p><div class="care-patients">';
+        for (const c of recovering) {
+          const forecast = D.treatmentForecast(s, c.id);
+          body += `<article class="care-patient"><strong>${esc(c.name)}${f.project?.patient === c.id ? ' · In treatment' : ''}</strong><p class="stats">${forecast.naturalDays === null ? esc(forecast.reason) : 'Natural recovery: ' + forecast.naturalDays + (forecast.naturalDays === 1 ? ' day' : ' days') + '<br>' + (forecast.eligible ? 'With treatment: ' + forecast.homeDays + (forecast.homeDays === 1 ? ' day' : ' days') + ' · returns ' + forecast.savedDays + (forecast.savedDays === 1 ? ' day' : ' days') + ' earlier<br>Care finishes in ' + forecast.days + (forecast.days === 1 ? ' day' : ' days') + (f.project?.patient === c.id ? ' · supply already paid' : ' · 1 supply') : esc(forecast.reason))}</p></article>`;
+        }
+        body += '</div>';
+      }
     }
     if (def.id === 'garden') {
       const policy = g.gardenPolicy;
@@ -222,7 +283,10 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
         D.recipes
           .filter(
             (r) =>
-              r.item && !r.sourceEquipment && (!r.blueprint || g.blueprints.includes(r.blueprint)),
+              r.item &&
+              !r.materials &&
+              !r.sourceEquipment &&
+              (!r.blueprint || g.blueprints.includes(r.blueprint)),
           )
           .map((base) => {
             const r = D.projectRecipe(s, def.id, base.id),
@@ -238,7 +302,10 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
           .join('') +
         '</div></details><details><summary>Craft furniture</summary><div class="room-recipes">' +
         D.recipes
-          .filter((r) => r.furniture && (!r.blueprint || g.blueprints.includes(r.blueprint)))
+          .filter(
+            (r) =>
+              r.furniture && !r.materials && (!r.blueprint || g.blueprints.includes(r.blueprint)),
+          )
           .map((base) => {
             const r = D.projectRecipe(s, def.id, base.id),
               item = D.furnishings.find((f) => f.id === r.furniture);
@@ -322,5 +389,72 @@ export function renderRooms(s, { esc, card, btn }, { section = 'all', orderQuant
         .map((c) => `<p class="stats">Day ${c.day} · ${esc(c.text)}</p>`)
         .join('') +
       '</details>';
+  return html;
+}
+
+function renderDecorating(s, { esc, card, btn }, furnitureUid, decorationRoom) {
+  const furniture = s.guild.furniture;
+  const name = (id) => D.furnishings.find((d) => d.id === id).name;
+  const facilityName = (id) => D.furnitureTarget(s, id).name;
+  const where = (i) => {
+    const placed = D.furniturePlacement(s, i.uid);
+    return placed
+      ? facilityName(placed.facility) +
+          ' · ' +
+          (placed.slot === 'utility'
+            ? 'Utility'
+            : 'Decoration ' + (Number(placed.slot.slice(-1)) + 1))
+      : 'In storage';
+  };
+  let html =
+    '<h3>Decorate your rooms</h3><p>Choose an owned furnishing, then pick a room and slot. Placed pieces appear immediately in the room. Moving or removing a piece keeps it owned by the guild.</p>';
+  if (!furniture.length) {
+    html += '<p>No completed furnishings yet.</p>';
+    const p = s.guild.facilities.workshop.project;
+    const recipe = p && D.recipes.find((r) => r.id === p.recipe);
+    if (recipe?.furniture)
+      html += `<p class="stats">${esc(name(recipe.furniture))} is still being built · ${p.progress}/${p.work} work. Advance game days to finish it.</p>`;
+    return html + btn('Open workshop', 'roomPage:workshop');
+  }
+  const selected =
+    furniture.find((i) => i.uid === furnitureUid) ||
+    furniture.find(
+      (i) => D.furnishings.find((d) => d.id === i.id).decoration && !D.furniturePlacement(s, i.uid),
+    ) ||
+    furniture.find((i) => !D.furniturePlacement(s, i.uid)) ||
+    furniture[0];
+  const definition = D.furnishings.find((d) => d.id === selected.id);
+  const current = D.furniturePlacement(s, selected.uid);
+  const sourceBlocked =
+    current &&
+    (!D.furnitureTarget(s, current.facility).available ||
+      (current.slot === 'utility' && D.furnitureTarget(s, current.facility).state.project));
+  html += `<label class="furniture-picker">Choose furnishing<select id="decorate-furniture" aria-label="Choose furnishing">${furniture.map((i) => `<option value="${i.uid}" ${i.uid === selected.uid ? 'selected' : ''}>${esc(name(i.id))} · #${i.uid.slice(10)} · ${esc(where(i))}</option>`).join('')}</select></label>`;
+  html += card(
+    name(selected.id),
+    `${furnitureIcon(selected.id, esc)}<p>${esc(definition.effect)}</p><p class="stats">${esc(where(selected))} · #${selected.uid.slice(10)}</p>${current ? btn('Remove to furniture storage', 'furnitureRemove:' + current.facility + ':' + current.slot, !!sourceBlocked) : ''}`,
+  );
+  const destinations = D.furnitureDestinations(s, selected.uid);
+  const chosen =
+    destinations.find((d) => d.facility === decorationRoom) ||
+    destinations.find((d) => d.facility === current?.facility) ||
+    destinations[0];
+  if (chosen)
+    html += `<label class="furniture-picker">Choose room<select id="decorate-room" aria-label="Choose room to decorate">${destinations.map((d) => `<option value="${d.facility}" ${d === chosen ? 'selected' : ''}>${esc(d.name)}${d.slots.every((slot) => slot.blocked) ? ' · ' + esc(d.slots[0].blocked) : ''}</option>`).join('')}</select></label>`;
+  if (!destinations.length)
+    html += `<p>${esc(D.facilities.find((f) => f.id === definition.facility)?.unlock || 'Restore a facility to place this furnishing.')}</p>`;
+  for (const destination of chosen ? [chosen] : []) {
+    const room =
+      destination.site === 'service'
+        ? 'Restored service room'
+        : D.houseRooms.find((r) => r.id === destination.site)?.name ||
+          D.rooms.find((r) => r.id === destination.site)?.name;
+    let body = `<p class="stats">${esc(room)}${destination.site === 'garden' ? ' · ' + (destination.facility === 'infirmary' ? 'Hospice area' : 'Garden area') : ''}</p>`;
+    for (const slot of destination.slots) {
+      const occupied = furniture.find((i) => i.uid === slot.uid);
+      body += `<div class="decoration-destination"><strong>${slot.label}</strong><p class="stats">${slot.uid === selected.uid ? esc(name(selected.id)) + ' is placed here.' : occupied ? esc(name(occupied.id)) + ' · replacing it returns it to storage.' : 'Empty slot'}</p>${slot.uid === selected.uid ? '' : btn((current ? 'Move' : 'Place') + ' in ' + slot.label, 'furnitureMove:' + destination.facility + ':' + slot.slot + ':' + selected.uid, !!slot.blocked)}${slot.blocked ? '<p class="stats">' + esc(slot.blocked) + '.</p>' : ''}</div>`;
+    }
+    html += `<section aria-label="Decorate ${destination.name}">${card(destination.name, body)}</section>`;
+  }
   return html;
 }

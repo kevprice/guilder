@@ -1385,7 +1385,8 @@ select:focus-visible {
   background: #3b493b;
 }
 .workshop-orders,
-.garden-policy {
+.garden-policy,
+.care-policy {
   padding: 14px;
   margin: 18px 0;
   border: 1px solid var(--line);
@@ -1393,7 +1394,8 @@ select:focus-visible {
   background: #14232a;
 }
 .workshop-orders h4,
-.garden-policy h4 {
+.garden-policy h4,
+.care-policy h4 {
   margin: 0 0 10px;
 }
 .workshop-conversions {
@@ -1419,13 +1421,15 @@ select:focus-visible {
   padding: 8px;
 }
 .order-quantity,
-.garden-policy label {
+.garden-policy label,
+.care-policy label {
   display: grid;
   gap: 8px;
   margin-bottom: 14px;
 }
 .order-quantity input,
-.garden-policy input {
+.garden-policy input,
+.care-policy input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -1436,6 +1440,16 @@ select:focus-visible {
 }
 .production-paused {
   color: #dfc494;
+}
+.care-policy button {
+  min-height: 44px;
+}
+.care-patient {
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #14232a;
 }
 .room-assignment-impact {
   padding: 12px;
@@ -1485,6 +1499,44 @@ select:focus-visible {
 }
 .room-recipe button {
   width: 100%;
+}
+.furniture-picker {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.room-crew {
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.room-crew label {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.material-stocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.material-stocks span {
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 6px;
+}
+.material-stocks strong {
+  color: var(--gold);
+}
+.decoration-destination {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.decoration-destination button,
+.guild-reward button {
+  min-height: 44px;
 }
 .furniture-slot {
   display: flex;

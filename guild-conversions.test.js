@@ -31,8 +31,8 @@ test('management version 2 upgrades without producing work, replacing stocks or 
   s.guild.version = 2;
   const before = structuredClone(s),
     copy = reload(s);
-  assert.equal(copy.guild.version, 3);
-  before.guild.version = 3;
+  assert.equal(copy.guild.version, 5);
+  before.guild.version = 5;
   assert.deepEqual(copy, before);
   assert.deepEqual(reload(copy), copy);
 });

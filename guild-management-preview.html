@@ -17,6 +17,10 @@
       <button data-branch="laboratory">Launch laboratory demo</button>
       <button data-branch="decision">Launch expedition decision demo</button>
       <button data-branch="workshop">Launch refit and reclamation demo</button>
+      <button data-branch="care">Launch care planning demo</button>
+      <button data-branch="furniture">Launch furniture crafting demo</button>
+      <button data-branch="house">Launch house production demo</button>
+      <button data-branch="guard">Launch Mara defence demo</button>
     </div>
     <p id="result" role="status"></p>
     <script type="module">
@@ -57,16 +61,61 @@
         D.recruit(s, 'bryn');
         D.recruit(s, 'ivo');
         s.roster[0].str = 10;
+        if (['house', 'guard'].includes(branch)) {
+          s.flags.discovered_sluice =
+            s.flags.searched_sluice =
+            s.flags.discovered_study =
+            s.flags.searched_study =
+              true;
+          s.flags.cellarDrained = s.flags.cellar = true;
+          s.roster[0].str = 20;
+          s.roster[0].end = 10;
+          s.roster[1].int = 20;
+          for (const m of D.materials) s.guild.house.materials[m.id] = 12;
+          s.guild.house.materials.components = 0;
+          D.assignRoomWorker(s, 'corridor', 0, 'bryn');
+          D.assignRoomWorker(s, 'tower', 0, 'ivo');
+        }
+        if (branch === 'guard') {
+          for (const flag of D.recruits.find((c) => c.id === 'nell').requires || [])
+            s.flags[flag] = true;
+          D.recruit(s, 'nell');
+          s.guild.house.mara.tier = 3;
+          D.assignRoomWorker(s, 'entrance', 0, 'bryn');
+          s.threats.monster = {
+            progress: 0,
+            active: true,
+            age: 0,
+            damage: 0,
+            room: 'service',
+            x: 865,
+            y: 380,
+          };
+        }
         if (branch === 'laboratory') {
           s.roster[1].status = 'injured';
           s.roster[1].injury = 2;
           s.roster[1].recovery = 5;
         }
-        for (const id of ['forge', 'banner', 'rug', 'plant', 'raisedBeds', 'medicalCabinet'])
-          grantFurniture(s, id);
+        if (branch !== 'furniture')
+          for (const id of ['forge', 'banner', 'rug', 'plant', 'raisedBeds', 'medicalCabinet'])
+            grantFurniture(s, id);
         if (branch === 'workshop') {
           for (const id of ['shortSword', 'paddedCoat', 'buckler'])
             D.awardEquipment(s, id, 'Demo stores');
+        }
+        if (branch === 'care') {
+          s.guild.supplies = 4;
+          D.setGardenPolicy(s, 'reserve', 2);
+          for (const [id, recovery] of [
+            ['bryn', 12],
+            ['ivo', 7],
+          ]) {
+            const c = s.roster.find((c) => c.id === id);
+            c.status = 'injured';
+            c.injury = 3;
+            c.recovery = recovery;
+          }
         }
         D.rememberPosition(s, 'rowan', { x: branch === 'hospice' ? 1670 : 860, floor: 380 });
         if (branch === 'decision') {

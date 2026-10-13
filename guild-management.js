@@ -1,5 +1,20 @@
 import { equipmentBonus, itemDefinition } from './equipment.js';
 import { classWorkFactor, talentValue } from './classes.js';
+import * as H from './house-rooms.js';
+export {
+  houseRooms,
+  materials,
+  activities,
+  roomUnlocked,
+  roomPause,
+  roomForecast,
+  assignedRoom,
+  workerStation,
+  facilityRoom,
+  coreFacility,
+  maraPower,
+  workerContribution,
+} from './house-rooms.js';
 
 export const facilities = [
   { id: 'workshop', name: 'Workshop', stat: 'str', unlock: 'Restore the service room.' },
@@ -97,6 +112,7 @@ const equipmentRecipes = [
   ['leatherArmour', 12, 70, 6, 'armour', 'mill'],
 ];
 export const recipes = [
+  ...H.materialRecipes,
   ...equipmentRecipes.map(([item, salvage, gold, work, category, blueprint]) => ({
     id: item,
     item,
@@ -254,12 +270,14 @@ export const guildProfiles = Object.fromEntries(
 
 export function managementState() {
   return {
-    version: 3,
+    version: 5,
+    house: H.houseState(),
     salvage: 6,
     supplies: 4,
     nextFurniture: 0,
     nextOrder: 0,
     gardenPolicy: { mode: 'continuous', reserve: 8 },
+    carePolicy: { mode: 'manual', priority: 'longest', reserve: 2 },
     furniture: [],
     blueprints: [],
     trophies: [],
@@ -284,6 +302,7 @@ export function managementState() {
   };
 }
 export function reconcileAssignments(s) {
+  if (s.guild.house) H.reconcileHouse(s);
   for (const f of Object.values(s.guild.facilities))
     if (
       f.worker &&
@@ -318,6 +337,14 @@ export function migrateManagement(s) {
   }
   // Version 3 adds item reservations to workshop conversions, without changing existing work.
   if (s.guild.version === 2) s.guild.version = 3;
+  if (s.guild.version === 3) {
+    s.guild.carePolicy = { mode: 'manual', priority: 'longest', reserve: 2 };
+    s.guild.version = 4;
+  }
+  if (s.guild.version === 4) {
+    H.migrateHouse(s);
+    s.guild.version = 5;
+  }
   reconcileAssignments(s);
   grantTrophies(s);
 }
@@ -352,11 +379,19 @@ export function workBreakdown(s, id, recipe = null, workerId = s.guild.facilitie
   const fit = !!worker && worker.status === 'home' && !worker.injury;
   const utility = utilityDefinition(s, id)?.id;
   const stats = worker ? effectiveWorkStat(worker, def.stat) : null;
+  const room = H.facilityRoom(s, id),
+    crew = s.guild.house && room ? s.guild.house.rooms[room].workers.slice(1) : [];
+  const contributions = [
+    worker,
+    ...crew.filter((id) => id !== workerId).map((id) => s.roster.find((c) => c.id === id)),
+  ]
+    .filter(Boolean)
+    .map((c) => H.workerContribution(c, def.stat));
   const parts = {
     mara: 1,
     upgrade: f.tier - 1,
-    worker: Number(fit),
-    stat: Number(fit && stats >= 10),
+    worker: contributions.filter((c) => c.fit).length,
+    stat: contributions.reduce((n, c) => n + Math.max(0, c.work - Number(c.fit)), 0),
     utility: Number(utility === 'forge' && recipe?.category === 'weapon'),
   };
   const potential = Object.values(parts).reduce((sum, value) => sum + value, 0);
@@ -369,6 +404,8 @@ export function workBreakdown(s, id, recipe = null, workerId = s.guild.facilitie
     workerStat: stats,
     workerId: worker?.id || null,
     workerFit: fit,
+    crew: contributions,
+    leadWork: contributions.find((c) => c.id === worker?.id)?.work || 0,
   };
 }
 export function dailyWork(s, id, recipe = null) {
@@ -383,7 +420,9 @@ export function projectForecast(s, id, workerId = s.guild.facilities[id]?.worker
       ? projectRecipe(s, id, next.recipe)
       : id === 'garden'
         ? projectRecipe(s, id, 'crop')
-        : null;
+        : id === 'infirmary' && carePlan(s, workerId).patients.length
+          ? projectRecipe(s, id, 'treatment')
+          : null;
   const work = workBreakdown(s, id, recipe, workerId);
   const fundingPause = next && resourceShortfall(s, recipe).length ? 'Waiting for resources' : null;
   const remaining = project ? project.work - project.progress : recipe?.work;
@@ -395,28 +434,71 @@ export function projectForecast(s, id, workerId = s.guild.facilities[id]?.worker
     ...work,
     total: fundingPause ? 0 : work.total,
     paused: fundingPause || work.paused,
-    scope: project ? 'current item' : next ? 'next ordered item' : 'crop',
+    scope: project
+      ? id === 'infirmary'
+        ? 'current treatment'
+        : 'current item'
+      : next
+        ? 'next ordered item'
+        : id === 'infirmary'
+          ? 'treatment'
+          : 'crop',
     days,
     completionDay: days === null ? null : s.day + days,
   };
 }
 export function roomWorkAbsence(s, ids) {
-  return facilities.flatMap((def) => {
-    const f = s.guild.facilities[def.id];
-    if (!f.worker || !ids.includes(f.worker)) return [];
-    const before = projectForecast(s, def.id),
-      after = projectForecast(s, def.id, null);
+  return H.houseRooms.flatMap((room) => {
+    if (!s.guild.house.rooms[room.id].workers.some((id) => ids.includes(id))) return [];
+    const id = H.coreFacility(s, room.id);
+    const before = id ? projectForecast(s, id) : H.roomForecast(s, room.id);
+    const copy = {
+      ...s,
+      guild: {
+        ...s.guild,
+        house: {
+          ...s.guild.house,
+          rooms: {
+            ...s.guild.house.rooms,
+            [room.id]: {
+              ...s.guild.house.rooms[room.id],
+              workers: s.guild.house.rooms[room.id].workers.map((w) =>
+                ids.includes(w) ? null : w,
+              ),
+            },
+          },
+        },
+        facilities: {
+          ...s.guild.facilities,
+          ...(id
+            ? {
+                [id]: {
+                  ...s.guild.facilities[id],
+                  worker: ids.includes(s.guild.facilities[id].worker)
+                    ? null
+                    : s.guild.facilities[id].worker,
+                },
+              }
+            : {}),
+        },
+      },
+    };
+    const after = id ? projectForecast(copy, id) : H.roomForecast(copy, room.id);
+    if (!id) {
+      before.total = before.work;
+      after.total = after.work;
+    }
     if (before.total === after.total) return [];
     return [
       {
-        facility: def.id,
-        name: def.name,
-        worker: f.worker,
+        facility: id || room.id,
+        name: room.name,
+        worker: s.guild.house.rooms[room.id].workers.find((w) => ids.includes(w)),
         before: before.total,
         after: after.total,
         beforeDays: before.days,
         afterDays: after.days,
-        scope: before.scope,
+        scope: before.scope || 'production cycle',
       },
     ];
   });
@@ -428,7 +510,12 @@ export function resourceShortfall(s, inputs) {
     ['supplies', s.guild.supplies],
   ]
     .filter(([key, have]) => (inputs[key] || 0) > have)
-    .map(([key, have]) => ({ resource: key, amount: inputs[key] - have }));
+    .map(([key, have]) => ({ resource: key, amount: inputs[key] - have }))
+    .concat(
+      Object.entries(inputs.materials || {})
+        .filter(([id, n]) => s.guild.house.materials[id] < n)
+        .map(([id, n]) => ({ resource: id, amount: n - s.guild.house.materials[id] })),
+    );
 }
 export function setGardenPolicy(s, mode, reserve = s.guild.gardenPolicy.reserve) {
   if (!facilitySite(s, 'garden')) throw Error('Restore the greenhouse before managing crops.');
@@ -440,11 +527,26 @@ export function setGardenPolicy(s, mode, reserve = s.guild.gardenPolicy.reserve)
     throw Error('Choose a farming mode and a positive whole-number reserve.');
   s.guild.gardenPolicy = { mode, reserve };
 }
+export function setCarePolicy(s, mode, priority, reserve) {
+  if (!facilitySite(s, 'infirmary')) throw Error('Restore an infirmary before planning care.');
+  if (
+    !['manual', 'auto'].includes(mode) ||
+    !['longest', 'soonest'].includes(priority) ||
+    !Number.isSafeInteger(reserve) ||
+    reserve < 0 ||
+    reserve >= Number.MAX_SAFE_INTEGER - 2
+  )
+    throw Error(
+      'Choose a care mode, patient priority and a nonnegative whole-number supply reserve.',
+    );
+  s.guild.carePolicy = { mode, priority, reserve };
+}
 export function queueWorkshopOrder(s, recipeId, quantity = 1) {
   if (!facilitySite(s, 'workshop')) throw Error('Restore the workshop before planning orders.');
   const recipe = projectRecipe(s, 'workshop', recipeId);
   if (recipe.sourceEquipment || recipe.reclaim)
     throw Error('Choose a specific stored item to refit or reclaim.');
+  if (recipe.maraTier) throw Error('Upgrade Mara as an individual workshop project.');
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99)
     throw Error('Choose between 1 and 99 items per order.');
   const order = {
@@ -474,7 +576,12 @@ export function moveWorkshopOrder(s, uid, direction) {
 export function workshopQueueForecast(s) {
   const f = s.guild.facilities.workshop;
   const active = f.project ? projectForecast(s, 'workshop') : null;
-  const budget = { gold: s.gold, salvage: s.guild.salvage, supplies: s.guild.supplies };
+  const budget = {
+    gold: s.gold,
+    salvage: s.guild.salvage,
+    supplies: s.guild.supplies,
+    ...s.guild.house.materials,
+  };
   let days = active?.days || 0,
     blocked = !facilityAvailable(s, 'workshop');
   return f.queue.map((order) => {
@@ -483,17 +590,32 @@ export function workshopQueueForecast(s) {
       gold: recipe.gold * order.remaining,
       salvage: recipe.salvage * order.remaining,
       supplies: recipe.supplies * order.remaining,
+      materials: Object.fromEntries(
+        Object.entries(recipe.materials).map(([id, n]) => [id, n * order.remaining]),
+      ),
+    };
+    const unitCosts = {
+      gold: recipe.gold,
+      salvage: recipe.salvage,
+      supplies: recipe.supplies,
+      ...recipe.materials,
+    };
+    const allCosts = {
+      gold: cost.gold,
+      salvage: cost.salvage,
+      supplies: cost.supplies,
+      ...cost.materials,
     };
     const affordableUnits = Math.min(
       order.remaining,
-      ...['gold', 'salvage', 'supplies']
-        .filter((key) => recipe[key] > 0)
-        .map((key) => Math.floor(budget[key] / recipe[key])),
+      ...Object.keys(unitCosts)
+        .filter((key) => unitCosts[key] > 0)
+        .map((key) => Math.floor(budget[key] / unitCosts[key])),
     );
-    const shortfall = ['gold', 'salvage', 'supplies']
-      .filter((key) => cost[key] > budget[key])
-      .map((key) => ({ resource: key, amount: cost[key] - budget[key] }));
-    for (const key of Object.keys(budget)) budget[key] = Math.max(0, budget[key] - cost[key]);
+    const shortfall = Object.keys(allCosts)
+      .filter((key) => allCosts[key] > budget[key])
+      .map((key) => ({ resource: key, amount: allCosts[key] - budget[key] }));
+    for (const key of Object.keys(allCosts)) budget[key] = Math.max(0, budget[key] - allCosts[key]);
     const rate = dailyWork(s, 'workshop', recipe);
     days += rate ? Math.ceil(recipe.work / rate) * order.remaining : 0;
     blocked ||= !!shortfall.length || !rate;
@@ -528,10 +650,13 @@ export function projectRecipe(s, id, recipeId, source = s.guild.facilities[id]?.
   const r = recipes.find((r) => r.id === recipeId && r.facility === id);
   if (!r || (r.blueprint && !s.guild.blueprints.includes(r.blueprint)))
     throw Error('Discover this project’s blueprint first.');
+  if (r.maraTier && r.maraTier !== s.guild.house?.mara.tier + 1)
+    throw Error('Build Mara’s upgrades in order.');
   const utility = utilityDefinition(s, id)?.id;
   return {
     ...r,
     supplies: r.supplies || 0,
+    materials: r.materials || {},
     salvage: Math.max(0, r.salvage - Number(utility === 'outfitter' && r.category === 'armour')),
     work:
       r.category === 'crop' && utility === 'cloche'
@@ -551,6 +676,7 @@ function reclamationYield(source) {
   const recipe = recipes.find(
     (r) =>
       !r.sourceEquipment &&
+      !r.materials &&
       (source.kind === 'equipment' ? r.item === source.item.id : r.furniture === source.item.id),
   );
   if (recipe) return Math.max(1, Math.floor(recipe.salvage / 2));
@@ -578,12 +704,7 @@ function conversionBlock(s, recipe, item) {
       return 'This item does not match the refit pattern.';
   } else {
     if (furnishings.find((f) => f.id === item.id).trophy) return 'Earned trophies are kept intact.';
-    if (
-      Object.values(s.guild.facilities).some(
-        (f) => f.utility === uid || f.decorations.includes(uid),
-      )
-    )
-      return 'Remove this furnishing to storage first.';
+    if (furniturePlacement(s, uid)) return 'Remove this furnishing to storage first.';
   }
   return null;
 }
@@ -621,11 +742,97 @@ export function startWorkshopConversion(s, recipeId, uid, hooks) {
   const source = storedConversionSource(s, recipe, uid);
   startProject(s, 'workshop', recipeId, null, hooks, source);
 }
-export function eligiblePatients(s) {
-  if (!facilityAvailable(s, 'infirmary')) return [];
+export function treatmentForecast(s, patientId, workerId = s.guild.facilities.infirmary.worker) {
+  const c = s.roster.find((c) => c.id === patientId);
+  if (!c) throw Error('Choose a guild companion.');
   const r = projectRecipe(s, 'infirmary', 'treatment');
-  const days = Math.ceil(r.work / dailyWork(s, 'infirmary', r));
-  return s.roster.filter((c) => c.status === 'injured' && !c.undead && c.recovery > days);
+  const active = s.guild.facilities.infirmary.project;
+  const progress = active?.patient === patientId ? active.progress : 0;
+  const work = workBreakdown(s, 'infirmary', r, workerId);
+  const days = work.total ? Math.ceil((r.work - progress) / work.total) : null;
+  const naturalDays = c.status === 'injured' && !c.undead ? c.recovery : null;
+  const eligible = naturalDays !== null && days !== null && naturalDays > days;
+  return {
+    id: c.id,
+    name: c.name,
+    eligible,
+    days,
+    naturalDays,
+    homeDays: eligible ? Math.max(days, naturalDays - 2) : naturalDays,
+    savedDays: eligible ? Math.min(2, naturalDays - days) : 0,
+    supplyCost: r.supplies,
+    reason:
+      work.paused ||
+      (c.undead
+        ? 'Ordinary treatment does not help undead companions'
+        : c.status !== 'injured'
+          ? 'Treatment requires an injured companion at home'
+          : !eligible
+            ? 'Natural recovery is at least as fast'
+            : null),
+  };
+}
+export function eligiblePatients(s) {
+  return s.roster.filter((c) => treatmentForecast(s, c.id).eligible);
+}
+export function carePlan(s, workerId = s.guild.facilities.infirmary.worker) {
+  const policy = s.guild.carePolicy;
+  const patients = s.roster
+    .map((c) => treatmentForecast(s, c.id, workerId))
+    .filter((p) => p.eligible)
+    .sort(
+      (a, b) =>
+        (policy.priority === 'soonest'
+          ? a.homeDays - b.homeDays || a.naturalDays - b.naturalDays
+          : b.naturalDays - a.naturalDays) || a.id.localeCompare(b.id),
+    );
+  const aboveReserve = Math.max(0, s.guild.supplies - policy.reserve);
+  const active = s.guild.facilities.infirmary.project;
+  const next = patients.find((p) => p.id !== active?.patient) || null;
+  const waiting = !facilityAvailable(s, 'infirmary')
+    ? facilitySite(s, 'infirmary')
+      ? 'Room damaged'
+      : 'Infirmary unavailable'
+    : active
+      ? 'Current treatment continues'
+      : policy.mode === 'manual'
+        ? 'Manual care selected'
+        : !next
+          ? 'No treatment would improve recovery'
+          : aboveReserve < next.supplyCost
+            ? s.guild.supplies < next.supplyCost
+              ? 'Waiting for supplies'
+              : 'Protected supply reserve reached'
+            : null;
+  return {
+    ...policy,
+    patients,
+    next,
+    aboveReserve,
+    waiting,
+    automaticReady: !waiting,
+    gardenTarget: policy.reserve + 2,
+    gardenConflict:
+      policy.mode === 'auto' &&
+      s.guild.gardenPolicy.mode === 'reserve' &&
+      s.guild.gardenPolicy.reserve <= policy.reserve,
+  };
+}
+function startAutomaticCare(s, hooks) {
+  if (
+    s.guild.carePolicy.mode !== 'auto' ||
+    s.guild.facilities.infirmary.project ||
+    !facilityAvailable(s, 'infirmary')
+  )
+    return null;
+  const plan = carePlan(s);
+  if (!plan.next) return null;
+  if (!plan.automaticReady)
+    return (
+      'Infirmary: ' + plan.waiting.toLowerCase() + ' · ' + plan.reserve + ' supplies protected.'
+    );
+  startProject(s, 'infirmary', 'treatment', plan.next.id, hooks);
+  return 'Infirmary: automatic treatment started for ' + plan.next.name + ' · 1 supply reserved.';
 }
 function requireFacility(s, id) {
   if (!facilities.some((f) => f.id === id) || !facilityAvailable(s, id))
@@ -633,27 +840,30 @@ function requireFacility(s, id) {
   return s.guild.facilities[id];
 }
 function spendInputs(s, inputs, pay, why) {
-  if (
-    s.gold < inputs.gold ||
-    s.guild.salvage < inputs.salvage ||
-    s.guild.supplies < inputs.supplies
-  )
-    throw Error(`Need ${inputs.gold}g, ${inputs.salvage} salvage and ${inputs.supplies} supplies.`);
+  const missing = resourceShortfall(s, inputs);
+  if (missing.length)
+    throw Error('Need ' + missing.map((m) => m.amount + ' ' + m.resource).join(' + ') + '.');
   if (inputs.gold) pay(s, inputs.gold, why);
   s.guild.salvage -= inputs.salvage;
   s.guild.supplies -= inputs.supplies;
+  for (const [id, n] of Object.entries(inputs.materials || {})) s.guild.house.materials[id] -= n;
 }
 export function assignWorker(s, id, residentId) {
-  const f = requireFacility(s, id);
-  if (
-    residentId !== null &&
-    !s.roster.some((c) => c.id === residentId && !['dead', 'departed'].includes(c.status))
-  )
-    throw Error('Choose a living guild resident.');
-  if (residentId)
-    for (const other of Object.values(s.guild.facilities))
-      if (other.worker === residentId) other.worker = null;
-  f.worker = residentId;
+  requireFacility(s, id);
+  H.assignRoomWorker(s, H.facilityRoom(s, id), 0, residentId);
+}
+export function assignRoomWorker(s, id, slot, resident) {
+  H.assignRoomWorker(s, id, slot, resident);
+}
+export function settleResident(s, id, p) {
+  return H.settleResident(s, id, p);
+}
+export function setRoomProduction(s, id, enabled) {
+  H.setRoomProduction(s, id, enabled);
+}
+export function setMaraDefence(s, enabled) {
+  if (typeof enabled !== 'boolean') throw Error('Choose Mara’s guard mode');
+  s.guild.house.mara.defend = enabled;
 }
 export function startProject(s, id, recipeId, patient, hooks, source = null) {
   const f = requireFacility(s, id);
@@ -670,6 +880,7 @@ export function startProject(s, id, recipeId, patient, hooks, source = null) {
       'Treatment would not improve on natural recovery. Choose an injured living companion at home.',
     );
   const inputs = { gold: r.gold, salvage: r.salvage, supplies: r.supplies };
+  if (Object.keys(r.materials).length) inputs.materials = { ...r.materials };
   spendInputs(s, inputs, hooks.pay, 'Room project: ' + recipeId);
   f.project = {
     recipe: recipeId,
@@ -696,6 +907,7 @@ export function cancelProject(s, id, hooks) {
   if (p.inputs.gold) hooks.earn(s, p.inputs.gold, 'Refund: ' + p.recipe);
   s.guild.salvage += p.inputs.salvage;
   s.guild.supplies += p.inputs.supplies;
+  for (const [id, n] of Object.entries(p.inputs.materials || {})) s.guild.house.materials[id] += n;
   if (p.source)
     (p.source.kind === 'equipment' ? s.inventory : s.guild.furniture).push(p.source.item);
   f.project = null;
@@ -706,23 +918,125 @@ export function upgradeFacility(s, id, hooks) {
   spendInputs(s, { gold: 40, salvage: 6, supplies: 0 }, hooks.pay, 'Upgrade ' + id);
   f.tier = 2;
 }
+export function furnitureTarget(s, id) {
+  if (id.startsWith('room_')) {
+    const r = H.houseRooms.find((r) => 'room_' + r.id === id);
+    if (r && H.coreFacility(s, r.id)) return furnitureTarget(s, H.coreFacility(s, r.id));
+    return r
+      ? {
+          id,
+          name: r.name,
+          site: r.id,
+          state: s.guild.house.rooms[r.id],
+          available: !H.roomPause(s, r),
+          paused: H.roomPause(s, r),
+        }
+      : null;
+  }
+  const def = facilities.find((f) => f.id === id);
+  return def
+    ? {
+        id,
+        name: def.name,
+        site: facilitySite(s, id),
+        state: s.guild.facilities[id],
+        available: facilityAvailable(s, id),
+        paused: 'Repair or restore this facility first',
+      }
+    : null;
+}
 export function placeFurniture(s, id, slot, uid) {
-  const f = requireFacility(s, id);
+  const target = furnitureTarget(s, id);
+  if (!target?.available) throw Error(target?.paused || 'Unknown room');
+  const f = target.state;
   if (!['utility', 'decoration0', 'decoration1'].includes(slot))
     throw Error('Unknown furniture slot.');
+  if (slot === 'utility' && target.id.startsWith('room_'))
+    throw Error('This room has decoration slots only.');
   if (slot === 'utility' && f.project)
     throw Error('Finish or cancel the current project before swapping utility furniture.');
   if (uid) {
     const item = s.guild.furniture.find((i) => i.uid === uid);
     const def = furnishings.find((d) => d.id === item?.id);
-    if (!def || (slot === 'utility' ? def.facility !== id || def.decoration : !def.decoration))
+    if (
+      !def ||
+      (slot === 'utility'
+        ? def.facility !== id || def.decoration || id.startsWith('room_')
+        : !def.decoration)
+    )
       throw Error('This furniture does not fit that slot.');
-    for (const other of Object.values(s.guild.facilities))
-      if (other.utility === uid || other.decorations.includes(uid))
-        throw Error('Remove this piece from its current slot first.');
+    if (furniturePlacement(s, uid)) throw Error('Remove this piece from its current slot first.');
   }
   if (slot === 'utility') f.utility = uid;
   else f.decorations[Number(slot.slice(-1))] = uid;
+}
+export function furniturePlacement(s, uid) {
+  if (!uid) return null;
+  for (const def of facilities) {
+    const f = s.guild.facilities[def.id];
+    if (f.utility === uid) return { facility: def.id, slot: 'utility' };
+    const decoration = f.decorations.indexOf(uid);
+    if (decoration >= 0) return { facility: def.id, slot: 'decoration' + decoration };
+  }
+  if (s.guild.house)
+    for (const r of H.houseRooms) {
+      const slot = s.guild.house.rooms[r.id].decorations.indexOf(uid);
+      if (slot >= 0) return { facility: 'room_' + r.id, slot: 'decoration' + slot };
+    }
+  return null;
+}
+export function furnitureDestinations(s, uid) {
+  const item = s.guild.furniture.find((i) => i.uid === uid);
+  const d = furnishings.find((d) => d.id === item?.id);
+  if (!d) return [];
+  const current = furniturePlacement(s, uid);
+  const sourceBlocked =
+    current &&
+    (!furnitureTarget(s, current.facility).available
+      ? 'Repair the current room first'
+      : current.slot === 'utility' && furnitureTarget(s, current.facility).state.project
+        ? 'Finish or cancel the current room project before moving utility furniture'
+        : null);
+  return [
+    ...facilities,
+    ...(d.decoration
+      ? H.houseRooms
+          .filter((r) => !H.coreFacility(s, r.id) && H.roomUnlocked(s, r))
+          .map((r) => ({ id: 'room_' + r.id, name: r.name }))
+      : []),
+  ]
+    .filter((f) => furnitureTarget(s, f.id).site && (d.decoration || d.facility === f.id))
+    .map((def) => ({
+      facility: def.id,
+      name: def.name,
+      site: furnitureTarget(s, def.id).site,
+      slots: (d.decoration ? ['decoration0', 'decoration1'] : ['utility']).map((slot) => {
+        const target = furnitureTarget(s, def.id),
+          f = target.state;
+        const placedUid = slot === 'utility' ? f.utility : f.decorations[Number(slot.slice(-1))];
+        return {
+          slot,
+          uid: placedUid,
+          label: slot === 'utility' ? 'Utility' : 'Decoration ' + (Number(slot.slice(-1)) + 1),
+          blocked: !target.available
+            ? target.paused
+            : slot === 'utility' && f.project
+              ? 'Finish or cancel this room’s current project first'
+              : sourceBlocked || null,
+        };
+      }),
+    }));
+}
+export function moveFurniture(s, id, slot, uid) {
+  const target = furnitureDestinations(s, uid)
+    .find((d) => d.facility === id)
+    ?.slots.find((d) => d.slot === slot);
+  if (!target) throw Error('Choose an owned furnishing and a compatible restored room.');
+  if (target.uid === uid) return;
+  if (target.blocked) throw Error(target.blocked);
+  const current = furniturePlacement(s, uid);
+  if (current) placeFurniture(s, current.facility, current.slot, null);
+  placeFurniture(s, id, slot, uid);
 }
 export function buyResources(s, type, hooks) {
   if (!['supplies', 'salvage'].includes(type)) throw Error('Unknown resource.');
@@ -738,7 +1052,23 @@ export function medicalKitSupplyCost(s) {
 export function completeRoomProject(s, id, p, hooks, workedWorker) {
   const r = recipes.find((r) => r.id === p.recipe);
   let label;
-  if (r.item) {
+  if (r.maraTier) {
+    s.guild.house.mara.tier = r.maraTier;
+    label =
+      'Mara upgraded to tier ' + r.maraTier + ' · ' + (r.maraTier - 1) * 4 + ' defence strength';
+    s.scenes.push({
+      title: 'Mara upgraded',
+      body:
+        label +
+        '. Mara can guard the home while companions travel. Manage her guard mode in Rooms → Mara.',
+    });
+  } else if (r.materialOutput || r.resourceOutput) {
+    for (const [id, n] of Object.entries(r.materialOutput || {})) s.guild.house.materials[id] += n;
+    for (const [id, n] of Object.entries(r.resourceOutput || {})) s.guild[id] += n;
+    label = Object.entries({ ...r.materialOutput, ...r.resourceOutput })
+      .map(([id, n]) => '+' + n + ' ' + id)
+      .join(', ');
+  } else if (r.item) {
     hooks.awardEquipment(s, r.item, r.sourceEquipment ? 'Guild workshop refit' : 'Guild workshop');
     label = hooks.itemName(r.item) + ' added to the store room';
   } else if (r.furniture) {
@@ -746,7 +1076,7 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     label = furnishings.find((f) => f.id === r.furniture).name + ' ready to place';
     s.scenes.push({
       title: 'Furniture completed',
-      body: label + '. Open Rooms to furnish a facility.',
+      body: label + '. Open Rooms → Decorate to place it in any secured room.',
       guildRewards: [r.furniture],
     });
   } else if (r.reclaim) {
@@ -767,12 +1097,10 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     if (!patient.recovery) patient.status = 'home';
     label = patient.name + ': ' + removed + ' recovery days removed';
   }
-  const worker = workedWorker;
-  if (worker && !s.guild.homeXP.workers.includes(worker.id)) {
-    hooks.awardXP(s, worker, 5);
-    s.guild.homeXP.workers.push(worker.id);
-    label += ' · ' + worker.name + ' +5 XP';
-  }
+  const workers = Array.isArray(workedWorker) ? workedWorker : workedWorker ? [workedWorker] : [];
+  const awarded = workers.filter((c) => !s.guild.homeXP.workers.includes(c.id));
+  H.awardHomeXP(s, workers, hooks);
+  for (const c of awarded) label += ' · ' + c.name + ' +5 XP';
   const completion = { id: ++s.guild.nextCompletion, day: s.day, facility: id, text: label };
   s.guild.completions.push(completion);
   return label;
@@ -786,6 +1114,10 @@ export function advanceRooms(s, hooks) {
     if (def.id === 'workshop') {
       const waiting = startQueuedProject(s, hooks);
       if (waiting) lines.push(waiting);
+    }
+    if (def.id === 'infirmary') {
+      const care = startAutomaticCare(s, hooks);
+      if (care) lines.push(care);
     }
     const r = f.project ? recipes.find((r) => r.id === f.project.recipe) : null;
     const work = dailyWork(s, def.id, r);
@@ -821,9 +1153,10 @@ export function advanceRooms(s, hooks) {
     if (def.id === 'garden' && !f.project) startProject(s, 'garden', 'crop', null, hooks);
     const p = f.project;
     if (!p) continue;
-    const workedWorker = s.roster.find(
-      (c) => c.id === f.worker && c.status === 'home' && !c.injury,
-    );
+    const workedWorker =
+      s.guild.house.rooms[H.facilityRoom(s, def.id)]?.workers
+        .map((id) => s.roster.find((c) => c.id === id && c.status === 'home' && !c.injury))
+        .filter(Boolean) || [];
     p.progress = Math.min(p.work, p.progress + work);
     const worker = s.roster.find((c) => c.id === f.worker);
     lines.push(
@@ -838,6 +1171,7 @@ export function advanceRooms(s, hooks) {
     );
     if (p.progress >= p.work) f.project = null;
   }
+  lines.push(...H.advanceHouse(s, hooks));
   s.guild.dailySummary = { day: s.day, lines };
   if (lines.length) hooks.note(s, 'Day ' + s.day + ' room work\n' + lines.join('\n'), 'Room work');
 }
@@ -896,7 +1230,7 @@ export function validateManagement(s) {
   };
   if (
     !g ||
-    ![1, 2, 3].includes(g.version) ||
+    ![1, 2, 3, 4, 5].includes(g.version) ||
     !['salvage', 'supplies', 'nextFurniture', 'nextCompletion', 'readCompletion'].every((k) =>
       nonnegativeInt(g[k]),
     ) ||
@@ -919,6 +1253,15 @@ export function validateManagement(s) {
     !g.facilities ||
     Array.isArray(g.facilities) ||
     Object.keys(g.facilities).length !== facilities.length
+  )
+    bad();
+  if (
+    g.version >= 4 &&
+    (!g.carePolicy ||
+      !['manual', 'auto'].includes(g.carePolicy.mode) ||
+      !['longest', 'soonest'].includes(g.carePolicy.priority) ||
+      !nonnegativeInt(g.carePolicy.reserve) ||
+      g.carePolicy.reserve >= Number.MAX_SAFE_INTEGER - 2)
   )
     bad();
   if (
@@ -948,6 +1291,7 @@ export function validateManagement(s) {
               r.facility === 'workshop' &&
               !r.sourceEquipment &&
               !r.reclaim &&
+              !r.maraTier &&
               (!r.blueprint || g.blueprints.includes(r.blueprint)),
           ),
       ))
@@ -989,7 +1333,7 @@ export function validateManagement(s) {
           item = source?.item;
         const kind = r.reclaim || 'equipment';
         if (
-          g.version !== 3 ||
+          g.version < 3 ||
           !item ||
           source.kind !== kind ||
           p.orderUid !== undefined ||
@@ -1044,6 +1388,11 @@ export function validateManagement(s) {
         p.inputs.salvage !== computed.salvage
       )
         bad();
+      if (
+        Object.keys(p.inputs.materials || {}).length !== Object.keys(computed.materials).length ||
+        Object.entries(computed.materials).some(([id, n]) => p.inputs.materials?.[id] !== n)
+      )
+        bad();
     }
   }
   if (
@@ -1052,7 +1401,8 @@ export function validateManagement(s) {
     g.completions.some(
       (c, i) =>
         c.id !== i + 1 ||
-        !facilities.some((f) => f.id === c.facility) ||
+        (!facilities.some((f) => f.id === c.facility) &&
+          !(g.version >= 5 && H.houseRooms.some((r) => 'room:' + r.id === c.facility))) ||
         !Number.isInteger(c.day) ||
         c.day < 1 ||
         c.day > s.day ||
@@ -1074,4 +1424,16 @@ export function validateManagement(s) {
         g.dailySummary.lines.some((l) => typeof l !== 'string')))
   )
     bad();
+  if (g.version >= 5) {
+    H.validateHouse(s, placed);
+    for (const r of H.houseRooms)
+      for (const uid of g.house.rooms[r.id].decorations)
+        if (
+          uid &&
+          !furnishings.some(
+            (d) => d.id === g.furniture.find((i) => i.uid === uid)?.id && d.decoration,
+          )
+        )
+          bad();
+  }
 }

@@ -342,8 +342,25 @@ export {
   workshopConversions,
   projectRecipe,
   eligiblePatients,
+  treatmentForecast,
+  carePlan,
   utilityDefinition,
+  furniturePlacement,
+  furnitureDestinations,
   medicalKitSupplyCost,
+  houseRooms,
+  materials,
+  activities,
+  roomUnlocked,
+  roomPause,
+  roomForecast,
+  assignedRoom,
+  workerStation,
+  facilityRoom,
+  coreFacility,
+  maraPower,
+  furnitureTarget,
+  workerContribution,
 } from './guild-management.js';
 const guildHooks = {
   pay,
@@ -362,6 +379,24 @@ const guildHooks = {
 };
 export function assignWorker(s, id, worker) {
   G.assignWorker(s, id, worker);
+  refreshHomeDefence(s);
+}
+export function assignRoomWorker(s, id, slot, worker) {
+  G.assignRoomWorker(s, id, slot, worker);
+  refreshHomeDefence(s);
+}
+export function settleResident(s, id, p) {
+  const r = G.settleResident(s, id, p);
+  refreshHomeDefence(s);
+  return r;
+}
+export function setRoomProduction(s, id, enabled) {
+  G.setRoomProduction(s, id, enabled);
+  refreshHomeDefence(s);
+}
+export function setMaraDefence(s, enabled) {
+  G.setMaraDefence(s, enabled);
+  refreshHomeDefence(s);
 }
 export function queueWorkshopOrder(s, recipe, quantity = 1) {
   return G.queueWorkshopOrder(s, recipe, quantity);
@@ -374,6 +409,9 @@ export function moveWorkshopOrder(s, uid, direction) {
 }
 export function setGardenPolicy(s, mode, reserve) {
   G.setGardenPolicy(s, mode, reserve);
+}
+export function setCarePolicy(s, mode, priority, reserve) {
+  G.setCarePolicy(s, mode, priority, reserve);
 }
 export function startRoomProject(s, id, recipe, patient = null) {
   G.startProject(s, id, recipe, patient, guildHooks);
@@ -389,6 +427,9 @@ export function upgradeFacility(s, id) {
 }
 export function placeFurniture(s, id, slot, uid) {
   G.placeFurniture(s, id, slot, uid);
+}
+export function moveFurniture(s, id, slot, uid) {
+  G.moveFurniture(s, id, slot, uid);
 }
 export function buyResources(s, type) {
   G.buyResources(s, type, guildHooks);
@@ -919,7 +960,8 @@ export function castRestoration(s, id, targetId, key = 'heal') {
   c.lastCastDay = s.day;
   const m = activeMissions(s).find((m) => m.party.includes(targetId) && m.status === 'travelling');
   if (m) {
-    const next = assessContract(
+    const next = assessGuildContract(
+      s,
       contracts.find((d) => d.id === m.id),
       m.party.map((id) => resident(s, id)),
       m.progress,
@@ -1157,18 +1199,55 @@ export function missionCost(s, m) {
 function effective(c, stat) {
   return c[stat] + equipmentBonus(c, stat);
 }
+function assessGuildContract(s, def, party, progress = 0) {
+  const result = assessContract(def, party, progress);
+  const guard =
+    def.homeEvent && s.guild?.house
+      ? G.maraPower(
+          s,
+          party.map((c) => c.id),
+        )
+      : 0;
+  if (!guard) return result;
+  const rate = result.rate + guard,
+    days = Math.ceil(Math.max(0, result.work - progress) / rate);
+  return {
+    ...result,
+    rate,
+    days,
+    homeGuard: guard,
+    exposure: Math.round((1 - Math.pow(1 - result.threat / 100, days)) * 100),
+  };
+}
+function refreshHomeDefence(s) {
+  for (const m of s.missions.filter((m) => m.status === 'travelling' && m.simulation === 'daily')) {
+    const def = contracts.find((d) => d.id === m.id);
+    if (!def.homeEvent) continue;
+    const a = assessGuildContract(
+      s,
+      def,
+      m.party.map((id) => resident(s, id)),
+      m.progress,
+    );
+    m.remaining = a.days || 0;
+    m.stalled = !a.rate && m.progress < a.work;
+  }
+}
 export function risk(s, id, ids) {
   const def = contracts.find((m) => m.id === id);
   if (!def) throw Error('Unknown contract.');
   const party = ids.map((id) => s.roster.find((c) => c.id === id)).filter(Boolean);
   const progress = def.internal ? s.threats?.[id]?.progress || 0 : 0;
-  const result = assessContract(def, party, progress);
+  const result = assessGuildContract(s, def, party, progress);
   return {
     ...result,
     safe: result.threat === 0,
     injuryDays: Math.max(1, def.injuryDays - (s.flags.hospice ? 1 : 0)),
     reasons: [
       `Party ${result.requirement.stat.toUpperCase()} ${result.combined} / ${result.requirement.amount}`,
+      ...(result.homeGuard
+        ? ['Mara and the home watch: +' + result.homeGuard + ' defence work/day']
+        : []),
       result.days === null
         ? 'No progress without the required stat'
         : `${result.days} days · ${result.threat}% harm chance each day`,
@@ -1336,7 +1415,8 @@ export function withdraw(s, uid, ids = null) {
     m.status = 'withdrawn';
     m.remaining = 0;
   } else {
-    const next = assessContract(
+    const next = assessGuildContract(
+      s,
       def,
       m.party.map((id) => resident(s, id)),
       m.progress,
@@ -1621,6 +1701,35 @@ export function dailyHomeEvent(s) {
     const t = s.threats[current.id];
     t.age++;
     if (!activeMissions(s).some((m) => m.id === current.id)) {
+      const guard = G.maraPower(s),
+        total = current.days * profiles[current.id].amount;
+      if (guard > 0) {
+        t.progress = Math.min(total, (t.progress || 0) + guard);
+        note(
+          s,
+          'Mara and the home watch: ' +
+            guard +
+            ' defence work against ' +
+            current.name +
+            ' · ' +
+            t.progress +
+            '/' +
+            total,
+          'Home watch',
+        );
+        if (t.progress >= total) {
+          t.active = false;
+          s.scenes.push({
+            title: 'The home watch held',
+            body:
+              'Mara and the home watch cleared ' +
+              current.name +
+              '. Rooms can continue their work.',
+          });
+          return;
+        }
+        if (guard >= Math.ceil(profiles[current.id].amount / 2)) return;
+      }
       if (current.id === 'ghost' || current.assault) {
         t.undefended = (t.undefended || 0) + 1;
         if (t.undefended % 2 === 1) {
@@ -1661,7 +1770,7 @@ export function dailyHomeEvent(s) {
           }
         }
       } else {
-        const damage = Math.min(8, s.gold);
+        const damage = Math.min(Math.max(0, 8 - Math.min(4, guard)), s.gold);
         s.gold -= damage;
         if (damage)
           s.transactions.unshift({
@@ -1757,6 +1866,8 @@ function applyMissionHarm(s, m, def) {
 }
 
 export function day(s) {
+  const position = s.residentPositions?.[s.selected];
+  if (position) G.settleResident(s, s.selected, position);
   s.day++;
   G.advanceRooms(s, guildHooks);
   if (s.rowanRecovery > 0) s.rowanRecovery--;
@@ -1800,7 +1911,8 @@ export function day(s) {
       }
       continue;
     }
-    const assessment = assessContract(
+    const assessment = assessGuildContract(
+      s,
       def,
       m.party.map((id) => resident(s, id)),
       m.progress,
@@ -1808,7 +1920,8 @@ export function day(s) {
     m.elapsed++;
     m.progress = Math.min(assessment.work, Math.round((m.progress + assessment.rate) * 100) / 100);
     if (random(s) < assessment.threat) applyMissionHarm(s, m, def);
-    const next = assessContract(
+    const next = assessGuildContract(
+      s,
       def,
       m.party.map((id) => resident(s, id)),
       m.progress,
@@ -1862,6 +1975,7 @@ export function day(s) {
       else resolve(s, m);
     }
   }
+  G.reconcileAssignments(s);
 }
 export function decide(s, uid, id) {
   const m = s.missions.find((m) => m.uid === uid);
@@ -2246,6 +2360,7 @@ export function characterRecap(s, id) {
   return { title: node.title, text: node.choices.find((c) => c.id === s.choices[key]).result };
 }
 export function save(s) {
+  if (s.guild?.version === 5) refreshHomeDefence(s);
   return JSON.stringify(s);
 }
 export function load(raw) {
@@ -2605,7 +2720,8 @@ export function load(raw) {
     const def = contracts.find((d) => d.id === m.id),
       work = def.days * profiles[m.id].amount;
     if (m.status === 'travelling') {
-      const a = assessContract(
+      const a = assessGuildContract(
+        s,
         def,
         m.party.map((id) => resident(s, id)),
         m.progress,
@@ -2699,6 +2815,49 @@ export function load(raw) {
 export function validateContent() {
   const errors = [],
     ids = new Set();
+  const roomIds = new Set();
+  for (const room of G.houseRooms) {
+    if (
+      roomIds.has(room.id) ||
+      !G.activities[room.activity] ||
+      room.capacity < 1 ||
+      room.capacity > 3
+    )
+      errors.push('Invalid house room ' + room.id);
+    roomIds.add(room.id);
+  }
+  const materialIds = new Set(G.materials.map((m) => m.id));
+  for (const [id, activity] of Object.entries(G.activities)) {
+    if (
+      !['str', 'agi', 'int', 'end'].includes(activity.stat) ||
+      !Number.isInteger(activity.work) ||
+      activity.work < 0 ||
+      Object.entries(activity.inputs || {}).some(
+        ([id, n]) => !materialIds.has(id) || !Number.isInteger(n) || n < 1,
+      ) ||
+      Object.entries(activity.output).some(
+        ([id, n]) =>
+          (!materialIds.has(id) && !['gold', 'salvage', 'supplies'].includes(id)) ||
+          !Number.isInteger(n) ||
+          n < 1,
+      )
+    )
+      errors.push('Invalid house activity ' + id);
+  }
+  const recipeIds = new Set();
+  for (const r of G.recipes) {
+    if (
+      recipeIds.has(r.id) ||
+      !G.facilities.some((f) => f.id === r.facility) ||
+      (r.item && !itemDefinition(r.item)) ||
+      (r.furniture && !G.furnishings.some((f) => f.id === r.furniture)) ||
+      Object.entries(r.materials || r.materialOutput || {}).some(
+        ([id, n]) => !materialIds.has(id) || !Number.isInteger(n) || n < 1,
+      )
+    )
+      errors.push('Invalid guild recipe ' + r.id);
+    recipeIds.add(r.id);
+  }
   for (const m of contracts) {
     if (ids.has(m.id)) errors.push(`Duplicate mission ${m.id}`);
     ids.add(m.id);

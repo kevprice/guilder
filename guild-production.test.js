@@ -39,7 +39,7 @@ test('version 1 management migrates queues and policies without replacing stocks
   s.guild.supplies = 0;
   const before = structuredClone(s),
     saved = reload(s);
-  assert.equal(saved.guild.version, 3);
+  assert.equal(saved.guild.version, 5);
   assert.deepEqual(saved.guild.facilities.workshop.queue, []);
   assert.deepEqual(saved.guild.gardenPolicy, { mode: 'continuous', reserve: 8 });
   for (const key of ['gold', 'inventory', 'roster', 'day', 'flags', 'missions'])

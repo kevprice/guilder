@@ -9,8 +9,12 @@
 - Visible home defence, daily danger, room damage, injury stages, lethal adventures and conscious retreat.
 - Shared equipment storage and individual ownership.
 - Working workshop, garden and infirmary facilities, with salvage, supplies, workers, upgrades and reusable utility/decorative furnishings.
+- Jobs and crew capacities across all 68 house rooms, physical leave-to-work assignments, stat-based output, six material stocks and work animations.
+- All-room decorating with a room picker, reusable physical furnishings across floors and reserved doors/stairs.
+- Material crafting chains, brass components and three Mara defence upgrades, with home-watch crews and defence-party support.
 - Workshop batch orders and priority changes, automatic collection, safe refunds, crop reserve targets and preserved paused progress.
 - Reclamation of spare stored equipment and furnishings, blueprint refits, exact item reservations and cancellation returns.
+- Optional automatic infirmary care, patient priorities, protected supplies, recovery forecasts and garden funding controls.
 - Survey and salvage expeditions, facility blueprints, safe mid-journey decisions, repeat cooldowns and guardian trophies.
 - Room overview and facility pages, shared furniture storage, worker stat forecasts and expedition preparation budgets.
 - A sprawling tower and underworld with keys, traps, secret passages and distinct chambers.

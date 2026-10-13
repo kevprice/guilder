@@ -457,7 +457,7 @@ test('Rooms panel covers locked facilities and furnishing zones reserve story in
   assert.match(initial, /Workshop · Unavailable/);
   const s = guild(),
     html = renderRooms(s, helpers);
-  assert.match(html, /Assigned resident/);
+  assert.match(html, /Lead resident/);
   assert.match(html, /Utility/);
   assert.match(html, /Decoration 2/);
   const zones = furnishingZones(s, D.rooms),

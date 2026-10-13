@@ -1,4 +1,5 @@
 import { renderRooms } from './room-panel.js';
+import { paintHouseFurnishings, paintRoomWorker } from './house-art.js';
 import { renderGuildRewards, paintGuildFurnishings } from './guild-art.js';
 import { renderQuestReward } from './quest-rewards.js';
 import { renderEquipmentRewards, equipmentIcon } from './equipment-rewards.js';
@@ -64,6 +65,9 @@ let selectedRecord = null;
 let contractTab = 'all';
 let roomSection = 'overview',
   workshopQuantity = 1;
+let decoratingFurniture = null;
+let houseRoom = null;
+let decorationRoom = null;
 function renderRecords() {
   const available = D.availableRecords(state),
     pages = D.records.filter(
@@ -129,7 +133,7 @@ function scene(
   $('scene-body').classList.remove('record-page');
   $('scene-title').textContent = title;
   $('scene-body').innerHTML =
-    renderGuildRewards(guildRewards, esc) +
+    renderGuildRewards(guildRewards, esc, state) +
     renderQuestReward(questReward, { esc }) +
     renderEquipmentRewards(equipmentRewards, { esc, storeAvailable: D.storeAvailable(state) }) +
     (questReward ? '' : record ? renderRecordPage(record) : paragraphs(body));
@@ -245,6 +249,11 @@ function renderStore() {
     'Expedition resources',
     `<p>${state.guild.salvage} salvage · ${state.guild.supplies} supplies</p><div class="row">${btn('Buy 2 supplies · 15g', 'resource:supplies', state.gold < 15)}${btn('Buy 4 salvage · 60g', 'resource:salvage', state.gold < 60)}</div>`,
   );
+  if (state.guild.furniture.length)
+    html += card(
+      'Furniture and decorations',
+      `<p>${state.guild.furniture.length} owned furnishings are available in Rooms.</p>${btn('Decorate rooms →', 'roomPage:decorate')}`,
+    );
   html += '<h3>Guild inventory</h3>';
   const heldProject = state.guild.facilities.workshop.project;
   if (heldProject?.source?.kind === 'equipment') {
@@ -414,7 +423,7 @@ function updatePartyPreview(id) {
   target.innerHTML += `<p class="stats">Preparation: ${goldCost}g + ${supplyCost} supplies · remaining stocks: ${Math.max(0, state.gold - goldCost)}g, ${Math.max(0, state.guild.supplies - supplyCost)} supplies</p>`;
   const homeWork = D.roomWorkAbsence(state, ids);
   if (homeWork.length)
-    target.innerHTML += `<div class="room-assignment-impact"><strong>Room work while this party is away</strong>${homeWork.map((f) => `<p>${esc(f.name)}: ${f.before} → ${f.after} work/day${f.beforeDays === null ? '' : ' · ' + esc(f.scope) + ' ' + f.beforeDays + ' → ' + f.afterDays + ' days'}</p>`).join('')}<small>Mara continues. Worker assignments resume when companions return fit.</small></div>`;
+    target.innerHTML += `<div class="room-assignment-impact"><strong>Room work while this party is away</strong>${homeWork.map((f) => `<p>${esc(f.name)}: ${f.before} → ${f.after} work/day${f.beforeDays === null ? '' : ' · ' + esc(f.scope) + ' ' + f.beforeDays + ' days → ' + (f.afterDays === null ? 'paused' : f.afterDays + ' days')}</p>`).join('')}<small>Mara maintains facility projects. Staffed gathering resumes when companions return fit.</small></div>`;
   button.disabled =
     !r.rate ||
     ids.length > def.capacity ||
@@ -700,7 +709,7 @@ function renderUI() {
     .join('');
   $('expeditions').innerHTML =
     (D.homeDanger(state)
-      ? `<button class="threat-badge" data-tab="Contracts"><strong>HOME UNDER ATTACK</strong>${esc(D.homeDanger(state).name)}<br>${D.activeMissions(state).some((m) => m.id === D.homeDanger(state).id) ? 'Defence in progress' : 'Assign defenders'}</button>`
+      ? `<button class="threat-badge" data-tab="Contracts"><strong>HOME UNDER ATTACK</strong>${esc(D.homeDanger(state).name)}<br>${D.activeMissions(state).some((m) => m.id === D.homeDanger(state).id) ? 'Defence in progress' : D.maraPower(state) > 0 ? 'Mara and the home watch defending' : 'Assign defenders'}</button>`
       : '') +
     D.activeMissions(state)
       .map(
@@ -809,7 +818,13 @@ function renderUI() {
     html += renderRooms(
       state,
       { esc, card, btn },
-      { section: roomSection, orderQuantity: workshopQuantity },
+      {
+        section: roomSection,
+        orderQuantity: workshopQuantity,
+        furnitureUid: decoratingFurniture,
+        houseRoom,
+        decorationRoom,
+      },
     );
   if (tab === 'Training') html += renderTraining();
   if (tab === 'Stories') html += renderStories();
@@ -868,6 +883,10 @@ function chooseResident(id) {
   D.leaveStore(state);
   if (!D.home(state).some((c) => c.id === id)) throw Error('Resident unavailable.');
   D.rememberPosition(state, state.selected, player);
+  const leaving = state.selected,
+    assigned = D.settleResident(state, leaving, player);
+  if (assigned)
+    toast(D.recruits.find((c) => c.id === leaving)?.name + ' now works in ' + assigned.name + '.');
   state.selected = id;
   player = D.residentPosition(state, id);
   keys = {};
@@ -903,6 +922,17 @@ document.addEventListener('click', (e) => {
     renderUI();
     return;
   }
+  if (op === 'rewardFurniture') {
+    if (!state.guild.furniture.some((i) => i.uid === id)) return;
+    decoratingFurniture = id;
+    decorationRoom = null;
+    $('scene').close();
+    roomSection = 'decorate';
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
   if (op === 'contractTab') {
     if (!missionTabs.some(([key]) => key === id)) return;
     contractTab = id;
@@ -911,8 +941,37 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (op === 'roomPage') {
-    if (!['overview', 'workshop', 'garden', 'infirmary', 'storage'].includes(id)) return;
+    if (
+      ![
+        'overview',
+        'house',
+        'materials',
+        'mara',
+        'workshop',
+        'garden',
+        'infirmary',
+        'decorate',
+        'storage',
+      ].includes(id)
+    )
+      return;
     roomSection = id;
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'decorateRoom') {
+    decorationRoom = id;
+    roomSection = 'decorate';
+    tab = 'Rooms';
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
+  if (op === 'workplace') {
+    houseRoom = id;
+    roomSection = 'house';
     tab = 'Rooms';
     renderUI();
     $('panel-content').scrollTop = 0;
@@ -926,6 +985,12 @@ document.addEventListener('click', (e) => {
   }
   if (op === 'import') {
     $('save-file').click();
+    return;
+  }
+  if (op === 'homeContracts') {
+    tab = 'Contracts';
+    contractTab = 'all';
+    renderUI();
     return;
   }
   if (op === 'talk') {
@@ -985,8 +1050,10 @@ document.addEventListener('click', (e) => {
   }
   act(() => {
     if (op === 'roomDay') advanceGuildDay();
+    if (op === 'housePause') D.setRoomProduction(state, id, value === 'resume');
+    if (op === 'maraGuard') D.setMaraDefence(state, id === 'on');
     if (op === 'queueOrder') {
-      const quantity = Number($('workshop-quantity').value);
+      const quantity = Number($('workshop-quantity')?.value || 1);
       D.queueWorkshopOrder(state, id, quantity);
       workshopQuantity = quantity;
     }
@@ -998,8 +1065,29 @@ document.addEventListener('click', (e) => {
         $('garden-policy-mode').value,
         Number($('garden-policy-reserve').value),
       );
+    if (op === 'carePolicy')
+      D.setCarePolicy(
+        state,
+        $('care-policy-mode').value,
+        $('care-policy-priority').value,
+        Number($('care-policy-reserve').value),
+      );
+    if (op === 'careGarden') D.setGardenPolicy(state, 'reserve', D.carePlan(state).gardenTarget);
     if (op === 'project') D.startRoomProject(state, id, value, choiceLevel || null);
     if (op === 'workshopConversion') D.startWorkshopConversion(state, id, value);
+    if (op === 'furnitureMove') {
+      D.moveFurniture(state, id, value, choiceLevel);
+      decoratingFurniture = choiceLevel;
+      toast(
+        D.furnishings.find(
+          (d) => d.id === state.guild.furniture.find((i) => i.uid === choiceLevel).id,
+        ).name +
+          ' placed in ' +
+          D.furnitureTarget(state, id).name +
+          '.',
+      );
+    }
+    if (op === 'furnitureRemove') D.placeFurniture(state, id, value, null);
     if (op === 'cancelProject') D.cancelRoomProject(state, id);
     if (op === 'upgradeRoom') D.upgradeFacility(state, id);
     if (op === 'resource') D.buyResources(state, id);
@@ -1096,7 +1184,43 @@ document.addEventListener('change', async (e) => {
     return;
   }
   if (e.target.dataset.roomWorker) {
-    act(() => D.assignWorker(state, e.target.dataset.roomWorker, e.target.value || null));
+    act(() => {
+      D.assignWorker(state, e.target.dataset.roomWorker, e.target.value || null);
+      if (e.target.value === state.selected) {
+        player = D.residentPosition(state, state.selected);
+        walkTarget = null;
+      }
+    });
+    return;
+  }
+  if (e.target.id === 'house-room') {
+    houseRoom = e.target.value;
+    renderUI();
+    return;
+  }
+  if (e.target.id === 'decorate-room') {
+    decorationRoom = e.target.value;
+    renderUI();
+    return;
+  }
+  if (e.target.dataset.houseRoom) {
+    act(() => {
+      D.assignRoomWorker(
+        state,
+        e.target.dataset.houseRoom,
+        Number(e.target.dataset.houseSlot),
+        e.target.value || null,
+      );
+      if (e.target.value === state.selected) {
+        player = D.residentPosition(state, state.selected);
+        walkTarget = null;
+      }
+    });
+    return;
+  }
+  if (e.target.id === 'decorate-furniture') {
+    decoratingFurniture = e.target.value || null;
+    renderUI();
     return;
   }
   if (e.target.dataset.furnitureFacility) {
@@ -1686,7 +1810,11 @@ document.addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
 window.addEventListener('blur', () => (keys = {}));
 
 function drawMara() {
-  const { x, y } = mara;
+  const threat = D.homeDanger(state),
+    target = threat && D.maraPower(state) > 0 ? state.threats[threat.id] : null;
+  const x = target ? target.x - 210 : mara.x,
+    y = target ? target.y : mara.y,
+    tier = state.guild.house.mara.tier;
   rect(x - 15, y - 30, 30, 22, '#a77c39');
   rect(x - 12, y - 49, 24, 18, '#d4ad62');
   rect(x - 19, y - 29, 5, 19, '#d4ad62');
@@ -1698,6 +1826,20 @@ function drawMara() {
   rect(x - 4, y - 25, 8, 8, '#89d9e5');
   rect(x + 8, y - 19, 4, 7, '#f3d68c');
   text('MARA · BRASS GOLEM', x - 48, y - 59, 9, '#e4c890');
+  if (tier > 1) {
+    rect(x - 17, y - 34, 34, 5, tier >= 3 ? '#96c8c4' : '#b5b6a0');
+    rect(x + 18, y - 28, 9, 18, '#9faeaa');
+    text('T' + tier, x - 7, y - 73, 8, '#b8d4cb');
+  }
+  if (target)
+    paintSpell(
+      ctx,
+      camera,
+      { x, y: y - 25 },
+      { x: target.x, y: target.y - 35 },
+      graphics.reducedMotion ? 0 : last / 1000,
+      'warrior',
+    );
 }
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -1919,9 +2061,11 @@ function drawWorld(c) {
       r.y - 190 <= view.bottom,
   ))
     paintChamber(ctx, camera, r, state, ambience.time);
+  paintHouseFurnishings(ctx, camera, state);
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
     const position = D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);
+    paintRoomWorker(ctx, camera, state, r, position, graphics.reducedMotion ? 0 : last / 1000);
   }
   for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
     drawResident(
@@ -1955,6 +2099,8 @@ function drawWorld(c) {
   drawRouteLandmarks();
   drawHomeAttack();
   drawResident(c, player.x, player.y, true);
+  if (!keys.a && !keys.d && !keys.arrowleft && !keys.arrowright && walkTarget === null)
+    paintRoomWorker(ctx, camera, state, c, player, graphics.reducedMotion ? 0 : last / 1000);
   graphics.end(ctx);
   paintMagicMotes(ctx, ambience);
 }
