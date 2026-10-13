@@ -266,6 +266,34 @@ canvas {
   border-radius: 10px;
   flex-shrink: 0;
 }
+#home-strip .home-resident {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+#home-strip .has-training > button[data-action^='select:'] {
+  padding-right: 42px;
+}
+#home-strip .level-up {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #e4c28e;
+  color: #18242b;
+  border: 1px solid #f2dcb0;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: bold;
+}
+#home-strip .level-up:hover,
+#home-strip .level-up:focus-visible {
+  background: #f2dcb0;
+  outline: 2px solid #9fdfb0;
+  outline-offset: 2px;
+}
 #panel {
   width: min(560px, calc(100% - 28px));
   border: 1px solid #49616a;

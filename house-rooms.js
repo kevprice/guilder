@@ -3,6 +3,7 @@ import { expansionRooms } from './expansion.js';
 import { chambers, trapDisarmed } from './sprawl.js';
 import { equipmentBonus } from './equipment.js';
 import { classWorkFactor, talentValue } from './classes.js';
+import { guildWorker } from './guild-workers.js';
 
 export const materials = [
   { id: 'timber', name: 'Timber', symbol: '▰' },
@@ -272,14 +273,23 @@ export function workerStation(r, index) {
 export function assignedRoom(s, id) {
   return houseRooms.find((r) => s.guild.house.rooms[r.id].workers.includes(id)) || null;
 }
+export function workerAssignmentError(s, id, r) {
+  const c = guildWorker(s, id);
+  if (!c || ['dead', 'departed'].includes(c.status)) return 'Choose a living guild worker';
+  if (id === 'rowan' && !s.flags.free && r.kind === 'chamber')
+    return 'Rowan’s binding must be released before working beyond these passages';
+  if (id === 'rowan' && r.id === 'dryLanding' && !s.flags.anchor && !s.flags.cellarDrained)
+    return 'Reconnect the landing or drain the cellar before Rowan can reach this workstation';
+  return null;
+}
 export function assignRoomWorker(s, roomId, slot, id) {
   const r = houseRooms.find((r) => r.id === roomId),
     state = s.guild.house.rooms[roomId];
   if (!r || roomPause(s, r)) throw Error(r ? roomPause(s, r) : 'Unknown room');
   if (!Number.isInteger(slot) || slot < 0 || slot >= r.capacity)
     throw Error('Choose a worker slot in this room');
-  if (id !== null && !s.roster.some((c) => c.id === id && !['dead', 'departed'].includes(c.status)))
-    throw Error('Choose a living guild companion');
+  const error = id !== null && workerAssignmentError(s, id, r);
+  if (error) throw Error(error);
   if (id)
     for (const room of Object.values(s.guild.house.rooms))
       room.workers = room.workers.map((worker) => (worker === id ? null : worker));
@@ -291,8 +301,8 @@ export function assignRoomWorker(s, roomId, slot, id) {
   }
 }
 export function settleResident(s, id, p) {
-  if (id === 'rowan') return null;
-  const c = s.roster.find((c) => c.id === id);
+  if (id === 'rowan' && !assignedRoom(s, id)) return null;
+  const c = guildWorker(s, id);
   if (!c || c.status !== 'home' || c.injury) return null;
   const r = roomAtPosition(s, p),
     current = assignedRoom(s, id);
@@ -302,7 +312,7 @@ export function settleResident(s, id, p) {
     old.workers = old.workers.map((w) => (w === id ? null : w));
     syncFacilityWorkers(s);
   }
-  if (!r || roomPause(s, r)) return null;
+  if (!r || roomPause(s, r) || workerAssignmentError(s, id, r)) return null;
   const slot = s.guild.house.rooms[r.id].workers.indexOf(null);
   if (slot < 0) return null;
   assignRoomWorker(s, r.id, slot, id);
@@ -311,7 +321,7 @@ export function settleResident(s, id, p) {
 export function reconcileHouse(s) {
   for (const room of Object.values(s.guild.house.rooms))
     room.workers = room.workers.map((id) =>
-      id && !s.roster.some((c) => c.id === id && !['dead', 'departed'].includes(c.status))
+      id && (!guildWorker(s, id) || ['dead', 'departed'].includes(guildWorker(s, id).status))
         ? null
         : id,
     );
@@ -336,8 +346,13 @@ export function roomForecast(s, id, excluded = []) {
   const core = coreFacility(s, id),
     baseRole = activities[core || r.activity];
   const workers = state.workers
-    .map((id) => s.roster.find((c) => c.id === id))
+    .map((id) => guildWorker(s, id))
     .filter(Boolean)
+    .map((c) =>
+      c.id === 'mara' && c.status === 'defending' && baseRole.animation === 'watch'
+        ? { ...c, status: 'home' }
+        : c,
+    )
     .map((c) =>
       excluded.includes(c.id)
         ? { ...workerContribution(c, baseRole.stat), fit: false, work: 0 }
@@ -399,7 +414,7 @@ export function setRoomProduction(s, id, enabled) {
   s.guild.house.rooms[id].enabled = enabled;
 }
 export function awardHomeXP(s, workers, hooks) {
-  for (const c of workers)
+  for (const c of workers.filter((c) => s.roster.some((r) => r.id === c.id)))
     if (!s.guild.homeXP.workers.includes(c.id)) {
       hooks.awardXP(s, c, 5);
       s.guild.homeXP.workers.push(c.id);
@@ -424,7 +439,7 @@ export function advanceHouse(s, hooks) {
       else s.guild.house.materials[id] += n;
     }
     state.progress = 0;
-    const workers = f.workers.filter((w) => w.fit).map((w) => s.roster.find((c) => c.id === w.id));
+    const workers = f.workers.filter((w) => w.fit).map((w) => guildWorker(s, w.id));
     awardHomeXP(s, workers, hooks);
     const label =
       r.name +
@@ -560,7 +575,12 @@ export function validateHouse(s, furniturePlaced) {
       bad();
     for (const id of room.workers)
       if (id !== null) {
-        if (!s.roster.some((c) => c.id === id) || assigned.has(id)) bad();
+        if (
+          !guildWorker(s, id) ||
+          assigned.has(id) ||
+          (id === 'rowan' && workerAssignmentError(s, id, r))
+        )
+          bad();
         assigned.add(id);
       }
     for (const uid of room.decorations)

@@ -1,11 +1,11 @@
-// Mara stays at the doorstep: a familiar and caretaker, not an expedition recruit.
+// Mara is a house worker and caretaker, not an expedition recruit.
 export const mara = { x: 115, y: 380, name: 'Mara', kind: 'brass golem' };
 
 export function maraDialogue(state) {
   return {
     title: 'Mara · brass golem familiar',
     body:
-      'Mara sets down the kettle. Her brass fingers click softly against its handle. A worn guild token hangs beside the blue light in her chest.\n“Halden built me, then raised me,” she says. “They taught me to mend things. They also taught me that I could choose who to stay with. I chose you, Rowan.”\nShe keeps Halden’s letters in a dry compartment beneath her breastplate. She can cross the boundary to arrange supplies and workers while Rowan searches the house. She stays out of expedition parties to keep the entrance and its deliveries safe.\n' +
+      'Mara sets down her tools. Her brass fingers click softly against their handles. A worn guild token hangs beside the blue light in her chest.\n“Halden built me, then raised me,” she says. “They taught me to mend things. They also taught me that I could choose who to stay with. I chose you, Rowan.”\nShe keeps Halden’s letters in a dry compartment beneath her breastplate. She can cross the boundary to arrange supplies and workers while Rowan searches the house. She works at her assigned station and stays out of expedition parties. When the guild is attacked, home defence takes priority over her production.\n' +
       (state.flags.free
         ? '“The house can manage without you now. Go where you like. I’ll keep the kettle warm.”'
         : state.flags.gateOpen

@@ -47,7 +47,6 @@ import { guildStairs, towerObjective } from './exploration.js';
 import * as D from './domain.js';
 import { houseChoices } from './narrative.js';
 import { useStairs } from './movement.js';
-import { mara } from './mara.js';
 import { recordEntry } from './homecoming.js';
 
 const $ = (id) => document.getElementById(id),
@@ -736,7 +735,7 @@ function renderUI() {
     motionState = state;
     pendingDoor = null;
   }
-  for (const c of state.roster) {
+  for (const c of D.guildWorkers(state)) {
     const fit = c.status === 'home' && !c.injury,
       room = D.assignedRoom(state, c.id);
     if (
@@ -746,13 +745,17 @@ function renderUI() {
       !graphics.reducedMotion &&
       !residentWalks.has(c.id)
     ) {
+      const target = D.workerStation(room, state.guild.house.rooms[room.id].workers.indexOf(c.id));
       const legs = planResidentWalk(
         state,
         c,
-        { x: 170, y: 380, floor: 380 },
-        D.residentPosition(state, c.id),
+        c.id === state.selected ? player : { x: 170, y: 380, floor: 380 },
+        target,
       );
-      if (legs) residentWalks.set(c.id, { legs, elapsed: 0, room: room.name });
+      if (legs) {
+        D.rememberPosition(state, c.id, target);
+        residentWalks.set(c.id, { legs, elapsed: 0, room: room.name });
+      }
     }
     homePresence.set(c.id, fit);
   }
@@ -794,7 +797,7 @@ function renderUI() {
   $('home-strip').innerHTML = D.home(state)
     .map(
       (c) =>
-        `<button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}" title="${esc(residentWalks.has(c.id) ? 'Walking to ' + residentWalks.get(c.id).room : D.assignedRoom(state, c.id) ? 'Assigned to ' + D.assignedRoom(state, c.id).name : 'Select ' + c.name)}">${portrait(c)}${esc(c.name)}${c.points ? ' · ↑' : ''}</button>`,
+        `<span class="home-resident ${c.points ? 'has-training' : ''}"><button data-action="select:${c.id}" class="${c.id === state.selected ? 'active' : ''}" aria-pressed="${c.id === state.selected}" title="${esc(residentWalks.has(c.id) ? 'Walking to ' + residentWalks.get(c.id).room : D.assignedRoom(state, c.id) ? 'Assigned to ' + D.assignedRoom(state, c.id).name : 'Select ' + c.name)}">${portrait(c)}${esc(c.name)}</button>${c.points ? `<button class="level-up" data-action="trainingOpen:${c.id}" aria-label="Train ${esc(c.name)}" title="${esc(c.name)} · ${c.points} unspent training ${c.points === 1 ? 'choice' : 'choices'}">↑</button>` : ''}</span>`,
     )
     .join('');
   $('expeditions').innerHTML =
@@ -978,13 +981,12 @@ function chooseResident(id) {
   if (assigned && !residentWalks.has(leaving) && !graphics.reducedMotion) {
     const target = D.residentPosition(state, leaving);
     if (Math.abs(target.x - player.x) > 8) {
-      const c = state.roster.find((c) => c.id === leaving),
+      const c = D.guildWorker(state, leaving),
         legs = planResidentWalk(state, c, player, target);
       if (legs) residentWalks.set(leaving, { legs, elapsed: 0, room: assigned.name });
     }
   }
-  if (assigned)
-    toast(D.recruits.find((c) => c.id === leaving)?.name + ' now works in ' + assigned.name + '.');
+  if (assigned) toast(D.guildWorker(state, leaving)?.name + ' now works in ' + assigned.name + '.');
   state.selected = id;
   player = D.residentPosition(state, id);
   keys = {};
@@ -1006,7 +1008,7 @@ function inspectDoor(id) {
 function sendWorker(roomId, slot, id) {
   pendingDoor = null;
   const room = D.houseRooms.find((r) => r.id === roomId),
-    c = state.roster.find((c) => c.id === id);
+    c = D.guildWorker(state, id);
   const previous = state.guild.house.rooms[roomId].workers[slot];
   let legs = null,
     origin;
@@ -1038,7 +1040,8 @@ function sendWorker(roomId, slot, id) {
       walkTarget = null;
     }
     toast(c.name + ' is walking to ' + room.name + '. Work begins on game days.');
-  } else if (id === state.selected) player = D.residentPosition(state, id);
+  } else if (id === state.selected && c?.status === 'home' && !c.injury)
+    player = D.residentPosition(state, id);
 }
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button');
@@ -1060,6 +1063,20 @@ document.addEventListener('click', (e) => {
   const a = b.dataset.action;
   if (!a) return;
   const [op, id, value, choiceLevel] = a.split(':');
+  if (op === 'trainingOpen') {
+    const c = state.roster.find((c) => c.id === id);
+    if (!c || !D.unspentLevels(c).length) return;
+    trainingResident = id;
+    trainingSection = 'choices';
+    trainingLevels[id] = D.unspentLevels(c)[0];
+    tab = 'Training';
+    moreOpen = false;
+    keys = {};
+    walkTarget = null;
+    renderUI();
+    $('panel-content').scrollTop = 0;
+    return;
+  }
   if (op === 'navMore') {
     moreOpen = !moreOpen;
     renderUI();
@@ -1692,7 +1709,12 @@ canvas.addEventListener('mouseleave', () => {
 });
 function hotspots() {
   const list = [
-    { x: mara.x, y: mara.y, action: 'mara', text: 'E · Speak to Mara · brass golem familiar' },
+    {
+      ...maraLocation(),
+      action: 'mara',
+      text: 'E · Speak to Mara · brass golem familiar',
+      show: !residentWalks.has('mara'),
+    },
     {
       x: 790,
       y: 380,
@@ -2161,12 +2183,28 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
 window.addEventListener('blur', () => (keys = {}));
 
+function maraLocation() {
+  const threat = D.homeDanger(state),
+    target = threat && D.maraPower(state) > 0 ? state.threats[threat.id] : null;
+  const position = residentWalks.get('mara')?.sample || D.residentPosition(state, 'mara');
+  return target ? { x: target.x - 210, y: target.y, floor: target.y } : position;
+}
 function drawMara() {
   const threat = D.homeDanger(state),
     target = threat && D.maraPower(state) > 0 ? state.threats[threat.id] : null;
-  const x = target ? target.x - 210 : mara.x,
-    y = target ? target.y : mara.y,
+  const position = maraLocation(),
+    x = position.x,
+    y = position.y,
     tier = state.guild.house.mara.tier;
+  const journey = residentWalks.get('mara')?.sample;
+  ctx.save();
+  if (journey && !target) {
+    ctx.globalAlpha *= journey.opacity;
+    ctx.translate(
+      0,
+      journey.moving && !graphics.reducedMotion ? Math.sin((last / 1000) * 9) * 1.5 : 0,
+    );
+  }
   rect(x - 15, y - 30, 30, 22, '#a77c39');
   rect(x - 12, y - 49, 24, 18, '#d4ad62');
   rect(x - 19, y - 29, 5, 19, '#d4ad62');
@@ -2192,6 +2230,16 @@ function drawMara() {
       graphics.reducedMotion ? 0 : last / 1000,
       'warrior',
     );
+  else if (!residentWalks.has('mara'))
+    paintRoomWorker(
+      ctx,
+      camera,
+      state,
+      D.guildWorker(state, 'mara'),
+      position,
+      graphics.reducedMotion ? 0 : last / 1000,
+    );
+  ctx.restore();
 }
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -2409,7 +2457,6 @@ function drawWorld(c) {
   rect(-330, 395, 385, 12, '#736749');
   rect(43, 275, 12, 120, '#8c7d5c');
   text(state.flags.gateOpen ? 'THE ROAD IS OPEN' : 'BOUNDARY', -100, 340, 12, '#c3b38b');
-  drawMara();
   if (state.flags.repaired) {
     ctx.save();
     ctx.translate(0, -240);
@@ -2432,6 +2479,7 @@ function drawWorld(c) {
     paintChamber(ctx, camera, r, state, ambience.time);
   paintHouseFurnishings(ctx, camera, state);
   paintProductionBadges(ctx, camera, state, productionSnapshots);
+  drawMara();
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
     const position = residentWalks.get(r.id)?.sample || D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);
@@ -2766,7 +2814,7 @@ function frame(now) {
   last = now;
   graphics.tick(dt);
   for (const [id, journey] of residentWalks) {
-    const resident = state.roster.find((c) => c.id === id);
+    const resident = D.guildWorker(state, id);
     if (
       !resident ||
       resident.status !== 'home' ||

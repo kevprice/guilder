@@ -24,6 +24,7 @@ export function paintHouseFurnishings(ctx, camera, s) {
   }
 }
 export function paintRoomWorker(ctx, camera, s, c, position, time) {
+  c = D.guildWorker(s, c.id) || c;
   const room = D.assignedRoom(s, c.id);
   if (!room || c.status !== 'home' || c.injury) return;
   const f = D.roomForecast(s, room.id),

@@ -71,10 +71,10 @@ export function renderRooms(
             : 'Treatment';
   const breakdown = (id, recipe = null) => {
     const w = D.workBreakdown(s, id, recipe),
-      worker = s.roster.find((c) => c.id === w.workerId),
+      worker = D.guildWorker(s, w.workerId),
       stat = D.facilities.find((f) => f.id === id).stat.toUpperCase();
     return [
-      'Mara 1',
+      w.mara ? 'Mara caretaker +1' : '',
       w.upgrade ? 'tier bonus +' + w.upgrade : '',
       ...w.crew.map(
         (c) =>
@@ -109,11 +109,11 @@ export function renderRooms(
     return html + renderDecorating(s, { esc, card, btn }, furnitureUid, decorationRoom);
   if (['all', 'overview'].includes(section))
     html +=
-      '<p class="stats">Mara keeps room work moving while adventurers travel. Workers gain 5 XP on a staffed completion; home work does not count as an expedition visit.</p>';
+      '<p class="stats">Assign Rowan, Mara or companions to worker slots. Unassigned Mara provides caretaker work; assigning her directs that work to one room. Adventurers gain 5 XP on a staffed completion; home work does not count as an expedition visit.</p>';
   if (['all', 'overview'].includes(section))
     html += card(
       'Work throughout the house',
-      `<p>${D.houseRooms.filter((r) => D.roomUnlocked(s, r)).length} discovered workplaces · ${s.roster.filter((c) => D.assignedRoom(s, c.id)).length} companions assigned. Room workers produce timber, ore, herbs, cloth, aether and fittings, or guard the home.</p><div class="row">${btn('Assign room crews', 'roomPage:house')}${btn('Materials and crafting', 'roomPage:materials')}${btn('Upgrade Mara', 'roomPage:mara')}</div>`,
+      `<p>${D.houseRooms.filter((r) => D.roomUnlocked(s, r)).length} discovered workplaces · ${D.guildWorkers(s).filter((c) => D.assignedRoom(s, c.id)).length} workers assigned. Room workers produce timber, ore, herbs, cloth, aether and fittings, or guard the home.</p><div class="row">${btn('Assign room crews', 'roomPage:house')}${btn('Materials and crafting', 'roomPage:materials')}${btn('Upgrade Mara', 'roomPage:mara')}</div>`,
     );
   if (['all', 'overview'].includes(section) && g.furniture.length)
     html += card(
@@ -221,7 +221,9 @@ export function renderRooms(
     let body = `<span class="tag">${esc(name)} · Tier ${f.tier}</span><p class="stats">${work} work per day<br>${esc(breakdown(def.id, r))}</p>`;
     if (!available)
       body += `<p class="threat-badge">Room damaged · production paused</p>${btn('Repair room · 30g', 'repairDamage:' + site, s.gold < 30)}`;
-    body += `<label class="room-worker">Lead resident<select data-room-worker="${def.id}" aria-label="${def.name} worker" ${available ? '' : 'disabled'}><option value="">Empty lead slot</option>${s.roster
+    body += `<label class="room-worker">Lead worker<select data-room-worker="${def.id}" aria-label="${def.name} worker" ${available ? '' : 'disabled'}><option value="">Empty lead slot</option>${D.guildWorkers(
+      s,
+    )
       .filter((c) => !['dead', 'departed'].includes(c.status))
       .map((c) =>
         (() => {

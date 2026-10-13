@@ -97,6 +97,7 @@ export function discoveryAvailable(s, d) {
 }
 export function residentPosition(s, id) {
   if (s.residentPositions?.[id]) return { ...s.residentPositions[id], vy: 0 };
+  if (id === 'mara') return { x: 115, y: 380, floor: 380, vy: 0 };
   const d = [...residentDiscoveries, ...sleepers].find((d) => d.id === id);
   if (d && d.requires.every((f) => s.flags[f])) return { x: d.x, y: d.y, floor: d.y, vy: 0 };
   const index = s.roster.findIndex((c) => c.id === id);

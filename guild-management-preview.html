@@ -25,11 +25,13 @@
       <button data-branch="doors">Launch door puzzle demo</button>
       <button data-branch="keys">Launch contract key reward demo</button>
       <button data-branch="watch">Launch Bryn watch demo</button>
+      <button data-branch="staff">Launch household workers demo</button>
     </div>
     <p id="result" role="status"></p>
     <script type="module">
       import * as D from './domain.js';
       import { grantFurniture } from './guild-management.js';
+      import { gainLevel } from './classes.js';
       document.addEventListener('click', (event) => {
         const branch = event.target.dataset.branch;
         if (!branch) return;
@@ -64,6 +66,9 @@
         s.guild.blueprints = ['mill', 'drains', 'tower'];
         D.recruit(s, 'bryn');
         D.recruit(s, 'ivo');
+        if (branch === 'staff') {
+          for (const c of s.roster) gainLevel(c);
+        }
         s.roster[0].str = 10;
         if (['house', 'guard', 'patterns', 'doors', 'watch'].includes(branch)) {
           s.flags.discovered_sluice =

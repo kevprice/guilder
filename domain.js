@@ -371,6 +371,9 @@ export {
   maraPower,
   furnitureTarget,
   workerContribution,
+  guildWorker,
+  guildWorkers,
+  workerAssignmentError,
   resources,
   resourceStock,
   recipeKnown,
@@ -2888,7 +2891,7 @@ export function load(raw) {
       Array.isArray(s.residentPositions) ||
       Object.entries(s.residentPositions).some(
         ([id, p]) =>
-          (id !== 'rowan' && !s.roster.some((c) => c.id === id)) ||
+          (!['rowan', 'mara'].includes(id) && !s.roster.some((c) => c.id === id)) ||
           !p ||
           !Number.isFinite(p.x) ||
           p.x < -600 ||

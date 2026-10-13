@@ -79,7 +79,7 @@ const workerFaces = (s, p, esc) =>
     p.id
   ].workers
     .map((id) => {
-      const c = s.roster.find((c) => c.id === id);
+      const c = D.guildWorker(s, id);
       return c
         ? `<img src="${portraits[id]}" alt="${esc(c.name)} · ${c.status}" class="${c.status === 'home' && !c.injury ? '' : 'unavailable'}">`
         : '<span aria-label="Empty worker slot">+</span>';
@@ -144,7 +144,7 @@ export function renderRoomInspector(s, helpers, id, facilityDetails = '') {
   const forecast = D.roomForecast(s, id);
   if (!p.core && forecast.quality > 1)
     html += `<p class="production-milestone">${forecast.yieldBonus ? '✓ +' + forecast.yieldBonus + ' output per batch earned. ' : ''}Richer workplace · effective ${p.stat.toUpperCase()} 20 adds +1 output per batch${forecast.quality >= 3 ? '; 30 adds another +1' : ''}. Current best worker: ${forecast.bestStat}.</p>`;
-  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Mara adds 1 baseline work each day. ' : ''}Each fit resident adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, 20 adds a third, 30 a fourth and 40 a fifth. Away and injured residents keep their slots and resume on return.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
+  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Unassigned Mara provides 1 caretaker work per day. Assigning a slot directs all her work to that room. ' : ''}Each fit worker adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, 20 a third, 30 a fourth and 40 a fifth. Away and injured residents keep their slots and resume on return. Mara pauses production to defend during attacks.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
     D.activities[p.core || r.activity].inputs || {},
   )
     .map(

@@ -15,7 +15,8 @@ export function planResidentWalk(s, c, origin, target) {
     add(position(350, 380), position(350, 140));
     add(position(350, 140), position(350, -100));
   }
-  if (s.flags.stairs) add(position(505, 380), position(535, 510));
+  if (s.flags.stairs && (c.id !== 'rowan' || s.flags.anchor || s.flags.cellarDrained))
+    add(position(505, 380), position(535, 510));
   if (s.flags.cellarDrained || c.skills.includes('water'))
     add(position(550, 510), position(570, 555));
   if (s.flags.labyrinth) add(position(540, 510), position(530, 790), 'door');

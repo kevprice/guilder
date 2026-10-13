@@ -3,6 +3,8 @@ import { classWorkFactor, talentValue } from './classes.js';
 import * as H from './house-rooms.js';
 import * as E from './guild-economy.js';
 import * as R from './guild-routes.js';
+import { guildWorker } from './guild-workers.js';
+export { guildWorker, guildWorkers } from './guild-workers.js';
 export { resources, resourceStock, recipeKnown, patternRecipes } from './guild-economy.js';
 export {
   houseRooms,
@@ -17,6 +19,7 @@ export {
   coreFacility,
   maraPower,
   workerContribution,
+  workerAssignmentError,
 } from './house-rooms.js';
 
 export const facilities = [
@@ -319,7 +322,7 @@ export function reconcileAssignments(s) {
   for (const f of Object.values(s.guild.facilities))
     if (
       f.worker &&
-      !s.roster.some((c) => c.id === f.worker && !['dead', 'departed'].includes(c.status))
+      (!guildWorker(s, f.worker) || ['dead', 'departed'].includes(guildWorker(s, f.worker).status))
     )
       f.worker = null;
 }
@@ -405,7 +408,7 @@ export function productionPause(s, id) {
 export function workBreakdown(s, id, recipe = null, workerId = s.guild.facilities[id]?.worker) {
   const def = facilities.find((f) => f.id === id),
     f = s.guild.facilities[id];
-  const worker = s.roster.find((c) => c.id === workerId);
+  const worker = guildWorker(s, workerId);
   const fit = !!worker && worker.status === 'home' && !worker.injury;
   const utility = utilityDefinition(s, id)?.id;
   const stats = worker ? effectiveWorkStat(worker, def.stat) : null;
@@ -413,19 +416,24 @@ export function workBreakdown(s, id, recipe = null, workerId = s.guild.facilitie
     crew = s.guild.house && room ? s.guild.house.rooms[room].workers.slice(1) : [];
   const contributions = [
     worker,
-    ...crew.filter((id) => id !== workerId).map((id) => s.roster.find((c) => c.id === id)),
+    ...crew.filter((id) => id !== workerId).map((id) => guildWorker(s, id)),
   ]
     .filter(Boolean)
     .map((c) => H.workerContribution(c, def.stat));
   const parts = {
-    mara: 1,
+    mara:
+      !contributions.some((c) => c.id === 'mara') &&
+      (!H.assignedRoom(s, 'mara') || H.assignedRoom(s, 'mara').id === room) &&
+      guildWorker(s, 'mara').status === 'home'
+        ? 1
+        : 0,
     upgrade: f.tier - 1,
     worker: contributions.filter((c) => c.fit).length,
     stat: contributions.reduce((n, c) => n + Math.max(0, c.work - Number(c.fit)), 0),
     utility: Number(utility === 'forge' && recipe?.category === 'weapon'),
   };
   const potential = Object.values(parts).reduce((sum, value) => sum + value, 0);
-  const paused = productionPause(s, id);
+  const paused = productionPause(s, id) || (!potential && 'No fit workers at home') || null;
   return {
     ...parts,
     potential,
@@ -1157,7 +1165,9 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     label = patient.name + ': ' + removed + ' recovery days removed';
   }
   const workers = Array.isArray(workedWorker) ? workedWorker : workedWorker ? [workedWorker] : [];
-  const awarded = workers.filter((c) => !s.guild.homeXP.workers.includes(c.id));
+  const awarded = workers.filter(
+    (c) => s.roster.some((r) => r.id === c.id) && !s.guild.homeXP.workers.includes(c.id),
+  );
   H.awardHomeXP(s, workers, hooks);
   for (const c of awarded) label += ' · ' + c.name + ' +5 XP';
   const completion = { id: ++s.guild.nextCompletion, day: s.day, facility: id, text: label };
@@ -1215,10 +1225,11 @@ export function advanceRooms(s, hooks) {
     if (!p) continue;
     const workedWorker =
       s.guild.house.rooms[H.facilityRoom(s, def.id)]?.workers
-        .map((id) => s.roster.find((c) => c.id === id && c.status === 'home' && !c.injury))
+        .map((id) => guildWorker(s, id))
+        .filter((c) => c && c.status === 'home' && !c.injury)
         .filter(Boolean) || [];
     p.progress = Math.min(p.work, p.progress + work);
-    const worker = s.roster.find((c) => c.id === f.worker);
+    const worker = guildWorker(s, f.worker);
     lines.push(
       def.name +
         ': ' +
@@ -1226,7 +1237,10 @@ export function advanceRooms(s, hooks) {
           ? completeRoomProject(s, def.id, p, hooks, workedWorker)
           : p.progress + '/' + p.work + ' work') +
         (worker && (worker.status !== 'home' || worker.injury)
-          ? ' · ' + worker.name + ' unavailable; Mara continues'
+          ? ' · ' +
+            worker.name +
+            ' unavailable' +
+            (H.assignedRoom(s, 'mara') ? '' : '; caretaker work continues when Mara is available')
           : ''),
     );
     if (p.progress >= p.work) f.project = null;
@@ -1385,7 +1399,7 @@ export function validateManagement(s) {
     if (
       !f ||
       ![1, 2].includes(f.tier) ||
-      (f.worker !== null && (!s.roster.some((c) => c.id === f.worker) || workers.has(f.worker))) ||
+      (f.worker !== null && (!guildWorker(s, f.worker) || workers.has(f.worker))) ||
       !Array.isArray(f.decorations) ||
       f.decorations.length !== 2
     )

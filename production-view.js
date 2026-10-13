@@ -20,7 +20,7 @@ export function roomProduction(s, id) {
       (core === 'garden' ? 'crop' : core === 'workshop' ? facility.queue[0]?.recipe : null);
     recipe = recipeId ? D.projectRecipe(s, core, recipeId) : null;
     work = D.dailyWork(s, core, recipe);
-    reason = D.productionPause(s, core);
+    reason = D.workBreakdown(s, core, recipe).paused;
     target = facility.project?.work || recipe?.work || 0;
     progress = facility.project?.progress || 0;
     outputs = core === 'garden' ? { supplies: facility.project?.yield || recipe.yield } : {};

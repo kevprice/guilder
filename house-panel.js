@@ -23,12 +23,15 @@ export function renderCrew(s, id, { esc }, leadOnly = false) {
   return `<div class="room-crew"><p class="stats">${room.workers.filter(Boolean).length}/${r.capacity} worker slots filled · ${role.stat.toUpperCase()} improves production at 10, 20, 30 and 40.</p>${room.workers
     .map((uid, index) => {
       if (leadOnly && index === 0) return '';
-      return `<label>Worker ${index + 1}<select data-house-room="${r.id}" data-house-slot="${index}" aria-label="${esc(r.name)} worker ${index + 1}" ${D.roomPause(s, r) ? 'disabled' : ''}><option value="">Empty slot</option>${s.roster
+      return `<label>Worker ${index + 1}<select data-house-room="${r.id}" data-house-slot="${index}" aria-label="${esc(r.name)} worker ${index + 1}" ${D.roomPause(s, r) ? 'disabled' : ''}><option value="">Empty slot</option>${D.guildWorkers(
+        s,
+      )
         .filter((c) => !['dead', 'departed'].includes(c.status))
         .map((c) => {
           const other = D.assignedRoom(s, c.id),
-            v = D.workerContribution(c, role.stat);
-          return `<option value="${c.id}" ${uid === c.id ? 'selected' : ''}>${esc(c.name)} · ${esc(c.status)}${v ? ' · ' + v.work + ' work/day' : ''}${other && other.id !== id ? ' · moves from ' + esc(other.name) : ''}</option>`;
+            v = D.workerContribution(c, role.stat),
+            restriction = D.workerAssignmentError(s, c.id, r);
+          return `<option value="${c.id}" ${uid === c.id ? 'selected' : ''} ${restriction ? 'disabled' : ''}>${esc(c.name)} · ${restriction ? esc(restriction) : esc(c.status) + ' · ' + v.work + ' work/day'}${other && other.id !== id ? ' · moves from ' + esc(other.name) : ''}</option>`;
         })
         .join('')}</select></label>`;
     })
@@ -126,6 +129,12 @@ export function renderMara(s, helpers) {
   let html = card(
     'Mara · brass caretaker',
     `<p>Tier ${mara.tier} · ${['', 'Caretaker', 'Reinforced frame', 'Sentry frame', 'Runic guard'][mara.tier]}</p><p>${(mara.tier - 1) * 4} personal defence strength · ${power} total home-watch strength.</p><p class="stats">The home watch makes daily progress against attacks and supports assigned defence parties. A weak watch can reduce damage; a strong watch holds attackers off while clearing them. Mara stays home when companions leave.</p>${btn(mara.defend ? 'Stand down home watch' : 'Enable home watch', 'maraGuard:' + (mara.defend ? 'off' : 'on'))}`,
+  );
+  const station = D.assignedRoom(s, 'mara'),
+    worker = D.guildWorker(s, 'mara');
+  html += card(
+    'Workstation',
+    `<p>${station ? 'Assigned to ' + esc(station.name) : 'Unassigned · provides 1 caretaker work per day to each restored facility'}.</p><p class="stats">STR ${worker.str} · AGI ${worker.agi} · INT ${worker.int} · END ${worker.end}. Frame upgrades improve her work stats. Assigning a slot directs all her work there; other facilities need workers. Home defence takes priority during an attack.</p>${btn('Choose a workstation', 'roomPage:dashboard')}`,
   );
   if (next) {
     const r = D.projectRecipe(s, 'workshop', next.id),

@@ -67,7 +67,7 @@ test('one room per companion, capacity checks and canonical facility lead are ma
   const before = D.save(s);
   assert.throws(() => D.assignRoomWorker(s, 'corridor', 1, 'bryn'), /slot/);
   assert.throws(() => D.assignRoomWorker(s, 'stars', 0, 'bryn'), /Discover/);
-  assert.throws(() => D.assignRoomWorker(s, 'corridor', 0, 'rowan'), /companion/);
+  assert.throws(() => D.assignRoomWorker(s, 'corridor', 0, 'unknown'), /worker/);
   assert.equal(D.save(s), before);
   D.assignWorker(s, 'workshop', 'bryn');
   D.assignRoomWorker(s, 'service', 1, 'ivo');
