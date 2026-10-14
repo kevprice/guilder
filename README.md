@@ -22,6 +22,14 @@ Bryn is the opening companion. Ivo is discovered on the restored tower’s lower
 
 The wall survey, mason's tool recovery and another opening request can bring Bryn to Strength 10. The tools reduce service restoration to 50 gold. The cellar-timber contract repairs the stairs. The dry landing leads to the flooded cellar; Water breathing reaches the submerged wheel that drains it and opens deeper exploration.
 
+## Character animation
+
+Residents turn their whole silhouette, including equipment, rather than shifting an eye. Walk cycles follow distance travelled and stop at walls; stairs use a climbing pose and door transitions preserve facing. Character faces, skin, hair, beard and class clothing match their portrait identities. Mara uses the same joint system with brass limbs and visible mechanical joints.
+
+Work starts visually at the assigned station. Hands grip the actual tool: hammer and anvil, saw and timber, watering can and planter, needle and cloth, quill and book, or packages and fittings. Benches stay in place while workers travel, pause or leave their station. Held weapons are stowed during work. Combatants face their target and attack from a planted stance, with effects originating at the hand. Unconscious residents lie down. Reduced motion freezes poses and removes impact particles.
+
+Open `http://127.0.0.1:4173/tools/animation-preview.html` to review work, travel, combat and equipment poses with pause, cycle, facing and reduced-motion controls. This development view uses the game's renderer without reading or changing saved games.
+
 ## Current game systems
 
 The main interface uses matching vector icons for House, Residents, Contracts and Story, with Equipment, Training, Exploration, Diaries, Reports and Journal under More. The resource HUD opens material details directly. The estate stays free of persistent prose: portraits identify residents, room badges pair the same resource icons with output and completion counts, and progress bars show ongoing work. Gold uses amber, ready actions use teal, and threats use copper. Inspection panels retain names, requirements and narrative. House has five pages: Rooms, Craft, Stores, Decorate and Mara. Room production badges on the cutaway open the same inspector as the room cards. Active workplaces appear first; filters and live search help manage a larger house. Inspectors show batch output, the average per game day, the next completion and worker slots, with production rules and advanced policies inside expandable details. The canvas adapts to screen width without stretching characters; phone management opens a full drawer and keeps keyboard focus out of the background.

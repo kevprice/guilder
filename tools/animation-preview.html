@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Character animation study</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: #e3dec8;
+        background: #12222b;
+        font: 14px system-ui;
+      }
+      header {
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #7eada83d;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 auto 0 0;
+      }
+      button,
+      select {
+        color: inherit;
+        background: #29443f;
+        border: 1px solid #7eada863;
+        border-radius: 6px;
+        padding: 8px 16px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      p {
+        margin: 0;
+        padding: 12px 24px;
+        color: #a3b7b3;
+        text-align: center;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>The Bound House · Animation study</h1>
+      <select id="mode" aria-label="Animation set">
+        <option value="work">Work & travel</option>
+        <option value="combat">Combat & equipment</option>
+      </select>
+      <button id="play">Pause</button>
+      <label
+        >Cycle
+        <input id="phase" aria-label="Animation cycle" type="range" min="0" max="100" value="0"
+      /></label>
+      <label><input id="mirror" type="checkbox" /> Face left</label>
+      <label><input id="reduce" type="checkbox" /> Reduced motion</label>
+    </header>
+    <canvas
+      id="study"
+      width="1080"
+      height="820"
+      aria-label="Character identities, walk cycles and workstation animations"
+    ></canvas>
+    <p>
+      Shared game renderer. Tools follow the grip; work surfaces stay fixed. This view does not read
+      or change a saved game.
+    </p>
+    <script type="module">
+      import { paintCharacter } from '../artwork.js';
+      import * as D from '../domain.js';
+      const canvas = document.getElementById('study'),
+        ctx = canvas.getContext('2d');
+      const phase = document.getElementById('phase'),
+        mirror = document.getElementById('mirror'),
+        reduce = document.getElementById('reduce');
+      let running = true,
+        elapsed = 0,
+        last = 0;
+      document.getElementById('play').onclick = (e) => {
+        running = !running;
+        e.target.textContent = running ? 'Pause' : 'Play';
+      };
+      phase.oninput = () => {
+        running = false;
+        elapsed = (Number(phase.value) / 100) * 2.2;
+        document.getElementById('play').textContent = 'Play';
+      };
+      const cast = ['rowan', 'bryn', 'ivo', 'nell', 'oren', 'maelin', 'mara'].map((id) =>
+        id === 'rowan'
+          ? { id, name: 'Rowan', color: '#c5a268' }
+          : id === 'mara'
+            ? { id, name: 'Mara' }
+            : [...D.recruits, ...D.sleepers].find((c) => c.id === id),
+      );
+      const jobs = [
+        ['Walk · right', 'walk', cast[1]],
+        ['Walk · left', 'walkLeft', cast[3]],
+        ['Stairs', 'stairs', cast[6]],
+        ['Forge', 'hammer', cast[1]],
+        ['Reclaim timber', 'saw', cast[4]],
+        ['Tend herbs', 'garden', cast[3]],
+        ['Mend cloth', 'sew', cast[0]],
+        ['Study & accounts', 'study', cast[2]],
+        ['Pack supplies', 'pack', cast[6]],
+        ['Sort fittings', 'sort', cast[3]],
+        ['Prepare treatment', 'care', cast[2]],
+        ['Distil aether', 'distil', cast[5]],
+      ];
+      const combatJobs = [
+        [
+          'Sword & shield',
+          'combat',
+          {
+            ...cast[1],
+            equipmentSlots: {
+              sword: { id: 'shortSword' },
+              shield: { id: 'ironShield' },
+              head: { id: 'ironHelm' },
+              feet: { id: 'ironGreaves' },
+            },
+          },
+        ],
+        [
+          'Bow & drawn string',
+          'combat',
+          { ...cast[3], equipmentSlots: { sword: { id: 'huntingBow' } } },
+        ],
+        [
+          'Staff & casting',
+          'combat',
+          { ...cast[2], equipmentSlots: { sword: { id: 'wardStaff' } } },
+        ],
+        ['Healer', 'combat', { ...cast[5], equipmentSlots: { sword: { id: 'ashStaff' } } }],
+        ['Unconscious', 'fallen', cast[4]],
+        ['Mara defending', 'combat', cast[6]],
+      ];
+      function draw(now) {
+        if (running) elapsed += Math.min((now - last) / 1000 || 0, 0.04);
+        last = now;
+        if (running) phase.value = Math.round(((elapsed % 2.2) / 2.2) * 100);
+        ctx.clearRect(0, 0, 1080, 820);
+        ctx.fillStyle = '#14262e';
+        ctx.fillRect(0, 0, 1080, 820);
+        const direction = mirror.checked ? -1 : 1;
+        ctx.font = '11px system-ui';
+        ctx.textAlign = 'center';
+        cast.forEach((c, i) => {
+          const x = 80 + i * 150;
+          ctx.fillStyle = '#b5c7bc';
+          ctx.fillText(c.name, x, 22);
+          ctx.save();
+          ctx.translate(x, 140);
+          ctx.scale(1.75, 1.75);
+          paintCharacter(ctx, 0, c, 0, 0, false, direction, {
+            time: elapsed,
+            reducedMotion: reduce.checked,
+            tier: 3,
+          });
+          ctx.restore();
+        });
+        const visibleJobs = document.getElementById('mode').value === 'combat' ? combatJobs : jobs;
+        visibleJobs.forEach(([label, kind, c], i) => {
+          const col = i % 3,
+            row = Math.floor(i / 3),
+            left = col * 360 + 10,
+            top = 165 + row * 160;
+          ctx.fillStyle = '#1b3037';
+          ctx.fillRect(left, top, 340, 148);
+          ctx.fillStyle = '#b5c7bc';
+          ctx.fillText(label, left + 170, top + 19);
+          ctx.strokeStyle = '#94aca43d';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(left + 30, top + 130);
+          ctx.lineTo(left + 310, top + 130);
+          ctx.stroke();
+          const walking = kind === 'walk' || kind === 'walkLeft' || kind === 'stairs';
+          const face = (kind === 'walkLeft' ? -1 : 1) * direction;
+          ctx.save();
+          ctx.translate(left + (walking ? 170 : 145), top + 129);
+          ctx.scale(1.55, 1.55);
+          paintCharacter(ctx, 0, c, 0, 0, false, face, {
+            time: elapsed,
+            moving: walking,
+            distance: walking ? (elapsed / 2.2) * 270 : undefined,
+            kind: kind === 'stairs' ? 'stairs' : 'walk',
+            activity: walking || kind === 'combat' || kind === 'fallen' ? null : kind,
+            combat: kind === 'combat' ? (c.id === 'mara' ? 'warrior' : c.type) : null,
+            unconscious: kind === 'fallen',
+            reducedMotion: reduce.checked,
+            tier: 3,
+          });
+          ctx.restore();
+        });
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>

@@ -1,10 +1,11 @@
+import { paintCharacter } from './artwork.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import * as G from './guild-management.js';
 import * as H from './house-rooms.js';
 import { renderRooms } from './room-panel.js';
-import { houseDecorationFootprints, paintRoomWorker } from './house-art.js';
+import { houseDecorationFootprints, workerActivity } from './house-art.js';
 import { assessContract } from './contracts.js';
 
 const helpers = {
@@ -533,7 +534,11 @@ test('decoration footprints stay above doors, stairs and floor interactions; wor
       set: () => true,
     },
   );
-  paintRoomWorker(ctx, 0, s, s.roster[0], D.workerStation(D.assignedRoom(s, 'bryn'), 0), 1);
-  assert(draws.some((d) => d[0] === 'fillText'));
+  const position = D.workerStation(D.assignedRoom(s, 'bryn'), 0);
+  const activity = workerActivity(s, s.roster[0], position);
+  assert.equal(activity, 'sew');
+  paintCharacter(ctx, 0, s.roster[0], position.x, position.y, false, 1, { time: 1, activity });
+  assert(draws.some((d) => d[0] === 'ellipse'));
+  assert(!draws.some((d) => d[0] === 'fillText'));
   assert.equal(D.save(s), before);
 });

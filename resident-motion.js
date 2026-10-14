@@ -69,14 +69,22 @@ const walkLeg = (a, b) => ({
   duration: Math.max(0.05, Math.min(6, Math.abs(b.x - a.x) / 180)),
 });
 export function walkSample(legs, elapsed) {
-  let remaining = elapsed;
+  let remaining = elapsed,
+    lastFacing = legs[0]?.a.facing || 1;
   for (const leg of legs) {
     if (remaining < leg.duration) {
       const t = Math.max(0, remaining / leg.duration),
-        facing = Math.sign(leg.b.x - leg.a.x) || 1;
+        facing = Math.sign(leg.b.x - leg.a.x) || lastFacing;
       if (leg.kind === 'door') {
         const p = t < 0.5 ? leg.a : leg.b;
-        return { ...p, facing, opacity: Math.abs(t * 2 - 1), moving: false, arrived: false };
+        return {
+          ...p,
+          facing,
+          opacity: Math.abs(t * 2 - 1),
+          moving: false,
+          kind: leg.kind,
+          arrived: false,
+        };
       }
       return {
         x: leg.a.x + (leg.b.x - leg.a.x) * t,
@@ -85,10 +93,18 @@ export function walkSample(legs, elapsed) {
         facing,
         opacity: 1,
         moving: true,
+        kind: leg.kind,
         arrived: false,
       };
     }
+    lastFacing = Math.sign(leg.b.x - leg.a.x) || lastFacing;
     remaining -= leg.duration;
   }
-  return { ...legs.at(-1).b, facing: 1, opacity: 1, moving: false, arrived: true };
+  return {
+    ...legs.at(-1).b,
+    facing: lastFacing,
+    opacity: 1,
+    moving: false,
+    arrived: true,
+  };
 }

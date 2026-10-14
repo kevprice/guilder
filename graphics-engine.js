@@ -108,200 +108,8 @@ function sparks(ctx, x, y, time, color, count = 8, radius = 25) {
     );
   }
 }
-export function paintEquipment(ctx, camera, c, x, y, time, facing = 1) {
-  const sx = x - camera,
-    mage = !c.undead && (c.type === 'mage' || ['healer', 'necromancer'].includes(c.specialisation)),
-    warrior = c.type === 'warrior',
-    gear = c.equipmentSlots?.sword?.id || c.gear,
-    shield = c.equipmentSlots?.shield?.id || c.gear,
-    body = c.equipmentSlots?.body?.id || c.gear,
-    feet = c.equipmentSlots?.feet?.id || c.gear;
-  ctx.save();
-  if (
-    warrior ||
-    [
-      'emberBlade',
-      'sunHammer',
-      'thornSpear',
-      'lanternSpear',
-      'glassDagger',
-      'shortSword',
-      'longSword',
-      'ironAxe',
-    ].includes(gear)
-  ) {
-    ctx.save();
-    ctx.translate(sx + 19 * facing, y - 24);
-    ctx.rotate(facing * 0.3 + Math.sin(time * 2) * 0.025);
-    const magical = ['emberBlade', 'sunHammer', 'lanternSpear'].includes(gear),
-      color = gear === 'emberBlade' ? '#ffc085' : gear === 'sunHammer' ? '#ffdf89' : '#dbe8f1';
-    if (magical) glow(ctx, 0, -18, 30, color, 0.35);
-    if (gear === 'sunHammer') {
-      path(
-        ctx,
-        [
-          [-14, -37],
-          [14, -37],
-          [14, -24],
-          [-14, -24],
-        ],
-        '#dcc694',
-        '#fff1be',
-      );
-      ctx.fillStyle = '#91704b';
-      ctx.fillRect(-2, -25, 4, 34);
-    } else if (gear?.includes('Spear')) {
-      path(
-        ctx,
-        [
-          [-1, -48],
-          [1, -48],
-          [2, 10],
-          [-2, 10],
-        ],
-        '#ad8253',
-      );
-      path(
-        ctx,
-        [
-          [0, -63],
-          [7, -47],
-          [0, -39],
-          [-7, -47],
-        ],
-        color,
-        '#54706b',
-      );
-    } else {
-      path(
-        ctx,
-        [
-          [0, -40],
-          [5, -29],
-          [3, 0],
-          [-3, 0],
-          [-5, -29],
-        ],
-        color,
-        '#65849b',
-        1,
-      );
-      ctx.fillStyle = '#e0b76f';
-      ctx.fillRect(-8, 0, 16, 3);
-      ctx.fillStyle = '#69503b';
-      ctx.fillRect(-2, 3, 4, 10);
-      ellipse(ctx, 0, 13, 3, 3, '#e0b76f');
-    }
-    ctx.restore();
-  }
-  if (warrior || ['shield', 'oathShield', 'buckler', 'ironShield'].includes(shield)) {
-    const px = sx - 17 * facing;
-    path(
-      ctx,
-      [
-        [px - 12, y - 35],
-        [px + 12, y - 35],
-        [px + 11, y - 14],
-        [px, y - 5],
-        [px - 11, y - 14],
-      ],
-      shield === 'oathShield' ? '#507788' : '#835d3f',
-      '#dfba77',
-      2,
-    );
-    path(
-      ctx,
-      [
-        [px - 7, y - 30],
-        [px + 7, y - 30],
-        [px + 6, y - 17],
-        [px, y - 11],
-        [px - 6, y - 17],
-      ],
-      '#4c4541',
-    );
-    ellipse(ctx, px, y - 22, 4, 4, '#e4c68a');
-    if (c.specialisation === 'paladin') {
-      ctx.fillStyle = '#ffe2a1';
-      ctx.fillRect(px - 1, y - 30, 2, 18);
-      ctx.fillRect(px - 5, y - 26, 10, 2);
-      glow(ctx, px, y - 22, 24, '#f5cf80', 0.2);
-    }
-  }
-  if (mage || ['wardStaff', 'stormRod', 'ashStaff'].includes(gear)) {
-    const px = sx + 16,
-      py = y - 55,
-      color =
-        c.specialisation === 'necromancer'
-          ? '#b19be9'
-          : c.specialisation === 'healer'
-            ? '#fff0b5'
-            : gear === 'stormRod'
-              ? '#99dfff'
-              : '#83e3df';
-    ctx.fillStyle = '#bd9564';
-    ctx.fillRect(px - 1, py + 6, 3, 50);
-    glow(ctx, px, py, 38, color, 0.4);
-    path(
-      ctx,
-      [
-        [px, py - 10],
-        [px + 7, py],
-        [px, py + 10],
-        [px - 7, py],
-      ],
-      color,
-      '#edf5e0',
-      1,
-    );
-    sparks(ctx, px, py, time, color, 5, 17);
-    if (c.specialisation === 'necromancer') {
-      ellipse(ctx, px, py, 4, 5, '#271b3b');
-      ellipse(ctx, px - 1.5, py - 1, 1, 1, '#f9d6ff');
-      ellipse(ctx, px + 1.5, py - 1, 1, 1, '#f9d6ff');
-    }
-  }
-  if (c.type === 'scout' || ['moonBow', 'huntingBow'].includes(gear)) {
-    const px = sx + 17;
-    ctx.strokeStyle = gear === 'moonBow' ? '#bce8fa' : '#d6aa75';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px, y - 45);
-    ctx.quadraticCurveTo(px + 18, y - 26, px, y - 7);
-    ctx.stroke();
-    ctx.strokeStyle = '#e3d6b9';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(px, y - 45);
-    ctx.lineTo(px, y - 7);
-    ctx.stroke();
-    ctx.strokeStyle = '#b89261';
-    ctx.beginPath();
-    ctx.moveTo(sx - 5, y - 38);
-    ctx.lineTo(sx + 11, y - 16);
-    ctx.stroke();
-    if (gear === 'moonBow') glow(ctx, px, y - 26, 26, '#a7dcec', 0.24);
-  }
-  if (['frostCloak', 'stoneMail', 'ironHeart'].includes(body)) {
-    ctx.strokeStyle = body === 'frostCloak' ? '#c9eafa' : '#dcc69b';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx - 8, y - 33, 16, 18);
-  }
-  if (
-    ['riverCharm', 'rootCrown', 'phoenixPin', 'echoLens', 'threadRing', 'starCompass'].includes(
-      c.equipmentSlots?.head?.id || c.equipmentSlots?.accessory?.id || c.gear,
-    )
-  ) {
-    ellipse(ctx, sx, y - 29, 3, 3, '#e8d8a7');
-    glow(ctx, sx, y - 29, 20, '#9fd7cf', 0.25);
-  }
-  if (feet === 'mistBoots') {
-    for (let i = 0; i < 4; i++)
-      ellipse(ctx, sx - 12 + i * 8, y + 1 + Math.sin(time + i) * 2, 7, 2, '#8ad7e62a');
-  }
-  ctx.restore();
-}
-export function paintSpell(ctx, camera, from, to, time, kind = 'mage') {
+export { paintSpriteEquipment as paintEquipment } from './sprite-art.js';
+export function paintSpell(ctx, camera, from, to, time, kind = 'mage', attackPhase = null) {
   const color =
       kind === 'necromancer'
         ? '#b392f0'
@@ -329,14 +137,32 @@ export function paintSpell(ctx, camera, from, to, time, kind = 'mage') {
       ellipse(ctx, x, y, 2.5, 2.5, '#f1ffff');
     }
     sparks(ctx, b.x, b.y, time, color, 7, 20);
+  } else if (kind === 'scout' || kind === 'archer' || kind === 'thief') {
+    const phase = attackPhase ?? (time / 1.4) % 1;
+    if (phase > 0.3 && phase < 0.75) {
+      const progress = (phase - 0.3) / 0.45;
+      const x = a.x + (b.x - a.x) * progress;
+      const y = a.y + (b.y - a.y) * progress;
+      const direction = Math.sign(b.x - a.x) || 1;
+      ctx.strokeStyle = '#dac99f';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - 10 * direction, y);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x - 3 * direction, y - 2);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 3 * direction, y + 2);
+      ctx.stroke();
+    }
   } else {
-    const phase = (time * 1.6) % 1;
-    if (phase < 0.55) {
-      ctx.globalAlpha = Math.sin((phase / 0.55) * Math.PI);
+    const phase = attackPhase ?? (time / 1.4) % 1;
+    if (phase > 0.3 && phase < 0.55) {
+      ctx.globalAlpha = Math.sin(((phase - 0.3) / 0.25) * Math.PI);
       ctx.strokeStyle = color;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(a.x, a.y, 40, -1.2, 1.3);
+      const direction = Math.atan2(b.y - a.y, b.x - a.x);
+      ctx.arc(a.x, a.y, 32, direction - 0.8, direction + 0.8);
       ctx.stroke();
       sparks(ctx, b.x, b.y, time, color, 5, 15);
     }

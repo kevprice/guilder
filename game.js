@@ -11,7 +11,8 @@ import {
   renderDevelopmentRewards,
 } from './route-ui.js';
 import { planResidentWalk, walkSample } from './resident-motion.js';
-import { paintHouseFurnishings, paintRoomWorker } from './house-art.js';
+import { paintHouseFurnishings, paintHouseWorkstations, workerActivity } from './house-art.js';
+import { trackSprite } from './character-pose.js';
 import { renderGuildRewards, paintGuildFurnishings } from './guild-art.js';
 import { renderQuestReward } from './quest-rewards.js';
 import { renderEquipmentRewards, equipmentIcon } from './equipment-rewards.js';
@@ -25,7 +26,6 @@ import {
   GraphicsEngine,
   screenToWorld,
   visibleBounds,
-  paintEquipment,
   paintSpell,
   paintCreature,
   paintRoomIdentity,
@@ -77,6 +77,7 @@ let trainingResident = null,
 let hoveredObject = null;
 const residentWalks = new Map();
 const homePresence = new Map();
+const spriteTracks = new Map();
 let motionState = state;
 let routeSelection = null,
   pendingDoor = null;
@@ -733,6 +734,7 @@ function renderUI() {
   if (motionState !== state) {
     residentWalks.clear();
     homePresence.clear();
+    spriteTracks.clear();
     motionState = state;
     pendingDoor = null;
   }
@@ -2208,56 +2210,27 @@ function maraLocation() {
   return target ? { x: target.x - 210, y: target.y, floor: target.y } : position;
 }
 function drawMara() {
-  const threat = D.homeDanger(state),
-    target = threat && D.maraPower(state) > 0 ? state.threats[threat.id] : null;
-  const position = maraLocation(),
-    x = position.x,
-    y = position.y,
-    tier = state.guild.house.mara.tier;
-  const journey = residentWalks.get('mara')?.sample;
-  ctx.save();
-  if (journey && !target) {
-    ctx.globalAlpha *= journey.opacity;
-    ctx.translate(
-      0,
-      journey.moving && !graphics.reducedMotion ? Math.sin((last / 1000) * 9) * 1.5 : 0,
-    );
-  }
-  rect(x - 15, y - 30, 30, 22, '#a77c39');
-  rect(x - 12, y - 49, 24, 18, '#d4ad62');
-  rect(x - 19, y - 29, 5, 19, '#d4ad62');
-  rect(x + 15, y - 29, 5, 19, '#d4ad62');
-  rect(x - 11, y - 8, 8, 8, '#73572e');
-  rect(x + 3, y - 8, 8, 8, '#73572e');
-  rect(x - 7, y - 43, 4, 4, '#a8eff0');
-  rect(x + 3, y - 43, 4, 4, '#a8eff0');
-  rect(x - 4, y - 25, 8, 8, '#89d9e5');
-  rect(x + 8, y - 19, 4, 7, '#f3d68c');
-  text('MARA · BRASS GOLEM', x - 48, y - 59, 9, '#e4c890');
-  if (tier > 1) {
-    rect(x - 17, y - 34, 34, 5, tier >= 3 ? '#96c8c4' : '#b5b6a0');
-    rect(x + 18, y - 28, 9, 18, '#9faeaa');
-    text('T' + tier, x - 7, y - 73, 8, '#b8d4cb');
-  }
+  const threat = D.homeDanger(state);
+  const target = threat && D.maraPower(state) > 0 ? state.threats[threat.id] : null;
+  const position = maraLocation();
+  const pose = drawResident(
+    D.guildWorker(state, 'mara'),
+    position.x,
+    position.y,
+    false,
+    target ? Math.sign(target.x - position.x) : null,
+    { combat: target ? 'warrior' : null },
+  );
   if (target)
     paintSpell(
       ctx,
       camera,
-      { x, y: y - 25 },
-      { x: target.x, y: target.y - 35 },
+      { x: position.x + pose.nearHand[0] * pose.facing, y: position.y + pose.nearHand[1] + 35 },
+      { x: target.x, y: target.y },
       graphics.reducedMotion ? 0 : last / 1000,
       'warrior',
+      pose.combatPhase,
     );
-  else if (!residentWalks.has('mara'))
-    paintRoomWorker(
-      ctx,
-      camera,
-      state,
-      D.guildWorker(state, 'mara'),
-      position,
-      graphics.reducedMotion ? 0 : last / 1000,
-    );
-  ctx.restore();
 }
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -2297,28 +2270,55 @@ function missingRoom(x, w, name, lead) {
   text(name, x + 20, 275, 15, '#708d7b');
   text(lead, x + 20, 300, 12, '#708d7b');
 }
-function drawResident(c, x, y, controlled = false) {
-  const journey = residentWalks.get(c.id),
-    sample = journey?.sample;
-  const moving = sample
-    ? sample.moving
-    : controlled &&
-      grounded &&
-      !!(keys.a || keys.d || keys.arrowleft || keys.arrowright || walkTarget !== null);
-  const facing = sample?.facing || (controlled ? player.facing || 1 : 1);
+function drawResident(c, x, y, controlled = false, forcedFacing = null, presentation = {}) {
+  const sample = residentWalks.get(c.id)?.sample;
+  const airborne = controlled && !grounded && !sample;
+  const track = trackSprite(
+    spriteTracks.get(c.id),
+    { x, y },
+    {
+      allowMovement: !!sample?.moving || (controlled && grounded),
+      facing: forcedFacing || sample?.facing || (controlled ? player.facing : null),
+    },
+  );
+  spriteTracks.set(c.id, track);
+  const activity =
+    presentation.combat || presentation.unconscious
+      ? null
+      : workerActivity(
+          state,
+          c,
+          { x, y },
+          {
+            moving: track.moving,
+            travelling: residentWalks.has(c.id),
+            airborne,
+          },
+        );
+  const facing = forcedFacing || (activity ? 1 : track.facing);
   ctx.save();
   ctx.globalAlpha *= sample?.opacity ?? 1;
-  paintCharacter(ctx, camera, c, x, y, controlled, facing, {
-    moving,
-    time: graphics.reducedMotion || (!controlled && c.status !== 'home') ? 0 : last / 1000,
+  const pose = paintCharacter(ctx, camera, c, x, y, controlled, facing, {
+    ...presentation,
+    moving: track.moving,
+    distance: track.distance,
+    kind: sample?.kind,
+    airborne,
+    activity,
+    drawStation: false,
+    reducedMotion: graphics.reducedMotion,
+    tier: c.id === 'mara' ? state.guild.house.mara.tier : undefined,
+    time:
+      graphics.reducedMotion ||
+      presentation.unconscious ||
+      (!controlled && c.status !== 'home' && !presentation.combat)
+        ? 0
+        : last / 1000,
   });
-  paintEquipment(ctx, camera, c, x, y, graphics.reducedMotion ? 0 : last / 1000, facing);
-  if (c.specialisation || c.undead)
-    text(D.classOf(c).name, x - 30, y - 78, 9, c.undead ? '#99c58e' : '#d8bc82');
   if (!controlled && D.availableChoices(state, c.id).length)
     text('…', x - 5, y - 75, 20, '#c5a268');
-  if (journey) text('→ ' + journey.room, x - 38, y - 82, 8, '#9bcfc9');
   ctx.restore();
+  return pose;
 }
 function drawWorld(c) {
   const activeRoom = visualRoom();
@@ -2513,12 +2513,11 @@ function drawWorld(c) {
     paintChamber(ctx, camera, r, state, ambience.time);
   paintHouseFurnishings(ctx, camera, state);
   paintProductionBadges(ctx, camera, state, productionSnapshots);
+  paintHouseWorkstations(ctx, camera, state);
   drawMara();
   for (const r of D.home(state).filter((r) => r.id !== c.id)) {
     const position = residentWalks.get(r.id)?.sample || D.residentPosition(state, r.id);
     drawResident(r, position.x, position.y);
-    if (!residentWalks.has(r.id))
-      paintRoomWorker(ctx, camera, state, r, position, graphics.reducedMotion ? 0 : last / 1000);
   }
   for (const d of D.residentDiscoveries.filter((d) => D.discoveryAvailable(state, d))) {
     drawResident(
@@ -2552,15 +2551,6 @@ function drawWorld(c) {
   drawPassageMarkers();
   drawHomeAttack();
   drawResident(c, player.x, player.y, true);
-  if (
-    !residentWalks.has(c.id) &&
-    !keys.a &&
-    !keys.d &&
-    !keys.arrowleft &&
-    !keys.arrowright &&
-    walkTarget === null
-  )
-    paintRoomWorker(ctx, camera, state, c, player, graphics.reducedMotion ? 0 : last / 1000);
   graphics.end(ctx);
   paintMagicMotes(ctx, ambience);
 }
@@ -2616,20 +2606,23 @@ function drawHomeAttack() {
       m.party.forEach((id, i) => {
         const c = state.roster.find((c) => c.id === id),
           side = i % 2 ? -1 : 1,
-          px = x + side * (90 + Math.floor(i / 2) * 55),
-          bob = D.injuryLevel(c) >= 4 || graphics.reducedMotion ? 0 : Math.sin(time * 3 + i) * 3;
+          px = x + side * (90 + Math.floor(i / 2) * 55);
         if (c.status !== 'dead') {
-          drawResident(c, px, y + bob);
+          const pose = drawResident(c, px, y, false, Math.sign(x - px), {
+            combat: c.type,
+            unconscious: D.injuryLevel(c) >= 4,
+          });
           if (D.injuryLevel(c) >= 4) {
             text('UNCONSCIOUS', px - 28, y + 18, 9, '#edaaa0');
           } else {
             paintSpell(
               ctx,
               camera,
-              { x: px, y },
+              { x: px + pose.nearHand[0] * pose.facing, y: y + pose.nearHand[1] + 35 },
               { x, y },
               graphics.reducedMotion ? 0 : time + i * 0.3,
               c.specialisation || c.type,
+              pose.combatPhase,
             );
           }
         }
