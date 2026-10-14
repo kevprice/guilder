@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { equipment, equipmentBonus } from './equipment.js';
 import { effectiveStat } from './contracts.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 20000;
   D.recruit(s, 'bryn');
   s.flags.repaired = true;
@@ -54,7 +54,8 @@ test('rare equipment is locked behind discovery and level eight', () => {
   assert.equal(equipmentBonus(s.roster[0], 'int'), 3);
 });
 test('catalogue provides affordable progression without large early bonuses', () => {
-  assert.equal(equipment.length, 37);
+  assert.equal(new Set(equipment.map((e) => e.id)).size, equipment.length);
+  assert(equipment.some((e) => e.id === 'hearthBlade' && e.craftOnly));
   for (const slot of D.equipmentSlots) assert(equipment.some((e) => e.slot === slot));
   for (const e of equipment.filter((e) => e.rarity === 'common')) {
     assert(e.cost >= 100);

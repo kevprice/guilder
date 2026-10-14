@@ -5,7 +5,7 @@ export const classes = {
     name: 'Reanimated zombie',
     growth: { str: 2, end: 2 },
     branches: [],
-    desc: 'Strong, tireless and resistant to physical attacks and ghost terror; vulnerable to magic. Cannot learn living-class talents or heal naturally.',
+    desc: 'Strong, tireless and resistant to physical attacks and ghost terror; vulnerable to magic. Cannot learn living-class talents or heal naturally. Newly raised echoes have fixed basic stats and cannot advance; historical reanimated residents preserve their earned builds.',
   },
   warrior: {
     name: 'Warrior',
@@ -482,6 +482,7 @@ export function xpRequired(level) {
   return 35 + 15 * n + 10 * n * n;
 }
 export function unspentLevels(c) {
+  if (c.echo) return [];
   return Array.from({ length: Math.max(0, Math.min(c.level, 20) - 1) }, (_, i) => i + 2).filter(
     (level) => !c.levelChoices?.[level],
   );
@@ -505,6 +506,7 @@ export function spendLevel(c, level, kind, id) {
   c.points = unspentLevels(c).length;
 }
 export function gainLevel(c) {
+  if (c.echo) return false;
   if (c.level >= 20) return false;
   c.levelChoices ||= {};
   c.level++;
@@ -513,6 +515,7 @@ export function gainLevel(c) {
   return true;
 }
 export function awardExperience(c, amount) {
+  if (c.echo) return false;
   c.xp += amount;
   const required = xpRequired(c.level);
   if (c.level < 20 && c.xp >= required) {

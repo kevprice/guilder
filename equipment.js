@@ -175,6 +175,66 @@ equipment.push(
     desc: 'Practical guild equipment, made for everyday expeditions.',
   })),
 );
+equipment.push({
+  id: 'hearthBlade',
+  name: 'Hearth-forged sword',
+  slot: 'sword',
+  stats: { str: 3 },
+  protection: 0,
+  rarity: 'rare',
+  minLevel: 1,
+  cost: 0,
+  craftOnly: true,
+  houseWork: 1,
+  desc: 'A long sword bound to the house forge. Its wielder adds +1 workshop work while fit and at home.',
+});
+equipment.push({
+  id: 'briarCloak',
+  name: 'Briarweave cloak',
+  slot: 'body',
+  stats: { agi: 1 },
+  protection: 1,
+  rarity: 'rare',
+  minLevel: 1,
+  cost: 0,
+  craftOnly: true,
+  stealth: 12,
+  desc: 'A padded coat woven around a briar horn. Quiet, flexible protection that helps a whole scouting party hide.',
+});
+for (const item of equipment) {
+  item.armour =
+    {
+      paddedCoat: 2,
+      leatherArmour: 4,
+      stoneMail: 6,
+      ironHeart: 7,
+      ironHelm: 2,
+      ironGreaves: 2,
+      ironShield: 3,
+      buckler: 1,
+      leatherCap: 1,
+      briarCloak: 2,
+      oathShield: 4,
+    }[item.id] || 0;
+  item.noise =
+    {
+      ironHelm: 3,
+      ironGreaves: 3,
+      ironShield: 4,
+      stoneMail: 8,
+      ironHeart: 8,
+      leatherArmour: 2,
+      paddedCoat: 1,
+      buckler: 1,
+      longSword: 1,
+      ironAxe: 2,
+      sunHammer: 4,
+    }[item.id] || 0;
+  if (['ashStaff', 'emberBlade', 'hearthBlade'].includes(item.id)) {
+    item.elements = ['fire'];
+    item.desc += ' Channels a steady magical flame.';
+  }
+}
 export const equipmentSlots = ['sword', 'shield', 'head', 'body', 'feet', 'accessory'];
 export function equippedItems(c) {
   return c.equipmentSlots
@@ -220,4 +280,43 @@ export function conscious(c) {
 }
 export function workFactor(c) {
   return [1, 0.85, 0.6, 0.2, 0, 0][injuryLevel(c)] || 0;
+}
+
+// Outfit a fit resident from owned stock without moving their job or controlled character.
+export function assignOwnedEquipment(s, id, slot, uid = null) {
+  const c = s.roster.find((c) => c.id === id);
+  if (!c || c.status !== 'home' || c.injury)
+    throw Error('Only fit residents at home can change equipment.');
+  if (!equipmentSlots.includes(slot)) throw Error('Choose a valid equipment slot.');
+  const item = uid ? s.inventory.find((e) => e.uid === uid) : null;
+  const def = item && itemDefinition(item.id);
+  const owner = item?.owner && s.roster.find((c) => c.id === item.owner);
+  if (uid && (!item || !def || def.slot !== slot))
+    throw Error('Choose owned equipment for this slot.');
+  if (def && c.level < def.minLevel)
+    throw Error(def.name + ' requires level ' + def.minLevel + '.');
+  if (
+    item?.owner &&
+    (!owner ||
+      !['home', 'injured'].includes(owner.status) ||
+      owner.equipmentSlots?.[slot]?.uid !== uid)
+  )
+    throw Error('This piece is away with another resident.');
+  const current = c.equipmentSlots?.[slot];
+  if (current?.uid === uid || (!uid && !current)) return;
+  if (current && !s.inventory.some((e) => e.uid === current.uid && e.owner === id))
+    throw Error('Equipped item ownership is inconsistent.');
+  // Every check precedes mutation, including ownership and level constraints.
+  if (current) s.inventory.find((e) => e.uid === current.uid).owner = null;
+  const slots = ensureEquipmentSlots(c);
+  delete slots[slot];
+  if (owner && owner.id !== id) {
+    delete ensureEquipmentSlots(owner)[slot];
+    syncLegacyGear(owner);
+  }
+  if (item) {
+    item.owner = id;
+    slots[slot] = { id: item.id, uid: item.uid };
+  }
+  syncLegacyGear(c);
 }

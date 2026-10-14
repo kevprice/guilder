@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { gainLevel } from './classes.js';
 function party() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
   const [b, i] = s.roster;

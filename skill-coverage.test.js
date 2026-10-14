@@ -113,14 +113,14 @@ test('all foundation skills have a contract use or a tested story gate; zombie a
   assert(active.threat < base.threat);
 });
 test('Anchor sight and Stone song affect story interactions rather than only descriptions', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 100;
   s.flags = { threshold: true, prepared: true };
   assert.throws(() => D.narrativeChoice(s, 'release', 'home'), /Anchor sight/);
   s.flags.observatoryRead = true;
   D.narrativeChoice(s, 'release', 'home');
   assert(s.flags.gateOpen);
-  const q = D.initial();
+  const q = D.initial({ opening: 'legacy' });
   q.gold = 500;
   D.recruit(q, 'bryn');
   q.roster[0].skills = ['stoneSong'];

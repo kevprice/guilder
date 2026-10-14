@@ -15,7 +15,10 @@ function unseen(keys, read) {
 }
 export function acknowledgeNavigation(s, tab, contractTab = 'all') {
   const read = seen(s);
-  if (tab === 'Contracts') {
+  if (tab === 'Contracts' && s.household?.opening === 'ready') {
+    read.outside = s.outside.events.length;
+  }
+  if (tab === 'Contracts' && s.household?.opening !== 'ready') {
     const keys = D.availableContracts(s)
       .filter((d) => contractTab === 'all' || missionCategory(d) === contractTab)
       .map((d) => contractKey(s, d));
@@ -39,10 +42,12 @@ export function navigationNotices(s) {
   return {
     Contracts: {
       count:
-        unseen(
-          D.availableContracts(s).map((d) => contractKey(s, d)),
-          read.contracts,
-        ) + awaiting,
+        s.household?.opening === 'ready'
+          ? D.pendingOrders(s).length + Math.max(0, s.outside.events.length - (read.outside || 0))
+          : unseen(
+              D.availableContracts(s).map((d) => contractKey(s, d)),
+              read.contracts,
+            ) + awaiting,
       label: 'new contracts or reports awaiting a decision',
     },
     Rooms: {
@@ -54,7 +59,10 @@ export function navigationNotices(s) {
     },
     Training: { count: levels, label: 'unspent level choices' },
     Exploration: {
-      count: s.guild.readyRoutes?.filter((id) => !s.guild.readRoutes.includes(id)).length || 0,
+      count:
+        s.household?.opening === 'ready'
+          ? 0
+          : s.guild.readyRoutes?.filter((id) => !s.guild.readRoutes.includes(id)).length || 0,
       label: 'door solutions earned',
     },
     Characters: {
@@ -64,10 +72,13 @@ export function navigationNotices(s) {
       label: 'characters ready to train',
     },
     Stories: {
-      count: unseen(
-        storyChoices(s).map((n) => n.id),
-        read.stories,
-      ),
+      count:
+        s.household?.opening === 'ready'
+          ? 0
+          : unseen(
+              storyChoices(s).map((n) => n.id),
+              read.stories,
+            ),
       label: 'new story leads',
     },
     Diaries: {

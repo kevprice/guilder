@@ -1,6 +1,6 @@
 # The Bound House
 
-A fantasy guild game about belonging, responsibility and the freedom to leave. Rowan survived the old guild's collapse through a binding to its magical house. Exploration recovers personal records, reconnects scattered rooms and releases thirty former guild members trapped during the evacuation. Their homecomings change the party as the guild learns to let people go.
+A fantasy household game about crew choices, shared resources, preparation and the consequences of venturing outside. New games start with a functional house and five residents. The original guild investigation remains preserved in existing campaign saves.
 
 ## Run
 
@@ -9,6 +9,12 @@ npm start
 ```
 
 Open http://127.0.0.1:4173/. Node.js 20 or newer runs the game and tests. Install development tools with `npm install`.
+
+## Household opening
+
+Assign crews through Rooms, gather and trade shared materials, and craft useful equipment and workstation upgrades. Contracts contains vague site reports, scouting, assault and reinforcement rescue. Its Guild discovery view retains clearing contracts and the passage ledger for finding rooms and residents. Select residents, use Equip party to assign owned gear, then Send party to attempt the objective. Scout first is optional. Travel food, available medicine and useful owned counter items are packed automatically. Small quiet scouting parties reveal local intelligence; a spotted party needs an order before the next day. Research discovered creatures with the alchemy crew, craft counters, and invest a successful hunt's horn in a forge or stealth equipment. Stories and resident pages explain the memories behind pair relationships.
+
+New games use this opening. Existing saves retain their residents, rooms, resources, equipment and campaign progress while gaining the new field systems. A fresh game is required to see the ready-house opening; restarting discards the current save. The campaign details below describe retained legacy content. See [FUNDAMENTALS.md](FUNDAMENTALS.md) for system rules, migration and first-slice acceptance.
 
 ## Play
 
@@ -21,6 +27,14 @@ Open http://127.0.0.1:4173/. Node.js 20 or newer runs the game and tests. Instal
 Bryn is the opening companion. Ivo is discovered on the restored tower’s lower landing and starts with Magical literacy. Nell is found after investigating the holding cells; Oren waits beneath the crypt’s burial stair. Later discoveries follow recovered records, keys and regional expedition milestones.
 
 The wall survey, mason's tool recovery and another opening request can bring Bryn to Strength 10. The tools reduce service restoration to 50 gold. The cellar-timber contract repairs the stairs. The dry landing leads to the flooded cellar; Water breathing reaches the submerged wheel that drains it and opens deeper exploration.
+
+## Crafting foundation
+
+The Craft screen plans batches of 1–99 items, shows costs against stock and earlier orders, and links material shortages to their production rooms or recipes. Orders pay for one item when it starts. Current paid work is excluded from future commitments, cancellation refunds its exact inputs, and blocked work does not promise completion dates for later orders.
+
+Completing three different products earns Artisan (+1 staffed workshop work/day); eight earns Guildwright (+2). Alternate ingredient recipes for the same item count once. Repetition, cancelled work and reclamation cannot farm mastery. Ranks are independent of story progress and persist in management save version 8. Historical workshop completion records can recover earned expertise without granting credit for purchased or found items.
+
+[FUNDAMENTALS.md](FUNDAMENTALS.md) records the economy-first design, implemented module boundaries and remaining work for contracts and narrative.
 
 ## Character animation
 
@@ -54,9 +68,9 @@ Companion investigations start from level 4. Three later chapters open at levels
 
 Equipment belongs to shared storage. Companions visit the store to equip and return items in separate weapon, shield, head, body, feet and accessory slots.
 
-Rooms → House rooms manages 68 workplaces across the estate, returned regional rooms, tower and underworld. Each has one to three companion slots and a defined job: timber, ore, herbs, cloth, aether, scrap, supplies, local commissions or the home watch. Leave a companion in a room and switch characters to assign them, or use the room’s worker controls. Each companion holds one assignment. Away, assigned defenders and injured workers pause and resume when fit at home; death or departure frees their slot. Effective job stats contribute one work unit, two at 10, or three at 20. Work and automatic collection advance on game days, with at most one batch per room per day; paused progress remains saved. Staffed completions grant 5 XP, capped at 5 home-work XP per resident per day, without counting as expedition visits. Tools, study, gardening and watch animations show the activity without advancing simulation time.
+Rooms → House rooms manages 68 workplaces across the estate, returned regional rooms, tower and underworld. Each has one to three companion slots and a defined job: timber, ore, herbs, cloth, aether, scrap, supplies, local commissions or the home watch. Assign crews through the room’s worker controls. Selecting a resident changes control without changing their job. Each companion holds one assignment. Away, assigned defenders and injured workers pause and resume when fit at home; death or departure frees their slot. Effective job stats contribute one work unit, two at 10, or three at 20. Work and automatic collection advance on game days, with at most one batch per room per day; paused progress remains saved. Staffed completions grant 5 XP, capped at 5 home-work XP per resident per day, without counting as expedition visits. Tools, study, gardening and watch animations show the activity without advancing simulation time.
 
-The workshop remains in the restored service room, the garden in the restored greenhouse, and the infirmary in the greenhouse hospice or a restored regional medical room. Mara contributes one baseline work unit to each active facility project per game day, in addition to the room’s entire fit crew. Rooms must be restored and repaired; dungeon workplaces require their guardian cleared, trap disarmed and investigation completed. Assigning workers never opens a story passage or bypasses discovery requirements.
+The workshop remains in the restored service room, the garden in the restored greenhouse, and the infirmary in the greenhouse hospice or a restored regional medical room. Every facility needs fit workers assigned to its room. Rowan and Mara occupy normal crew slots. Empty rooms pause without losing partial progress; furnishings and expertise only improve staffed production. Rooms must be restored and repaired; dungeon workplaces require their guardian cleared, trap disarmed and investigation completed. Assigning workers never opens a story passage or bypasses discovery requirements.
 
 Rooms → Materials shows stocks and gathering sources. Material recipes offer another way to craft the existing basic equipment and decorations, plus supply packs, scrap fittings and brass components. The workshop reserves actual materials and gold when a project starts; cancellation refunds them. Mara’s three sequential workshop upgrades use brass components, ore, timber and aether and add four personal defence strength per tier. Watch-room crews add twice their daily work to her defence. A strong watch holds off an attack while clearing it; a weak watch reduces ordinary monster damage. The watch also supports a dispatched home defence party. Mara stays home when adventurers travel, and her upgrades do not enable early home attacks. Rooms → Mara controls the watch and shows the next upgrade.
 
@@ -71,6 +85,10 @@ Garden production can grow continuously, maintain a player-selected supply reser
 Infirmary care stays manual by default. Players can enable automatic treatment, prioritise the longest recovery or the earliest return home, and protect a supply reserve from automatic spending. Useful treatment starts only on a game day, costs one supply when started, and is reassessed before another course begins. Changing the plan leaves paid work running; ineffective work still refunds its supply. Manual treatments and expedition kits can use the protected reserve. Recovery forecasts compare one course with natural recovery using current staffing and partial progress. The Rooms overview shows care funding and the next harvest; conflicting garden targets are explained, with a control to grow a treatment buffer above the reserve. Laboratory playthroughs still need a restored regional medical room.
 
 The workshop can reclaim spare stored equipment or furniture for scrap in two work units. Crafted pieces return half their base scrap, rounded down with a minimum of one; other common equipment returns up to three scrap based on its stats. Equipped gear, placed furnishings, rare equipment and earned trophies cannot be reclaimed. Mill-road blueprints also allow refitting a stored short sword into a long sword (6 scrap + 50g / 4 work), or a padded coat into leather armour (7 scrap + 50g / 4 work). Forge and outfitter effects apply normally. Each conversion holds its exact physical input until completion; cancellation returns that piece and all payments. Started conversions take priority over planned orders, which resume on a later game day.
+
+Rooms → Craft → Upgrade & enchant adds recipes to existing equipment and furnishings. Remove a furnishing to storage or unequip a piece first. Forge → reinforced forge → runic forge and raised beds → irrigated beds → living beds preserve the original physical piece. Refits also preserve the equipment UID; a long sword can then become a hearth-forged sword with +3 STR and +1 workshop work for a fit assigned wielder. Cancellation returns the piece at its previous stage and all paid materials. These are individual projects, with no batch queue bypass.
+
+Enchanted furnishings have real house uses: runic forges speed crafting, living beds improve supply harvests, whispering shelves improve aether distillation, evergreen planters improve herb harvests, and ward banners add defence to staffed watch rooms. Duplicate enchanted decorations do not stack. Their reinforced shapes, irrigation and anchored runes appear in the cutaway. The material recipe for recovered metal converts 2 scrap to 2 ore before the furnace boss is available.
 
 Survey and Recovery have their own contract tabs. Surveys along the mill road, lower drains and tower approaches unlock utility furniture blueprints; completed surveys open repeatable recovery trips with a two-day cooldown. Each trip offers a decision after its first working day and waits safely for an answer. Supplies can secure a bonus, or the party can attempt it using the displayed stat threshold and extra injury chance. Existing expeditions remain playable without supplies. Medical kits can be purchased for 10 gold or funded with supplies.
 
@@ -100,6 +118,10 @@ npm run check
 ```
 
 `generate-reference.mjs` is the single reference-generation entry point. It reads the same character, discovery, skill and diary data as the game. Edit those source definitions, then regenerate and format the references.
+
+`npm run test:household` tests the new opening from scouting through research, preparation, hunting and the hornbound forge using earned resources and stage reloads.
+
+`npm run test:progression` runs a reproducible restored-house production playthrough with starter stocks, earned materials, active crews, surplus sales and reloads after every completed upgrade. See [FUNDAMENTALS.md](FUNDAMENTALS.md) for its premise, measured checkpoints and remaining balance work.
 
 The simulation lives in `domain.js`, supported by focused modules for contracts, classes, equipment, exploration, guild management and homecomings. `guild-management.js` defines facilities, resources, projects, furniture and development expeditions; `house-rooms.js` defines all workplaces, crews, material recipes and Mara upgrades. `room-panel.js`, `house-panel.js`, `guild-art.js` and `house-art.js` provide their UI, furnishings and work animations. `game.js` coordinates input and presentation; `character-panel.js` renders character pages. The graphics modules paint the house, furnishings, equipment, creatures and affordances. `player-copy.js` migrates retired prose from stored games. The static server sends fresh resources for local development.
 

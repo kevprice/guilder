@@ -93,7 +93,7 @@ test('door and vertical legs retain the travel direction, including on arrival',
   assert.equal(walkSample(legs, 4).facing, -1);
 });
 test('a work pose requires a fit, stationary worker at an active assigned workstation', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.assignRoomWorker(s, 'corridor', 0, 'rowan');
   const worker = D.guildWorker(s, 'rowan'),
     room = D.assignedRoom(s, 'rowan');
@@ -149,4 +149,41 @@ test('facing mirrors the whole sprite and tools, while distinct residents retain
     characterAppearance({ id: 'bryn' }).hair,
     characterAppearance({ id: 'ivo' }).hair,
   );
+});
+
+test('left and right arms alternate over the stride and the cloak does not hide the rear hand', () => {
+  const samples = [0, 22.5, 45, 67.5, 90].map((distance) =>
+    characterPose(c, { moving: true, distance }),
+  );
+  for (let i = 1; i < samples.length; i++) {
+    const near = samples[i].nearHand[0] - samples[i - 1].nearHand[0];
+    const far = samples[i].farHand[0] - samples[i - 1].farHand[0];
+    assert.ok(near * far < 0, 'arms must travel in opposite directions');
+  }
+  const p = samples[1],
+    events = [];
+  let color;
+  const ctx = new Proxy(
+    {},
+    {
+      get: (_, key) =>
+        key === 'ellipse'
+          ? (...args) => events.push({ kind: 'ellipse', args })
+          : key === 'fill'
+            ? () => events.push({ kind: 'fill', color })
+            : () => {},
+      set: (_, key, value) => {
+        if (key === 'fillStyle') color = value;
+        return true;
+      },
+    },
+  );
+  paintCharacter(ctx, 0, c, 0, 0, false, 1, { pose: p });
+  const cloak = events.findIndex(
+    (e) => e.kind === 'fill' && e.color === characterAppearance(c).accent,
+  );
+  const rear = events.findIndex(
+    (e) => e.kind === 'ellipse' && e.args[0] === p.farHand[0] && e.args[1] === p.farHand[1],
+  );
+  assert.ok(cloak >= 0 && rear > cloak, 'rear hand must be visible in front of the cloak');
 });

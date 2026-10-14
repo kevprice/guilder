@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 test('complete loop: growth, physical gates, ledger, anchor and persistence', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   s.selected = 'bryn';
   assert.throws(() => D.interact(s, 'wall'), /Strength 8/);
@@ -51,7 +51,7 @@ test('complete loop: growth, physical gates, ledger, anchor and persistence', ()
   assert.deepEqual(D.load(D.save(restored)), restored);
 });
 test('funds and combined requirements are atomic', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   s.selected = 'bryn';
   s.roster[0].str = 9;
@@ -68,7 +68,7 @@ test('funds and combined requirements are atomic', () => {
   assert.throws(() => D.interact(s, 'cellar'));
 });
 test('store access follows service-room restoration and damage', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   assert.equal(D.storeAvailable(s), false);
   assert.throws(() => D.enterStore(s, 'bryn'));
@@ -83,7 +83,7 @@ test('store access follows service-room restoration and damage', () => {
 });
 
 test('distinct parties, shared equipment and away availability', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   const uid = D.equip(s, 'bryn', 'shield');
@@ -104,7 +104,7 @@ test('distinct parties, shared equipment and away availability', () => {
 });
 
 test('injuries have recovery and viable no-funds fallback', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   D.dispatch(s, 'road', ['bryn']);
   s.seed = 1;
@@ -120,7 +120,7 @@ test('injuries have recovery and viable no-funds fallback', () => {
   assert.throws(() => D.load('{"version":99}'));
 });
 test('capability paths and supplies change outcomes', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   const before = D.risk(s, 'quarry', ['bryn']).threat;
   s.roster[0].level = 2;
@@ -136,7 +136,7 @@ test('capability paths and supplies change outcomes', () => {
 });
 
 test('restoring the service room opens its cleared doorway to every resident, including Rowan', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
@@ -159,7 +159,7 @@ test('restoring the service room opens its cleared doorway to every resident, in
 });
 
 test('story rewards gate the cellar, tower and labyrinth without consuming funds on locked attempts', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   const before = s.gold;

@@ -11,9 +11,10 @@ const helpers = {
   btn: (t, a, disabled) => `<button data-action="${a}" ${disabled ? 'disabled' : ''}>${t}</button>`,
 };
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = true;
   s.gold = 100;
+  D.assignRoomWorker(s, 'service', 2, 'mara');
   return s;
 }
 function tick(s, n = 1) {

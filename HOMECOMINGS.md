@@ -24,11 +24,11 @@ Mara helps them lower the door. Bryn runs her hand over its familiar chisel mark
 
 Survivor preserved through magic · Scout
 
-The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.
-Nell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.
-She opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.
-“Did they get there?” she asks. Nobody can answer yet.
-She had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.
+At the back of the abandoned holding cells, a doorway has been drawn in chalk. Rowan rubs out the line across its handle. A latch appears beneath their hand.
+Nell steps through with a guide’s satchel. “Is anyone else still in here?”
+She had led the last families out, given them directions to the shelters and come back to search the rooms. When she turned to leave, the door was gone.
+Rowan tells her that was thirty years ago. Nell looks at the bread in her satchel. It is still soft.
+She takes out a list of names and addresses. “These are the places I sent them. Can we ask?”
 
 **Destination:** the shelter roads.
 
@@ -42,7 +42,7 @@ She had folded the passage behind the escaping families to keep the patrol from 
 
 Survivor preserved through magic · Wizard
 
-Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
+On the lower bell-tower landing, Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
 Rowan follows Ada’s margin diagram and closes the line. Ivo lands badly, still trying to save the book. Mara helps him up.
 “Is the joining over?” he asks. Then, seeing Rowan’s face: “What happened?”
 His last memory is Ada sending him to fetch the test records. Thirty years have passed since then.
@@ -60,7 +60,7 @@ He sits with the notebook on his knees. After a while he asks where his teacher 
 
 Survivor preserved through magic · Warrior
 
-A guild mason trapped in his own stone-skin spell while bracing the collapsing cellar stair.
+A guild mason trapped in his own stone-skin spell while bracing the collapsing burial stair beneath the holding cells.
 
 **Destination:** his daughter’s riverside workshop.
 

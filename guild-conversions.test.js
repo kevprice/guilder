@@ -5,13 +5,15 @@ import * as G from './guild-management.js';
 import { renderRooms } from './room-panel.js';
 
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.garden = s.flags.hospice = true;
   s.guild.blueprints = ['mill'];
   s.gold = 200;
   s.guild.salvage = 20;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
+  D.assignRoomWorker(s, 'service', 2, 'mara');
+  D.assignRoomWorker(s, 'garden', 1, 'rowan');
   return s;
 }
 function tick(s, n = 1) {
@@ -28,11 +30,14 @@ test('management version 2 upgrades without producing work, replacing stocks or 
   D.queueWorkshopOrder(s, 'buckler', 2);
   tick(s);
   D.setGardenPolicy(s, 'reserve', 7);
+  D.assignRoomWorker(s, 'service', 0, 'mara');
+  D.assignRoomWorker(s, 'garden', 0, 'rowan');
   s.guild.version = 2;
   const before = structuredClone(s),
     copy = reload(s);
-  assert.equal(copy.guild.version, 7);
-  before.guild.version = 7;
+  assert.equal(copy.guild.version, 9);
+  before.guild.version = 9;
+  before.guild.crafting = { completed: [] };
   before.guild.unlocksAnnounced = ['cellarKey'];
   before.guild.roomsAnnounced = ['service', 'store', 'garden', 'hospice'];
   assert.deepEqual(copy, before);
@@ -100,7 +105,7 @@ test('refits use unlocked patterns and existing equipment bonuses, with the forg
   tick(s, 2);
   assert.equal(s.gold, 150);
   assert.equal(s.guild.salvage, 14);
-  assert(!s.inventory.some((i) => i.uid === sword));
+  assert.equal(s.inventory.find((i) => i.uid === sword).id, 'longSword');
   const longSword = s.inventory.find((i) => i.id === 'longSword');
   assert(longSword && longSword.owner === null);
   assert(s.scenes.some((scene) => scene.equipmentRewards?.includes('longSword')));
@@ -112,7 +117,7 @@ test('refits use unlocked patterns and existing equipment bonuses, with the forg
   s = reload(s);
   tick(s, 4);
   assert(s.inventory.some((i) => i.id === 'leatherArmour' && i.owner === null));
-  assert(!s.inventory.some((i) => i.uid === coat));
+  assert.equal(s.inventory.find((i) => i.uid === coat).id, 'leatherArmour');
   assert.equal(s.inventory.length, 2);
   assert.deepEqual(reload(s), s);
 });

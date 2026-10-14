@@ -546,7 +546,14 @@ function workTool(ctx, p) {
 }
 function weapon(ctx, c, p) {
   const id = c.equipmentSlots?.sword?.id || c.gear;
-  const sword = ['emberBlade', 'shortSword', 'longSword', 'glassDagger', 'ironAxe'].includes(id);
+  const sword = [
+    'hearthBlade',
+    'emberBlade',
+    'shortSword',
+    'longSword',
+    'glassDagger',
+    'ironAxe',
+  ].includes(id);
   const staff = ['wardStaff', 'stormRod', 'ashStaff'].includes(id);
   const spear = ['thornSpear', 'lanternSpear'].includes(id);
   const bow = ['moonBow', 'huntingBow'].includes(id);
@@ -555,7 +562,14 @@ function weapon(ctx, c, p) {
   const stowed = p.incapacitated || (p.activity && p.activity !== 'watch');
   ctx.translate(...(stowed ? [-9, -21 + p.bob] : p.nearHand));
   ctx.rotate(stowed ? -2.75 : (p.weaponAngle ?? -0.15 + p.lean));
-  const metal = id === 'emberBlade' ? '#e9b583' : id === 'sunHammer' ? '#edcc89' : '#bed0cf';
+  const metal =
+    id === 'hearthBlade'
+      ? '#9edbd1'
+      : id === 'emberBlade'
+        ? '#e9b583'
+        : id === 'sunHammer'
+          ? '#edcc89'
+          : '#bed0cf';
   if (sword) {
     polygon(
       ctx,
@@ -597,7 +611,8 @@ function weapon(ctx, c, p) {
         metal,
       );
     } else {
-      const length = id === 'glassDagger' ? 17 : id === 'longSword' ? 36 : 29;
+      const length =
+        id === 'glassDagger' ? 17 : ['longSword', 'hearthBlade'].includes(id) ? 36 : 29;
       polygon(
         ctx,
         [
@@ -759,8 +774,6 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing, motion 
     ctx.rotate(-Math.PI / 2);
   }
   if (motion.drawStation !== false) station(ctx, p.activity);
-  limb(ctx, [p.farShoulder, p.farElbow, p.farHand], brass ? '#96753e' : '#526666', brass ? 6 : 5);
-  oval(ctx, ...p.farHand, 2.8, 2.6, brass ? '#aa884d' : a.skin);
   polygon(
     ctx,
     [
@@ -781,6 +794,9 @@ export function paintCharacter(ctx, camera, c, x, y, controlled, facing, motion 
     1,
   );
   limb(ctx, [p.farHip, p.farKnee, p.farFoot], brass ? '#7b623c' : '#464d4c', brass ? 7 : 5.5);
+  // Draw the rear arm over the cloak so its counter-swing remains visible.
+  limb(ctx, [p.farShoulder, p.farElbow, p.farHand], brass ? '#96753e' : '#526666', brass ? 6 : 5);
+  oval(ctx, ...p.farHand, 2.8, 2.6, brass ? '#aa884d' : a.skin);
   boot(ctx, p.farFoot, true, brass, c.equipmentSlots?.feet?.id);
   limb(ctx, [p.nearHip, p.nearKnee, p.nearFoot], brass ? '#a18752' : '#66716a', brass ? 7 : 6);
   boot(ctx, p.nearFoot, false, brass, c.equipmentSlots?.feet?.id);

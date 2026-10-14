@@ -44,16 +44,30 @@ export function roomProduction(s, id) {
     if (core === 'workshop' && recipe && !facility.project && D.resourceShortfall(s, recipe).length)
       reason = 'Waiting for materials';
   }
+  const research = s.outside?.research?.room === id ? s.outside.research : null;
+  if (research) {
+    const f = D.researchForecast(s);
+    work = f.total;
+    target = research.work;
+    progress = research.progress;
+    outputs = {};
+    reason = f.paused;
+    recipe = { name: 'Creature research', category: 'research' };
+    name = 'Creature research';
+  }
   const watch = !core && f.role.animation === 'watch';
   const cycleDays = work > 0 && target ? Math.max(1, Math.ceil(target / work)) : null;
   const nextDays = !reason && cycleDays ? Math.max(1, Math.ceil((target - progress) / work)) : null;
   const main = Object.entries(outputs)[0];
   const amount = main?.[1] || (recipe?.item || recipe?.furniture || recipe?.routeTool ? 1 : 0);
-  const resource = main?.[0] || (watch ? 'guard' : core === 'infirmary' ? 'care' : 'craft');
+  const resource = research
+    ? 'research'
+    : main?.[0] || (watch ? 'guard' : core === 'infirmary' ? 'care' : 'craft');
   const resourceName =
     D.resources.find((r) => r.id === resource)?.name ||
-    (watch ? 'Defence' : core === 'infirmary' ? 'Recovery' : 'Crafting');
-  const fit = f.workers.filter((w) => w.fit).length,
+    (research ? 'Research' : watch ? 'Defence' : core === 'infirmary' ? 'Recovery' : 'Crafting');
+  const visibleWorkers = research ? D.researchForecast(s).workers : f.workers;
+  const fit = visibleWorkers.filter((w) => w.fit).length,
     assigned = state.workers.filter(Boolean).length;
   const status = reason
     ? D.roomPause(s, room)
@@ -67,15 +81,19 @@ export function roomProduction(s, id) {
             : 'paused'
     : 'working';
   const average = !reason && cycleDays && amount ? amount / cycleDays : 0;
-  const rate = watch
-    ? !reason
-      ? '+' + work * 2 + ' defence/day'
-      : reason
-    : main
-      ? `${main[1]} ${resourceName.toLowerCase()} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
-      : recipe
-        ? `1 ${recipe.item ? 'item' : recipe.furniture ? 'furnishing' : recipe.routeTool ? 'mechanism' : recipe.materialOutput ? 'batch' : recipe.maraTier ? 'upgrade' : 'treatment'} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
-        : reason;
+  const rate = reason
+    ? reason
+    : research
+      ? reason || 'Creature study · ' + nextDays + ' days remaining'
+      : watch
+        ? !reason
+          ? '+' + work * 2 + ' defence/day'
+          : reason
+        : main
+          ? `${main[1]} ${resourceName.toLowerCase()} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
+          : recipe
+            ? `1 ${recipe.item ? 'item' : recipe.furniture ? 'furnishing' : recipe.routeTool ? 'mechanism' : recipe.materialOutput ? 'batch' : recipe.maraTier ? 'upgrade' : 'treatment'} / ${cycleDays || '—'} ${cycleDays === 1 ? 'day' : 'days'}`
+            : reason;
   return {
     id,
     room,

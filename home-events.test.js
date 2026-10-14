@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
@@ -109,7 +109,7 @@ test('ghost room damage blocks plot until paid repair, survives clearing and per
 });
 
 test('one companion cannot trigger home attacks at home or while away', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   const gold = s.gold;
   for (const seed of [17, 117, 217, 317, 417]) {

@@ -41,7 +41,7 @@ function travel(
   rest(s);
 }
 function firstChapter() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   while (s.roster[0].str < 10) {
     rest(s);
@@ -331,7 +331,7 @@ test('a legacy pending anchor decision retains its committed roll and resolves o
 });
 
 test('a Water breather drains the cellar permanently and opens it to other residents', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');

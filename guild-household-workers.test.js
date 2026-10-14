@@ -12,7 +12,7 @@ const helpers = {
   btn: (t) => `<button>${t}</button>`,
 };
 function house() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.breach = s.flags.repaired = s.flags.garden = s.flags.hospice = true;
   s.gold = 600;
   s.guild.salvage = 30;
@@ -45,9 +45,9 @@ test('Rowan and Mara fill normal slots, produce materials and persist without ga
   assert.throws(() => D.dispatch(s, 'road', ['mara']));
 });
 
-test('Mara’s assigned contribution replaces caretaker work and projections do not count her twice', () => {
+test('Mara works only in her assigned room and projections do not count her twice', () => {
   const s = house();
-  assert.equal(D.dailyWork(s, 'workshop'), 1);
+  assert.equal(D.dailyWork(s, 'workshop'), 0);
   assert.equal(D.projectForecast(s, 'workshop', 'mara').total, 1);
   D.assignWorker(s, 'workshop', 'rowan');
   D.assignRoomWorker(s, 'service', 1, 'mara');
@@ -63,8 +63,8 @@ test('Mara’s assigned contribution replaces caretaker work and projections do 
   assert.deepEqual(s.guild.house.rooms.service.workers, ['rowan', null, null]);
   assert.equal(D.dailyWork(s, 'workshop'), 1);
   D.assignRoomWorker(s, 'quarters', 0, null);
-  assert.equal(D.dailyWork(s, 'workshop'), 2);
-  assert.equal(D.dailyWork(s, 'garden'), 1);
+  assert.equal(D.dailyWork(s, 'workshop'), 1);
+  assert.equal(D.dailyWork(s, 'garden'), 0);
   assert.deepEqual(reload(s), s);
 });
 

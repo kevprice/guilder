@@ -1,4 +1,10 @@
 export const iconPaths = {
+  skull:
+    '<path d="M6 15a8 8 0 1112 0v6H6zM9 21v-4m6 4v-4"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/>',
+  research: '<path d="M12 5C7 2 3 4 3 4v16c5-2 9 1 9 1s4-3 9-1V4s-4-2-9 1zm0 0v16"/>',
+  briarHorn: '<path d="M5 21q2-10 14-18-3 15-14 18zm0 0 6-8m0 0 4 1m-1-5 4 1"/>',
+  briarSample: '<path d="M8 3h8m-6 0v6L5 19q-1 3 7 3t7-3L14 9V3M7 16h10"/>',
+  flameKit: '<path d="M12 2q1 7 6 10 6 10-6 10S0 14 7 10q-1 5 3 5 4-4 2-13z"/>',
   house: '<path d="M3 11l9-8 9 8M5 9v12h14V9M9 21v-8h6v8"/>',
   residents: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-3a8 8 0 0116 0v3"/>',
   contracts:

@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { assessContract } from './contracts.js';
 const fighter = (id, str = 10) => ({ id, str, agi: 0, int: 0, end: 0, skills: [] });
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 1000;
   D.recruit(s, 'bryn');
   D.recruit(s, 'nell');

@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { gainLevel } from './classes.js';
 import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
 test('new contract badges clear when viewed and reappear for newly unlocked missions', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   assert(navigationNotices(s).Contracts.count > 0);
   acknowledgeNavigation(s, 'Contracts', 'main');
@@ -18,7 +18,7 @@ test('new contract badges clear when viewed and reappear for newly unlocked miss
   assert.equal(navigationNotices(loaded).Contracts.count, 0);
 });
 test('training indicators persist until a level choice is spent', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   gainLevel(s.roster[0]);
   assert.equal(navigationNotices(s).Training.count, 1);
@@ -29,7 +29,7 @@ test('training indicators persist until a level choice is spent', () => {
   assert.equal(navigationNotices(s).Training.count, 0);
 });
 test('unread reports and journals clear separately and later entries restore badges', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.reports.push({ day: 1, title: 'Test', text: 'A report', reward: 0, xp: 0, party: [] });
   assert.equal(navigationNotices(s).Reports.count, 1);
   acknowledgeNavigation(s, 'Reports');
@@ -41,7 +41,7 @@ test('unread reports and journals clear separately and later entries restore bad
   assert.equal(navigationNotices(s).Journal.count, 1);
 });
 test('Ivo arrives literate and old saves gain literacy without spending a choice', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'ivo');
   assert.deepEqual(s.roster[0].skills, ['literacy']);
   s.roster[0].skills = [];

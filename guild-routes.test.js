@@ -8,7 +8,7 @@ import { planResidentWalk, walkSample } from './resident-motion.js';
 const helpers = { esc: String, btn: (t, a) => `<button data-action="${a}">${t}</button>` };
 const reload = (s) => D.load(D.save(s));
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.stairs = s.flags.cellarDrained = s.flags.tower = s.flags.anchor = true;
   s.gold = 1500;
   D.recruit(s, 'bryn');
@@ -133,6 +133,7 @@ test('contract keys appear on the first completion scene and in the saved report
 });
 test('crafted winches reserve costs, refund cancellation, produce once, and secure a dry guild route', () => {
   let s = guild();
+  D.assignRoomWorker(s, 'service', 2, 'mara');
   s.flags.discovered_sluice = true;
   D.investigateChamber(s, 'sluice');
   assert(s.guild.patterns.includes('pattern_sluiceWinch'));
@@ -268,7 +269,7 @@ test('version 6 saves migrate quietly without changing work, resources, builds, 
     assert.deepEqual(loaded[key], before[key]);
   assert.deepEqual(loaded.guild.facilities, before.guild.facilities);
   assert.deepEqual(loaded.guild.house, before.guild.house);
-  assert.equal(loaded.guild.version, 7);
+  assert.equal(loaded.guild.version, 9);
   assert.equal(loaded.guild.salvage, before.guild.salvage);
   assert(loaded.guild.patterns.includes('pattern_sluiceWinch'));
   assert.deepEqual(reload(loaded), loaded);

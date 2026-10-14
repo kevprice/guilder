@@ -19,7 +19,7 @@ export function renderCrew(s, id, { esc }, leadOnly = false) {
   const r = D.houseRooms.find((r) => r.id === id),
     room = s.guild.house.rooms[id];
   const core = D.coreFacility(s, id),
-    role = D.activities[core || r.activity];
+    role = D.roomForecast(s, id).role;
   return `<div class="room-crew"><p class="stats">${room.workers.filter(Boolean).length}/${r.capacity} worker slots filled · ${role.stat.toUpperCase()} improves production at 10, 20, 30 and 40.</p>${room.workers
     .map((uid, index) => {
       if (leadOnly && index === 0) return '';
@@ -30,7 +30,11 @@ export function renderCrew(s, id, { esc }, leadOnly = false) {
         .map((c) => {
           const other = D.assignedRoom(s, c.id),
             v = D.workerContribution(c, role.stat),
-            restriction = D.workerAssignmentError(s, c.id, r);
+            restriction =
+              D.workerAssignmentError(s, c.id, r) ||
+              (s.outside?.research?.room === id && (c.undead || c.id === 'mara')
+                ? 'Living researcher needed'
+                : null);
           return `<option value="${c.id}" ${uid === c.id ? 'selected' : ''} ${restriction ? 'disabled' : ''}>${esc(c.name)} · ${restriction ? esc(restriction) : esc(c.status) + ' · ' + v.work + ' work/day'}${other && other.id !== id ? ' · moves from ' + esc(other.name) : ''}</option>`;
         })
         .join('')}</select></label>`;
@@ -42,13 +46,13 @@ export function renderHouse(s, helpers, selectedRoom = null) {
   const known = D.houseRooms.filter((r) => D.roomUnlocked(s, r));
   const r = known.find((r) => r.id === selectedRoom) || known[0];
   let html =
-    '<h3>House workplaces</h3><p>Leave a companion in a room and switch characters to put them to work, or assign them here. Each companion holds one slot. Missions, defence duties and injuries pause their contribution; they resume when fit at home. Restore rooms and clear, disarm and search dungeon rooms before setting up work or decorations.</p>';
+    '<h3>House workplaces</h3><p>Assign a crew using the worker slots below. Each companion holds one slot. Missions, defence duties and injuries pause their contribution; they resume when fit at home. Restore rooms and clear, disarm and search dungeon rooms before setting up work or decorations.</p>';
   html += `<label class="furniture-picker">Choose workplace<select id="house-room" aria-label="Choose workplace">${known.map((r) => `<option value="${r.id}" ${r.id === selectedRoom ? 'selected' : ''}>${esc(r.name)} · ${s.guild.house.rooms[r.id].workers.filter(Boolean).length}/${r.capacity} workers${D.roomPause(s, r) ? ' · ' + esc(D.roomPause(s, r)) : ''}</option>`).join('')}</select></label>`;
   const f = D.roomForecast(s, r.id),
     state = s.guild.house.rooms[r.id];
   let body = `<p>${esc(f.role.name)} · ${f.role.stat.toUpperCase()}</p>${renderCrew(s, r.id, helpers)}<div class="worker-contributions">${f.workers.map((w) => `<p>${esc(w.name)} · ${f.role.stat.toUpperCase()} ${w.stat} · ${w.fit ? w.work + ' work/day' : esc(w.status) + ' · work paused'}</p>`).join('') || '<p>No workers assigned.</p>'}</div>`;
   if (f.core)
-    body += `<p>Mara contributes 1 baseline work unit. This crew works on the facility’s current project.</p>${btn('Manage ' + f.core, 'roomPage:' + f.core)}`;
+    body += `<p>Fit assigned workers advance the current project. Empty rooms pause and keep their progress.</p>${btn('Manage ' + f.core, 'roomPage:' + f.core)}`;
   else if (f.role.animation === 'watch')
     body += `<p>Fit workers add ${f.work * 2} defence strength to Mara’s home watch.</p>${btn('Manage Mara and defence', 'roomPage:mara')}`;
   else
@@ -134,7 +138,7 @@ export function renderMara(s, helpers) {
     worker = D.guildWorker(s, 'mara');
   html += card(
     'Workstation',
-    `<p>${station ? 'Assigned to ' + esc(station.name) : 'Unassigned · provides 1 caretaker work per day to each restored facility'}.</p><p class="stats">STR ${worker.str} · AGI ${worker.agi} · INT ${worker.int} · END ${worker.end}. Frame upgrades improve her work stats. Assigning a slot directs all her work there; other facilities need workers. Home defence takes priority during an attack.</p>${btn('Choose a workstation', 'roomPage:dashboard')}`,
+    `<p>${station ? 'Assigned to ' + esc(station.name) : 'Unassigned · choose a worker slot to begin production'}.</p><p class="stats">STR ${worker.str} · AGI ${worker.agi} · INT ${worker.int} · END ${worker.end}. Frame upgrades improve her work stats. Assigning a slot directs all her work there; other facilities need workers. Home defence takes priority during an attack.</p>${btn('Choose a workstation', 'roomPage:dashboard')}`,
   );
   if (next) {
     const r = D.projectRecipe(s, 'workshop', next.id),

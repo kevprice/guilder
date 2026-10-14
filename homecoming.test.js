@@ -17,7 +17,7 @@ test('personal documents retain their context and recovery dates across saves', 
     assert.ok(r.documentType && r.date && r.source, r.id);
     if (r.author === 'Rowan') assert.notEqual(r.date, 'Undated', r.id);
   }
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recoverRecord(s, 'entrance');
   const saved = D.load(D.save(s));
   assert.equal(saved.recordDays.entrance, s.day);
@@ -38,16 +38,16 @@ test('all playable companions have distinct homecomings; every interior has a pe
   assert.deepEqual(D.validateContent(), []);
 });
 test('room records cannot be collected early or twice and persist in older saves', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   assert.throws(() => D.recoverRecord(s, 'library'));
   D.recoverRecord(s, 'entrance');
   assert.throws(() => D.recoverRecord(s, 'entrance'));
   assert.ok(D.load(D.save(s)).flags.record_entrance);
-  const old = D.initial();
+  const old = D.initial({ opening: 'legacy' });
   assert.equal(D.availableRecords(D.load(D.save(old)))[0].id, 'entrance');
 });
 test('a farewell requires personal evidence and preserves the departed companion and stored equipment', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   s.flags.brynResolved = true;
   D.recruit(s, 'ivo');
@@ -76,7 +76,7 @@ test('a farewell requires personal evidence and preserves the departed companion
   assert.equal(D.load(D.save(s)).roster[0].status, 'departed');
 });
 test('away, wounded and dead companions cannot be released; spirit evidence precedes passing on', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 1000;
   s.flags.fenStep2 = true;
   D.recruit(s, 'lark');

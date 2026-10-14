@@ -92,7 +92,7 @@ button:disabled {
   opacity: 0.45;
   cursor: default;
 }
-header {
+body > header {
   display: flex;
   align-items: center;
   gap: 28px;
@@ -388,7 +388,7 @@ dialog h2 {
   display: none !important;
 }
 @media (max-width: 900px) {
-  header {
+  body > header {
     flex-wrap: wrap;
     padding: 14px;
     gap: 12px;

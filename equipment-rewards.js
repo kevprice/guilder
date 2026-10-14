@@ -54,7 +54,7 @@ export function equipmentIcon(item, esc) {
                         : item.slot === 'accessory'
                           ? 'charm'
                           : item.slot;
-  return `<svg class="equipment-icon" viewBox="0 0 64 64" role="img" aria-label="${esc(item.name)} icon">${shapes[kind] || shapes.sword}</svg>`;
+  return `<svg class="equipment-icon" viewBox="0 0 64 64" role="img" aria-label="${esc(item.name)} icon">${shapes[kind] || shapes.sword}${item.houseWork ? '<path d="M34 18l5 4-4 5-5-4z" fill="#8bd2dc" stroke="#d9efe6"/>' : ''}</svg>`;
 }
 export function renderEquipmentRewards(ids, { esc, storeAvailable = true } = {}) {
   return (ids || [])

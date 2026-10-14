@@ -9,12 +9,14 @@ import { renderRooms } from './room-panel.js';
 import { furnishingZones, furnitureFootprints } from './guild-art.js';
 
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.garden = s.flags.hospice = s.flags.wallSurveyed = true;
   s.gold = 1000;
   s.guild.salvage = 100;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
+  D.assignRoomWorker(s, 'service', 2, 'mara');
+  D.assignRoomWorker(s, 'garden', 1, 'rowan');
   return s;
 }
 function tick(s, n = 1) {
@@ -59,7 +61,7 @@ test('starting resources migrate exactly once without advancing old progress or 
   assert.deepEqual(again, loaded);
 });
 test('facilities obey existing story unlocks and laboratory branch retains regional treatment', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   for (const f of D.facilities) assert.equal(D.facilitySite(s, f.id), null);
   s.flags.repaired = true;
   assert.equal(D.facilitySite(s, 'workshop'), 'service');
@@ -221,6 +223,7 @@ test('treatment beats natural recovery, refuses ineffective patients and refunds
   c.status = 'injured';
   c.injury = 2;
   c.recovery = 4;
+  D.assignRoomWorker(s, 'hospice', 1, 'rowan');
   D.startRoomProject(s, 'infirmary', 'treatment', c.id);
   const mid = reload(s);
   tick(mid, 2);
@@ -266,6 +269,7 @@ test('treatment refunds inputs if a worker leaving makes it no faster than natur
   patient.injury = 1;
   patient.recovery = 2;
   D.assignWorker(s, 'infirmary', worker.id);
+  D.assignRoomWorker(s, 'hospice', 1, 'rowan');
   D.startRoomProject(s, 'infirmary', 'treatment', patient.id);
   D.dispatch(s, 'road', [worker.id]);
   tick(s);
@@ -281,6 +285,7 @@ test('a patient cannot receive home-work XP for treating themselves while unavai
   patient.status = 'injured';
   patient.injury = 2;
   patient.recovery = 3;
+  D.assignRoomWorker(s, 'hospice', 1, 'rowan');
   D.startRoomProject(s, 'infirmary', 'treatment', patient.id);
   tick(s, 2);
   assert.equal(patient.status, 'home');
@@ -453,7 +458,7 @@ test('Rooms panel covers locked facilities and furnishing zones reserve story in
     card: (t, b) => '<h3>' + t + '</h3>' + b,
     btn: (t) => '<button>' + t + '</button>',
   };
-  const initial = renderRooms(D.initial(), helpers);
+  const initial = renderRooms(D.initial({ opening: 'legacy' }), helpers);
   assert.match(initial, /Workshop · Unavailable/);
   const s = guild(),
     html = renderRooms(s, helpers);

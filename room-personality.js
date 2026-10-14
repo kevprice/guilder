@@ -697,6 +697,12 @@ export function paintInterior(ctx, camera, x, w, name, restored, time = 0) {
 }
 
 export function paintAffordance(ctx, camera, h, time, near = false) {
+  if (
+    !near &&
+    !h.routeIndicator &&
+    !/^(passage:|leave:|record:|recover:|discover:|awaken:)/.test(h.action || '')
+  )
+    return;
   const x = h.x - camera,
     y = h.y - 37;
   ctx.save();
@@ -740,11 +746,31 @@ export function paintAffordance(ctx, camera, h, time, near = false) {
     ctx.stroke();
   } else {
     ctx.beginPath();
-    ctx.moveTo(x, y - 7);
-    ctx.lineTo(x + 5, y);
-    ctx.lineTo(x, y + 7);
-    ctx.lineTo(x - 5, y);
-    ctx.closePath();
+    if (h.action?.startsWith('housework:')) {
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.moveTo(x, y - 3);
+      ctx.lineTo(x, y + 3);
+      ctx.moveTo(x - 3, y);
+      ctx.lineTo(x + 3, y);
+    } else if (
+      /^(recover:|discover:|awaken:)/.test(h.action || '') ||
+      h.action === 'householdGuide' ||
+      h.choice
+    ) {
+      ctx.roundRect(x - 8, y - 6, 16, 11, 3);
+      ctx.moveTo(x - 3, y + 5);
+      ctx.lineTo(x - 5, y + 9);
+    } else if (h.action?.startsWith('store')) {
+      ctx.rect(x - 7, y - 5, 14, 12);
+      ctx.moveTo(x - 7, y - 1);
+      ctx.lineTo(x + 7, y - 1);
+    } else if (h.done && /^[WS]/.test(h.text || '')) {
+      ctx.moveTo(x - 6, y + 4);
+      ctx.lineTo(x, y - 3);
+      ctx.lineTo(x + 6, y + 4);
+    } else {
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+    }
     ctx.stroke();
   }
   if (near) {

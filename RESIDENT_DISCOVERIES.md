@@ -16,15 +16,15 @@ Mara helps them lower the door. Bryn runs her hand over its familiar chisel mark
 
 ## Nell
 
-**Room:** Quarters. **Condition:** Hidden inside a folded corridor.
+**Room:** Quarters. **Condition:** Trapped behind a sealed door.
 
-**Release:** Unfold the chalk route.
+**Release:** Open the chalk doorway.
 
-The chalk route behind the quarters curtain folds back on itself. Rowan recognises Nell’s mark for an emergency shelter and rubs out the final turn.
-Nell steps through with a guide’s satchel. She asks how many people are still on the route. Rowan has to tell her the evacuation ended thirty years ago.
-She opens the satchel on the floor. The shelter list, the bread wrapped for travellers, even the chalk dust are as she left them.
-“Did they get there?” she asks. Nobody can answer yet.
-She had folded the passage behind the escaping families to keep the patrol from following. The severance closed it around her. Now she has a list of addresses in a world that has had thirty years to change.
+At the back of the abandoned holding cells, a doorway has been drawn in chalk. Rowan rubs out the line across its handle. A latch appears beneath their hand.
+Nell steps through with a guide’s satchel. “Is anyone else still in here?”
+She had led the last families out, given them directions to the shelters and come back to search the rooms. When she turned to leave, the door was gone.
+Rowan tells her that was thirty years ago. Nell looks at the bread in her satchel. It is still soft.
+She takes out a list of names and addresses. “These are the places I sent them. Can we ask?”
 
 ## Ivo
 
@@ -32,7 +32,7 @@ She had folded the passage behind the escaping families to keep the patrol from 
 
 **Release:** Close the open line in Ada’s diagram.
 
-Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
+On the lower bell-tower landing, Ivo hangs above the notebook, one hand outstretched toward the finishing stroke of his rune. The spell keeps a fallen shelf from crushing him, but it has never released its caster.
 Rowan follows Ada’s margin diagram and closes the line. Ivo lands badly, still trying to save the book. Mara helps him up.
 “Is the joining over?” he asks. Then, seeing Rowan’s face: “What happened?”
 His last memory is Ada sending him to fetch the test records. Thirty years have passed since then.
@@ -56,7 +56,7 @@ Rufus wears the old guild’s watch insignia. Their drainage ward stopped the di
 
 ## Lark
 
-**Room:** River infirmary. **Condition:** Held in a reversed-water ward.
+**Room:** Lantern dock. **Condition:** Held in a reversed-water ward.
 
 **Release:** Turn the disconnected hand valve.
 
@@ -80,7 +80,7 @@ Ves wears the old guild’s spellkeeper insignia. The old guild’s fire crew se
 
 ## Dara
 
-**Room:** Firewatch hall. **Condition:** Caught in a cooling circle.
+**Room:** Kiln archive. **Condition:** Caught in a cooling circle.
 
 **Release:** Break the chalk circuit with its wooden switch.
 
@@ -104,7 +104,7 @@ Fenn wears the old guild’s pathfinder insignia. The coast watch tried to close
 
 ## Mira
 
-**Room:** Salt chapel. **Condition:** Caught behind a reflected doorway.
+**Room:** Beacon gallery. **Condition:** Caught behind a reflected doorway.
 
 **Release:** Cover the spare mirror with its cloth.
 
@@ -128,7 +128,7 @@ Bram wears the old guild’s watch insignia. The guild’s growers used a living
 
 ## Sorrel
 
-**Room:** Seed vault. **Condition:** Sleeping inside a root cradle.
+**Room:** Green council room. **Condition:** Sleeping inside a root cradle.
 
 **Release:** Open the labelled pruning latch.
 
@@ -152,7 +152,7 @@ Tor wears the old guild’s watch insignia. The weather crew stopped the collaps
 
 ## Eda
 
-**Room:** Snow observatory. **Condition:** Preserved in a snow ward.
+**Room:** Bell hospital. **Condition:** Preserved in a snow ward.
 
 **Release:** Turn the thaw lever shown on the wall.
 
@@ -176,7 +176,7 @@ Joss wears the old guild’s watch insignia. The guild’s court staff were held
 
 ## Pip
 
-**Room:** Automaton stable. **Condition:** Held by the emergency clock.
+**Room:** Timekeeper archive. **Condition:** Held by the emergency clock.
 
 **Release:** Release the local pendulum brake.
 
@@ -200,7 +200,7 @@ Maro wears the old guild’s watch insignia. The guild’s divers sealed the bor
 
 ## Sal
 
-**Room:** Coral archive. **Condition:** Suspended inside a pressure seal.
+**Room:** Deep treasury. **Condition:** Suspended inside a pressure seal.
 
 **Release:** Open the isolated pressure release.
 
@@ -224,7 +224,7 @@ Wynn wears the old guild’s watch insignia. The roadkeepers brought this room i
 
 ## Tavi
 
-**Room:** Roadkeepers hall. **Condition:** Lost inside a signal echo.
+**Room:** Dawn terrace. **Condition:** Lost inside a signal echo.
 
 **Release:** Disconnect the local echo receiver.
 
@@ -232,11 +232,11 @@ Tavi wears the old guild’s pathfinder insignia. The roadkeepers brought this r
 
 ## Oren
 
-**Room:** Dry cellar landing. **Condition:** Petrified.
+**Room:** The crypt of erased names. **Condition:** Petrified.
 
 **Release:** Strength 10 · remove the casting ring.
 
-The ceiling rests on new timber now. The stone figure beneath it is still bent under a beam that no longer needs him.
+Beyond the restored memorial lantern, the burial stair rests on new timber now. The stone figure beneath it is still bent under a beam that no longer needs him.
 His casting ring is jammed shut. When it is forced open, stone flakes from his shoulders. He drops to his knees and immediately reaches for the support.
 “Did they get down?” he asks.
 Rowan tells him the stair was cleared. They do not know what happened to every passenger afterward.
@@ -246,7 +246,7 @@ Oren listens while Mara explains the thirty years. His tool belt is intact. He t
 
 **Room:** Bell tower crown. **Condition:** Frozen in blue ice.
 
-**Release:** Magical literacy · disable the repeating rune.
+**Release:** Bell ward release diagram · Magical literacy.
 
 The thaw takes time. Ice drains from Maelin’s sleeves while she remains braced against the bell rope.
 Her first movement is to catch the clapper. Nobody tells her to let go yet.

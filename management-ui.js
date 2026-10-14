@@ -1,3 +1,6 @@
+import { renderHouseholdMilestones } from './expedition-ui.js';
+import { renderUpgrades } from './upgrade-ui.js';
+import { craftPlan, queueCommitments } from './production-planning.js';
 import * as D from './domain.js';
 import { portraits } from './portraits.js';
 import { furnitureIcon } from './guild-art.js';
@@ -127,7 +130,7 @@ export function renderRoomDashboard(s, helpers, { roomFilter = 'all', roomSearch
     html += `<details class="quiet-details"><summary>Last day’s production · Day ${s.guild.dailySummary.day}</summary><ul>${s.guild.dailySummary.lines.map((l) => '<li>' + esc(l) + '</li>').join('')}</ul></details>`;
   html +=
     '<details class="quiet-details"><summary>Managing residents</summary><p>Leave a companion in a room and switch characters to assign them, or choose their worker slot in the room inspector. Missions and injuries pause home work.</p></details>';
-  return html;
+  return html + renderHouseholdMilestones(s, helpers);
 }
 
 export function renderRoomInspector(s, helpers, id, facilityDetails = '') {
@@ -142,9 +145,16 @@ export function renderRoomInspector(s, helpers, id, facilityDetails = '') {
   if (p.target)
     html += `<div class="production-timing"><progress value="${p.progress}" max="${p.target}" aria-label="Production progress"></progress><span>${p.nextDays ? 'Ready in ' + p.nextDays + (p.nextDays === 1 ? ' day' : ' days') : 'Work paused'}${p.nextDays ? ' · Day ' + (s.day + p.nextDays) : ''}</span></div>`;
   const forecast = D.roomForecast(s, id);
+  const context =
+    s.outside?.research?.room === id
+      ? D.researchForecast(s)
+      : p.core
+        ? D.workBreakdown(s, p.core, p.recipe)
+        : forecast;
+  html += `<p class="crew-effects">${context.relationship ? 'Relationships: ' + (context.relationship > 0 ? '+' : '') + context.relationship + ' work. ' : ''}${context.supervision ? 'Necromancer supervision: +' + context.supervision + ' work for up to two zombies.' : ''}</p>`;
   if (!p.core && forecast.quality > 1)
     html += `<p class="production-milestone">${forecast.yieldBonus ? '✓ +' + forecast.yieldBonus + ' output per batch earned. ' : ''}Richer workplace · effective ${p.stat.toUpperCase()} 20 adds +1 output per batch${forecast.quality >= 3 ? '; 30 adds another +1' : ''}. Current best worker: ${forecast.bestStat}.</p>`;
-  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Unassigned Mara provides 1 caretaker work per day. Assigning a slot directs all her work to that room. ' : ''}Each fit worker adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, 20 a third, 30 a fourth and 40 a fifth. Away and injured residents keep their slots and resume on return. Mara pauses production to defend during attacks.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
+  html += `<div class="section-heading"><h4>Room crew</h4><span>${p.fit} working / ${p.capacity} ${p.capacity === 1 ? 'slot' : 'slots'} · ${p.stat.toUpperCase()}</span></div>${renderCrew(s, id, helpers)}<details class="quiet-details"><summary>How production works</summary><p>${p.core ? 'Rooms need fit assigned workers. Mara uses a normal worker slot. Empty rooms pause and keep their progress. ' : ''}Each fit worker adds 1 work; effective ${p.stat.toUpperCase()} 10 adds another, 20 a third, 30 a fourth and 40 a fifth. Away and injured residents keep their slots and resume on return. Mara pauses production to defend during attacks.</p><p>${p.work} current work per day${p.target ? ' · ' + p.progress + '/' + p.target + ' work completed' : ''}. Outputs collect automatically on game days. At most one batch completes per day.</p>${Object.entries(
     D.activities[p.core || r.activity].inputs || {},
   )
     .map(
@@ -156,6 +166,7 @@ export function renderRoomInspector(s, helpers, id, facilityDetails = '') {
         '.</p>',
     )
     .join('')}</details>`;
+  if (id === 'tower') html += btn('Creature research', 'fieldPage:bestiary');
   if (p.core === 'workshop')
     html += `<div class="room-primary-actions">${btn('Choose a recipe', 'roomPage:recipes')}${p.recipe ? btn('Manage project & orders', 'facilitySettings:workshop') : ''}</div>`;
   else if (p.core) html += renderFacilityControls(s, helpers, p.core);
@@ -193,13 +204,19 @@ function renderFacilityControls(s, { esc, btn }, id) {
 
 export function recipeCatalogue(s) {
   return D.recipes.filter(
-    (r) => r.facility === 'workshop' && !r.sourceEquipment && !r.reclaim && !r.maraTier,
+    (r) =>
+      r.facility === 'workshop' &&
+      !r.sourceEquipment &&
+      !r.sourceFurniture &&
+      !r.reclaim &&
+      !r.maraTier &&
+      (s.household?.opening !== 'ready' || !r.sourceFlag || D.recipeKnown(s, r)),
   );
 }
 export function renderCrafting(
   s,
   helpers,
-  { craftCategory = 'all', craftRecipe = null, craftSource = null } = {},
+  { craftCategory = 'all', craftRecipe = null, craftSource = null, craftQuantity = 1 } = {},
 ) {
   const { esc, btn } = helpers,
     all = recipeCatalogue(s),
@@ -209,17 +226,26 @@ export function renderCrafting(
         (!craftSource || r.materials?.[craftSource] || r[craftSource] > 0),
     );
   const known = filtered.filter((r) => D.recipeKnown(s, r)),
-    selected = known.find((r) => r.id === craftRecipe) || known[0];
+    selected =
+      known.find((r) => r.id === craftRecipe) ||
+      known.find((r) => !D.resourceShortfall(s, D.projectRecipe(s, 'workshop', r.id)).length) ||
+      known[0];
   const tiles = recipeTiles(known),
     unread = s.guild.patterns.filter((id) => !s.guild.readPatterns.includes(id)).length;
   let html = `<div class="management-heading"><div><h3>Workshop</h3><p>${recipeTiles(all.filter((r) => D.recipeKnown(s, r))).length} known recipes · ${unread} new ${unread === 1 ? 'pattern' : 'patterns'}</p></div>${btn('Room crew', 'workplace:service')}</div><div class="craft-filters" role="group" aria-label="Recipe categories">${Object.entries(
     categoryNames,
   )
+    .filter(
+      ([id]) =>
+        s.household?.opening !== 'ready' || id === 'all' || all.some((r) => group(r) === id),
+    )
     .map(
       ([id, label]) =>
         `<button data-action="craftCategory:${id}" aria-pressed="${craftCategory === id}">${label}</button>`,
     )
     .join('')}</div>`;
+  const mastery = D.craftingProgress(s);
+  html += `<section class="craft-mastery" aria-label="Workshop progression"><div>${resourceIcon('craft', 'Workshop rank')}<strong>${esc(mastery.name)}</strong><span>${mastery.count}${mastery.next ? ' / ' + mastery.next.products : ''} designs completed</span></div><progress value="${mastery.count}" max="${mastery.next?.products || mastery.count || 1}" aria-label="Workshop mastery"></progress><p>${mastery.next ? 'Complete ' + mastery.remaining + ' different ' + (mastery.remaining === 1 ? 'design' : 'designs') + ' to reach ' + mastery.next.name + ': +' + mastery.next.bonus + ' work/day while staffed.' : 'Guildwright reached: +2 work/day while staffed.'} Repeating a design produces more items; new designs grow guild experience.</p></section>`;
   if (craftSource)
     html += `<div class="filter-banner">Uses ${esc(D.resources.find((r) => r.id === craftSource).name)} ${btn('Show all recipes', 'craftSource:all')}</div>`;
   if (!D.facilitySite(s, 'workshop'))
@@ -227,19 +253,15 @@ export function renderCrafting(
       '<p class="production-paused">Restore the service room to craft. Your known recipes remain here.</p>';
   const active = s.guild.facilities.workshop.project;
   if (active)
-    html += `<div class="active-craft"><strong>Building ${esc(recipeName(D.recipes.find((r) => r.id === active.recipe)))}</strong><progress value="${active.progress}" max="${active.work}" aria-label="Current craft progress"></progress><span>${active.progress}/${active.work} work · ${D.projectForecast(s, 'workshop').days || '—'} days left</span>${btn('Cancel & refund', 'cancelProject:workshop')}</div>`;
+    html += `<div class="active-craft"><strong>${active.source ? 'Upgrading' : 'Building'} ${esc(recipeName(D.recipes.find((r) => r.id === active.recipe)))}</strong><progress value="${active.progress}" max="${active.work}" aria-label="Current craft progress"></progress><span>${active.progress}/${active.work} work · ${D.projectForecast(s, 'workshop').days || '—'} days left</span>${btn('Cancel & refund', 'cancelProject:workshop')}</div>`;
   if (selected) {
-    const recipe = D.projectRecipe(s, 'workshop', selected.id),
-      missing = D.resourceShortfall(s, recipe),
-      days = Math.ceil(recipe.work / (D.dailyWork(s, 'workshop', recipe) || 1)),
+    const plan = craftPlan(s, selected.id, selected.routeTool ? 1 : craftQuantity),
+      recipe = plan.recipe,
+      missing = plan.missing.map((m) => ({ resource: m.id, amount: m.missing })),
+      days = plan.days,
       item = D.equipment.find((e) => e.id === recipe.item),
       furniture = D.furnishings.find((f) => f.id === recipe.furniture);
-    const inputs = {
-      gold: recipe.gold,
-      salvage: recipe.salvage,
-      supplies: recipe.supplies,
-      ...recipe.materials,
-    };
+    const inputs = plan.cost;
     const variants = known.filter((r) =>
       recipe.item
         ? r.item === recipe.item
@@ -247,7 +269,7 @@ export function renderCrafting(
           ? r.furniture === recipe.furniture
           : r.id === recipe.id,
     );
-    html += `<section class="recipe-detail" aria-label="Selected recipe"><div class="recipe-detail-heading">${iconForRecipe(recipe, esc)}<div><span class="eyebrow">${recipe.pattern ? 'DISCOVERED PATTERN' : recipe.materials ? 'MATERIAL RECIPE' : 'SCRAP RECIPE'}</span><h3>${esc(recipeName(recipe))}</h3></div></div>${variants.length > 1 ? '<div class="craft-filters" role="group" aria-label="Recipe inputs">' + variants.map((r) => `<button data-action="craftRecipe:${r.id}" aria-pressed="${r.id === recipe.id}">Use ${r.materials ? 'materials' : 'scrap'}</button>`).join('') + '</div>' : ''}<p>${esc(
+    html += `<section class="recipe-detail" aria-label="Selected recipe"><div class="recipe-detail-heading">${iconForRecipe(recipe, esc)}<div><span class="eyebrow">${recipe.pattern ? 'DISCOVERED PATTERN' : Object.keys(recipe.materials).length ? 'MATERIAL RECIPE' : 'SCRAP RECIPE'}</span><h3>${esc(recipeName(recipe))}</h3></div></div>${variants.length > 1 ? '<div class="craft-filters" role="group" aria-label="Recipe inputs">' + variants.map((r) => `<button data-action="craftRecipe:${r.id}" aria-pressed="${r.id === recipe.id}">Use ${r.materials ? 'materials' : 'scrap'}</button>`).join('') + '</div>' : ''}<p>${esc(
       recipe.purpose ||
         item?.desc ||
         furniture?.effect ||
@@ -273,7 +295,22 @@ export function renderCrafting(
       )
       .join(
         '',
-      )}</div><div class="recipe-build-actions"><span>${days} ${days === 1 ? 'day' : 'days'} with current staff</span>${btn(recipe.routeTool && s.guild.mechanisms.includes(recipe.routeTool) ? 'Mechanism owned' : active && recipe.routeTool ? 'Finish current project first' : active ? 'Add to build queue' : 'Craft ' + recipeName(recipe), active ? 'queueOrder:' + recipe.id : 'project:workshop:' + recipe.id, !D.facilityAvailable(s, 'workshop') || (!active && !!missing.length) || (!!recipe.routeTool && (!!active || s.guild.mechanisms.includes(recipe.routeTool))))}</div>${missing.length ? '<p class="stats">Need ' + missing.map((m) => m.amount + ' ' + esc(D.resources.find((r) => r.id === m.resource)?.name || m.resource)).join(' + ') + '. Planned orders wait for materials.</p>' : ''}${recipe.pattern ? '<p class="stats">' + esc(recipe.source) + '.</p>' : ''}</section>`;
+      )}</div><div class="recipe-build-actions">${recipe.routeTool ? '' : '<label class="craft-quantity">Quantity<input id="craft-quantity" aria-label="Craft quantity" type="number" min="1" max="99" step="1" value="' + craftQuantity + '"></label>'}<span>${days === null ? esc(plan.paused || 'Assign workshop staff') : days + ' ' + (days === 1 ? 'day' : 'days') + ' of work with current staff'}</span>${recipe.routeTool ? btn(s.guild.mechanisms.includes(recipe.routeTool) ? 'Mechanism owned' : 'Craft mechanism', 'project:workshop:' + recipe.id, !D.facilityAvailable(s, 'workshop') || !!active || !!missing.length || s.guild.mechanisms.includes(recipe.routeTool)) : btn('Plan ' + plan.quantity + ' ' + recipeName(recipe), 'craftOrder:' + recipe.id, !D.facilitySite(s, 'workshop'))}</div>${missing.length ? '<p class="stats">Need ' + missing.map((m) => m.amount + ' ' + esc(D.resources.find((r) => r.id === m.resource)?.name || m.resource)).join(' + ') + '. Planned orders wait for materials.</p>' : ''}${recipe.pattern ? '<p class="stats">' + esc(recipe.source) + '.</p>' : ''}</section>`;
+    html += `<section class="craft-plan" aria-label="Materials for this plan"><h4>Material plan</h4><p class="stats">Orders pay when each item starts. Current work is already paid; planned orders leave stock available for other uses.</p><div class="material-plan-grid">${plan.materials
+      .map((m) => {
+        const resource = D.resources.find((r) => r.id === m.id);
+        return `<div class="material-plan-row ${m.plannedMissing ? 'needs-material' : ''}"><button data-action="material:${m.id}" title="${esc(resource.name)}">${resourceIcon(m.id, esc(resource.name))}</button><div><strong>${esc(resource.name)}</strong><span>${m.owned} owned · ${m.planned} in queue · ${m.amount} for this order</span><small>${m.plannedMissing ? 'Need ' + m.plannedMissing + ' more after earlier orders' : 'Enough for queue and this order'}</small>${m.sources.map((source) => `<button class="plan-source" data-action="workplace:${source.room}">${esc(source.name)} · ${esc(source.paused || '+' + source.amount + ' / ' + source.days + 'd')}</button>`).join('')}${m.recipes
+          .filter((id) => id !== recipe.id)
+          .map((id) =>
+            btn('Craft ' + recipeName(D.recipes.find((r) => r.id === id)), 'recipeOpen:' + id),
+          )
+          .join(
+            '',
+          )}${m.plannedMissing && !m.sources.length && !m.recipes.length ? '<small>Use contracts, restore a source, or choose another input variant.</small>' : ''}</div></div>`;
+      })
+      .join(
+        '',
+      )}</div>${plan.newDesign ? '<p class="recipe-benefit">First completion of this design advances workshop mastery.</p>' : ''}</section>`;
   } else html += '<div class="empty-state"><p>No known recipes match this filter.</p></div>';
   html +=
     '<div class="recipe-list" aria-label="Known recipes">' +
@@ -288,8 +325,8 @@ export function renderCrafting(
   if (unknown.length)
     html += `<details class="quiet-details"><summary>Patterns to discover · ${unknown.length}</summary>${unknown.map((r) => `<div class="locked-recipe">${iconForRecipe(r, esc)}<div><strong>${esc(recipeName(r))}</strong><p>${esc(r.source || 'Complete the ' + (r.blueprint === 'mill' ? 'mill road' : r.blueprint === 'drains' ? 'lower drains' : 'tower approaches') + ' survey')}.</p></div></div>`).join('')}</details>`;
   const queue = D.workshopQueueForecast(s);
-  html += `<details class="quiet-details"><summary>Build queue · ${queue.reduce((sum, o) => sum + o.remaining, 0)} items</summary>${queue.map((o) => `<div class="queue-line"><span>${esc(recipeName(D.recipes.find((r) => r.id === o.recipe)))} ×${o.remaining}${o.days === null ? ' · waiting for materials' : ' · ' + o.days + ' days'}</span>${btn('↑', 'moveOrder:' + o.uid + ':up')}${btn('↓', 'moveOrder:' + o.uid + ':down')}${btn('Remove', 'removeOrder:' + o.uid)}</div>`).join('') || '<p>The workshop is ready for an order.</p>'}</details>${btn('Refit & reclaim stored items', 'facilitySettings:workshop')}`;
-  return html;
+  html += `<section class="queue-board" aria-label="Workshop build plan"><div class="section-heading"><h4>Build plan · ${queue.reduce((sum, o) => sum + o.remaining, 0)} items</h4>${btn('Room crew', 'workplace:service')}</div>${queue.map((o, i) => `<div class="queue-line"><span><strong>${i + 1}. ${esc(recipeName(D.recipes.find((r) => r.id === o.recipe)))} ×${o.remaining}</strong><small>${o.days === null ? 'Waiting: ' + (o.shortfall.length ? o.shortfall.map((m) => m.amount + ' ' + D.resources.find((r) => r.id === m.resource).name.toLowerCase()).join(' + ') : 'finish active work or restore staffing') : 'Complete on day ' + o.completionDay + ' with current crew'}</small></span>${btn('↑', 'moveOrder:' + o.uid + ':up', i === 0)}${btn('↓', 'moveOrder:' + o.uid + ':down', i === queue.length - 1)}${btn('Remove', 'removeOrder:' + o.uid)}</div>`).join('') || '<p class="stats">Choose a design and quantity. Assign a crew, then advance a day to begin.</p>'}</section>${btn('Refit & reclaim stored items', 'facilitySettings:workshop')}`;
+  return html + renderUpgrades(s, helpers);
 }
 
 export function renderStores(s, helpers, { materialId = null, saleQuantity = 1 } = {}) {
@@ -328,10 +365,11 @@ export function renderStores(s, helpers, { materialId = null, saleQuantity = 1 }
   }`;
   if (selected.id === 'components' || selected.id === 'aether' || selected.id === 'ore')
     html += btn('Mara upgrades', 'roomPage:mara');
+  const planned = queueCommitments(s)[selected.id] || 0;
+  if (planned)
+    html += `<p class="production-paused">${planned} planned for workshop orders · ${Math.max(0, stock - planned)} left after the queue. Plans do not reserve stock.</p>`;
   const sources = D.houseRooms.filter(
-    (r) =>
-      D.roomUnlocked(s, r) &&
-      D.activities[D.coreFacility(s, r.id) || r.activity].output[selected.id],
+    (r) => D.roomUnlocked(s, r) && D.roomForecast(s, r.id).role.output[selected.id],
   );
   html += `<h4>Where it comes from</h4>${
     sources.length

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 test('only Bryn is available in the opening rooms; repairs do not reveal a batch of companions', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   const available = () =>
     D.residentDiscoveries.filter((d) => D.discoveryAvailable(s, d)).map((d) => d.id);
   assert.deepEqual(available(), ['bryn']);
@@ -24,7 +24,7 @@ test('only Bryn is available in the opening rooms; repairs do not reveal a batch
 });
 
 test('regional companions are spaced across three expedition milestones and distinct rooms', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   for (const region of ['fen', 'ash', 'glass', 'root', 'frost', 'clock', 'deep', 'star']) {
     const discoveries = D.residentDiscoveries.filter((d) =>
       d.requires.some((f) => f.startsWith(region + 'Room')),
@@ -42,7 +42,7 @@ test('regional companions are spaced across three expedition milestones and dist
 });
 
 test('advanced sleepers require evidence from separate dungeon branches', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   for (const flag of ['stairs', 'towerCrown', 'labyrinthHeart']) s.flags[flag] = true;
   for (const id of ['oren', 'ysra']) assert.throws(() => D.discoverSleeper(s, id));
   for (const [id, flag] of [
@@ -56,7 +56,7 @@ test('advanced sleepers require evidence from separate dungeon branches', () => 
 });
 
 test('control destinations preserve distinct coordinates and floors through saves', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recoverResident(s, 'bryn', { x: 240, floor: 380 });
   D.rememberPosition(s, 'rowan', { x: 600, floor: 380 });
   D.rememberPosition(s, 'bryn', { x: 730, floor: 555 });
@@ -71,7 +71,7 @@ test('control destinations preserve distinct coordinates and floors through save
   assert.throws(() => D.load(JSON.stringify(bad)));
 });
 test('regional residents require their returned guild rooms rather than outside recruitment', () => {
-  const s = D.initial(),
+  const s = D.initial({ opening: 'legacy' }),
     d = D.residentDiscoveries.find((d) => d.id === 'tamsin');
   s.flags.fenStep2 = true;
   assert.throws(() => D.recoverResident(s, 'tamsin', { x: d.x, floor: 380 }));

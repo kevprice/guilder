@@ -40,7 +40,7 @@ test('current story, discoveries, mechanics and interface use current player-fac
 });
 
 test('Nell’s old return scene is migrated in every stored surface and stays clean after resaving', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.searched_cells = true;
   D.recoverResident(s, 'nell', { x: 1850, floor: 1770 });
   const old =
@@ -87,7 +87,7 @@ test('both reference helpers follow the current cast and XP model', async () => 
 });
 
 test('the character page renders one person and keeps old Nell prose out of biographies and memories', () => {
-  const state = D.initial();
+  const state = D.initial({ opening: 'legacy' });
   D.recoverResident(state, 'bryn', { x: 240, floor: 380 });
   state.flags.searched_cells = true;
   D.recoverResident(state, 'nell', { x: 1850, floor: 1770 });
@@ -110,7 +110,7 @@ test('the character page renders one person and keeps old Nell prose out of biog
 });
 
 test('character sheets separate descriptive biography from actions and expose actual attributes', () => {
-  const state = D.initial();
+  const state = D.initial({ opening: 'legacy' });
   const html = renderCharacterPanel(state, 'rowan', {
     esc: playerCopy,
     paragraphs: (text) => `<p>${playerCopy(text)}</p>`,

@@ -15,7 +15,13 @@ export function planResidentWalk(s, c, origin, target) {
     add(position(350, 380), position(350, 140));
     add(position(350, 140), position(350, -100));
   }
-  if (s.flags.stairs && (c.id !== 'rowan' || s.flags.anchor || s.flags.cellarDrained))
+  if (
+    s.flags.stairs &&
+    (c.id !== 'rowan' ||
+      s.household?.opening === 'ready' ||
+      s.flags.anchor ||
+      s.flags.cellarDrained)
+  )
     add(position(505, 380), position(535, 510));
   if (s.flags.cellarDrained || c.skills.includes('water'))
     add(position(550, 510), position(570, 555));
@@ -25,6 +31,8 @@ export function planResidentWalk(s, c, origin, target) {
     if (c.skills.some((k) => ['tracking', 'echoSight', 'threadwalk'].includes(k)))
       add(position(530, 790), position(530, 1020), 'stairs', false);
   }
+  if (s.household?.opening === 'ready' && s.household.rooms.includes('furnace'))
+    add(position(890, 140), position(350, 1250), 'door');
   if (s.flags.dragonFound) add(position(875, 1020), position(350, 1250), 'door');
   for (const p of passages) {
     const destination = chambers.find((r) => r.id === p.to);

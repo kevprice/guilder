@@ -1,3 +1,4 @@
+import { renderRelationships } from './expedition-ui.js';
 import * as D from './domain.js';
 import { portraits } from './portraits.js';
 import { abilityNames, effectiveStat } from './contracts.js';
@@ -7,17 +8,24 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
   const person = people.find((person) => person.id === selectedId) || people[0];
   let html = `<div class="sheet-picker"><label for="character-page">Character</label><select id="character-page">${people.map((entry) => `<option value="${entry.id}" ${entry.id === person.id ? 'selected' : ''}>${esc(entry.name)}</option>`).join('')}</select></div>`;
   if (person.id === 'rowan') {
-    const description = state.flags.free
-      ? 'The house is a home Rowan can leave and return to.'
-      : state.flags.gateOpen
-        ? 'The binding is gone. Rowan can walk beyond the gate.'
-        : 'Rowan survived the collapse through Halden’s binding. The spell keeps them alive and ties them to the house. Its scattered records hold the history of that night.';
+    const description =
+      state.household?.opening === 'ready'
+        ? 'Rowan organises the household, works alongside its residents, and keeps their shared stores and memories.'
+        : state.flags.free
+          ? 'The house is a home Rowan can leave and return to.'
+          : state.flags.gateOpen
+            ? 'The binding is gone. Rowan can walk beyond the gate.'
+            : 'Rowan survived the collapse through Halden’s binding. The spell keeps them alive and ties them to the house. Its scattered records hold the history of that night.';
     return (
       html +
       sheet(
         person,
         state,
-        state.flags.free || state.flags.gateOpen ? 'Unbound survivor' : 'Bound survivor',
+        state.household?.opening === 'ready'
+          ? 'Household organiser'
+          : state.flags.free || state.flags.gateOpen
+            ? 'Unbound survivor'
+            : 'Bound survivor',
         description,
         'At home',
         btn('Control Rowan', 'select:rowan'),
@@ -26,17 +34,20 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
       )
     );
   }
+  const outside = D.residentExpedition(state, person.id);
   const mission = D.activeMissions(state).find((mission) => mission.party.includes(person.id));
   const condition =
     person.status === 'departed'
       ? 'Journey completed'
       : person.status === 'dead'
         ? 'Fallen'
-        : mission
-          ? D.contracts.find((contract) => contract.id === mission.id).name
-          : person.status === 'injured'
-            ? `Recovering · ${person.recovery} days`
-            : 'At home';
+        : outside
+          ? D.operationView(state, outside.uid).name + ' · ' + outside.phase
+          : mission
+            ? D.contracts.find((contract) => contract.id === mission.id).name
+            : person.status === 'injured'
+              ? `Recovering · ${person.recovery} days`
+              : 'At home';
   let body = '';
   if (person.status === 'home')
     body += `<div class="row">${btn('Control ' + person.name, 'select:' + person.id)}${D.storeAvailable(state) ? btn('Visit store room', 'visitStore:' + person.id) : ''}</div>`;
@@ -47,7 +58,7 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
     D.journeys[person.id]?.kind !== 'spirit'
   )
     body += `<p>This companion left before the expanded story was complete.</p>${btn('Invite ' + person.name + ' back', 'recallCompanion:' + person.id)}`;
-  if (!['dead', 'departed'].includes(person.status)) {
+  if (state.household?.opening !== 'ready' && !['dead', 'departed'].includes(person.status)) {
     const completed = [1, 2, 3].filter(
       (stage) => state.flags['companionStage' + stage + '_' + person.id],
     ).length;
@@ -57,8 +68,11 @@ export function renderCharacterPanel(state, selectedId, { esc, btn, paragraphs }
       if (reason) body += `<p>${esc(reason)}</p>`;
     }
   }
-  if (person.status === 'injured') body += btn('Arrange treatment · 15 gold', 'treat:' + person.id);
-  for (const node of D.availableChoices(state, person.id))
+  if (person.status === 'injured' && !person.undead)
+    body += btn('Arrange treatment · 15 gold', 'treat:' + person.id);
+  for (const node of state.household?.opening === 'ready'
+    ? []
+    : D.availableChoices(state, person.id))
     body += `<div class="row">${btn(node.title, 'talk:' + node.id)}</div>`;
   const memories = person.memories.filter((memory) => memory.text);
   const history = memories.length
@@ -123,9 +137,10 @@ function sheet(
   const abilityList = abilities.length
     ? `<ul class="sheet-abilities">${abilities.map((ability) => `<li><strong>${esc(ability.name)}</strong><p>${esc(ability.desc)}</p></li>`).join('')}</ul>`
     : '<p class="sheet-muted">Practical experience and an unfinished education.</p>';
-  const progression = rowan
-    ? ''
-    : `<div class="sheet-progress"><span>Level ${person.level}${person.level < 20 ? ` · ${person.xp} / ${D.xpRequired(person.level)} XP` : ' · Mastery'}</span>${person.level < 20 ? `<progress aria-label="Experience towards next level" value="${Math.min(person.xp, D.xpRequired(person.level))}" max="${D.xpRequired(person.level)}"></progress>` : ''}</div>`;
+  const progression =
+    rowan || person.echo
+      ? ''
+      : `<div class="sheet-progress"><span>${person.echo ? 'Echo of level ' : 'Level '}${person.level}${person.level < 20 ? ` · ${person.xp} / ${D.xpRequired(person.level)} XP` : ' · Mastery'}</span>${person.level < 20 ? `<progress aria-label="Experience towards next level" value="${Math.min(person.xp, D.xpRequired(person.level))}" max="${D.xpRequired(person.level)}"></progress>` : ''}</div>`;
   return `<article class="character-sheet" aria-label="${esc(person.name)} character sheet">
     <header class="sheet-identity"><img src="${portraits[person.id]}" alt="${esc(person.name)} portrait"><div><p class="sheet-eyebrow">The guild register</p><h3>${esc(person.name)}</h3><p class="sheet-class">${esc(className)}</p>${progression}<p class="sheet-condition">${esc(condition)} · ${rowan ? (state.rowanRecovery > 0 ? 'Recovering' : 'Fit') : esc(D.injuryNames[D.injuryLevel(person)])}</p></div></header>
     <div class="sheet-attributes">${attributes.map(([key, name]) => `<div class="sheet-attribute"><span>${name}</span><strong>${person[key]}</strong>${!rowan && effectiveStat(person, key) !== person[key] ? `<small>${effectiveStat(person, key)} on contracts</small>` : ''}</div>`).join('')}</div>
@@ -149,6 +164,6 @@ function sheet(
           }</p>`;
         })
         .join(''),
-    )}${rowan ? '' : section('Relationship', `<p>Trust <strong>${person.bond}</strong></p>`)}</div><div>${section('Biography', paragraphs(biography))}${history}</div></div>
+    )}${section('Relationships', (rowan ? '' : `<p>Trust with Rowan <strong>${person.bond}</strong></p>`) + renderRelationships(state, person.id, { esc }))}</div><div>${section('Biography', paragraphs(biography))}${history}</div></div>
     ${actions ? `<footer class="sheet-actions" aria-label="Character actions">${actions}</footer>` : ''}</article>`;
 }

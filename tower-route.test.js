@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { chamberTreasureX, chamberObjective, legacyPassagePositions } from './sprawl.js';
 import { towerObjective } from './exploration.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'ivo');
   s.selected = 'ivo';
   s.flags.tower = true;

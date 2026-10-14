@@ -1,94 +1,18 @@
+import { groundBoundary } from './house-access.js';
+import { furnitureEffects } from './furnishing-upgrades.js';
+import { tradeResources } from './resource-ledger.js';
+import { coworkerMemory } from './household-social.js';
+import { crewContribution } from './workforce.js';
+import { workerContribution } from './workforce.js';
+export { workerContribution } from './workforce.js';
 import { rooms as storyRooms } from './narrative.js';
 import { expansionRooms } from './expansion.js';
 import { chambers, trapDisarmed } from './sprawl.js';
-import { equipmentBonus } from './equipment.js';
-import { classWorkFactor, talentValue } from './classes.js';
 import { guildWorker } from './guild-workers.js';
 
-export const materials = [
-  { id: 'timber', name: 'Timber', symbol: '▰' },
-  { id: 'ore', name: 'Ore', symbol: '◆' },
-  { id: 'herbs', name: 'Herbs', symbol: '❧' },
-  { id: 'cloth', name: 'Cloth', symbol: '▧' },
-  { id: 'aether', name: 'Aether', symbol: '✧' },
-  { id: 'components', name: 'Brass components', symbol: '⚙' },
-];
-export const activities = {
-  timber: { name: 'Reclaim timber', stat: 'str', work: 4, output: { timber: 2 }, animation: 'saw' },
-  ore: {
-    name: 'Sort and smelt ore',
-    stat: 'str',
-    work: 4,
-    output: { ore: 2 },
-    animation: 'hammer',
-  },
-  herbs: {
-    name: 'Tend medicinal herbs',
-    stat: 'int',
-    work: 4,
-    output: { herbs: 2 },
-    animation: 'garden',
-  },
-  cloth: {
-    name: 'Mend and weave cloth',
-    stat: 'agi',
-    work: 4,
-    output: { cloth: 2 },
-    animation: 'sew',
-  },
-  aether: {
-    name: 'Distil aether',
-    stat: 'int',
-    work: 6,
-    output: { aether: 1 },
-    animation: 'study',
-  },
-  salvage: {
-    name: 'Recover usable fittings',
-    stat: 'agi',
-    work: 4,
-    output: { salvage: 2 },
-    animation: 'sort',
-  },
-  supplies: {
-    name: 'Pack expedition supplies',
-    stat: 'end',
-    work: 4,
-    inputs: { herbs: 1 },
-    output: { supplies: 2 },
-    animation: 'pack',
-  },
-  accounts: {
-    name: 'Take local guild commissions',
-    stat: 'int',
-    work: 4,
-    output: { gold: 6 },
-    animation: 'study',
-  },
-  watch: { name: 'Keep the home watch', stat: 'end', work: 0, output: {}, animation: 'watch' },
-  workshop: {
-    name: 'Craft equipment and furnishings',
-    stat: 'str',
-    work: 0,
-    output: {},
-    animation: 'hammer',
-  },
-  garden: {
-    name: 'Grow expedition supplies',
-    stat: 'int',
-    work: 4,
-    output: { supplies: 2 },
-    animation: 'garden',
-  },
-  infirmary: {
-    name: 'Treat injured companions',
-    stat: 'end',
-    work: 2,
-    output: {},
-    animation: 'care',
-  },
-};
-export const medicalRoomIds = ['fenRoom2', 'frostRoom3', 'deepRoom1', 'starRoom1'];
+export { materials, activities, materialRecipes, medicalRoomIds } from './production-catalogue.js';
+import { materials, activities, medicalRoomIds } from './production-catalogue.js';
+
 const base = [
   ['entrance', 'Entrance', 55, 380, 230, 'watch', 2],
   ['quarters', 'Quarters', 285, 380, 190, 'cloth', 2],
@@ -190,11 +114,21 @@ export function coreFacility(s, id) {
   return ['workshop', 'garden', 'infirmary'].find((f) => facilityRoom(s, f) === id) || null;
 }
 export function roomUnlocked(s, r) {
+  if (s.household?.opening === 'ready') {
+    if (s.household.rooms.includes(r.id)) return true;
+    if (['dryLanding', 'cellar', 'furnace'].includes(r.id)) return false;
+  }
   if (r.kind === 'chamber') return !!s.flags['discovered_' + r.id];
   if (r.kind === 'hospice') return !!s.flags.garden && !!s.flags.hospice;
   return !r.flag || !!s.flags[r.flag];
 }
 export function roomPause(s, r) {
+  if (
+    s.household?.opening === 'ready' &&
+    ['returned', 'hospice'].includes(r.kind) &&
+    r.x > groundBoundary(s)
+  )
+    return 'Reconnect the intervening rooms first';
   if (!roomUnlocked(s, r)) return 'Discover or restore this room first';
   if (r.kind === 'chamber') {
     if (r.encounter && !s.flags['cleared_' + r.id]) return 'Clear the guardian first';
@@ -276,9 +210,15 @@ export function assignedRoom(s, id) {
 export function workerAssignmentError(s, id, r) {
   const c = guildWorker(s, id);
   if (!c || ['dead', 'departed'].includes(c.status)) return 'Choose a living guild worker';
-  if (id === 'rowan' && !s.flags.free && r.kind === 'chamber')
+  if (id === 'rowan' && !s.flags.free && s.household?.opening !== 'ready' && r.kind === 'chamber')
     return 'Rowan’s binding must be released before working beyond these passages';
-  if (id === 'rowan' && r.id === 'dryLanding' && !s.flags.anchor && !s.flags.cellarDrained)
+  if (
+    id === 'rowan' &&
+    s.household?.opening !== 'ready' &&
+    r.id === 'dryLanding' &&
+    !s.flags.anchor &&
+    !s.flags.cellarDrained
+  )
     return 'Reconnect the landing or drain the cellar before Rowan can reach this workstation';
   return null;
 }
@@ -327,25 +267,15 @@ export function reconcileHouse(s) {
     );
   syncFacilityWorkers(s);
 }
-export function workerContribution(c, stat) {
-  const effective = Math.floor(
-    (c[stat] + equipmentBonus(c, stat) + talentValue(c, stat)) * classWorkFactor(c),
-  );
-  return {
-    id: c.id,
-    name: c.name,
-    status: c.status,
-    stat: effective,
-    fit: c.status === 'home' && !c.injury,
-    work: c.status === 'home' && !c.injury ? 1 + Math.min(4, Math.floor(effective / 10)) : 0,
-  };
-}
 export function roomForecast(s, id, excluded = []) {
   const r = houseRooms.find((r) => r.id === id),
     state = s.guild.house.rooms[id];
   const core = coreFacility(s, id),
-    baseRole = activities[core || r.activity];
-  const workers = state.workers
+    baseRole =
+      activities[
+        core || (s.household?.opening === 'ready' && r.id === 'towerCrown' ? 'herbs' : r.activity)
+      ];
+  const crewResidents = state.workers
     .map((id) => guildWorker(s, id))
     .filter(Boolean)
     .map((c) =>
@@ -358,6 +288,20 @@ export function roomForecast(s, id, excluded = []) {
         ? { ...workerContribution(c, baseRole.stat), fit: false, work: 0 }
         : workerContribution(c, baseRole.stat),
     );
+  const contextual = crewContribution(
+    s,
+    state.workers
+      .map((id) => guildWorker(s, id))
+      .filter((c) => c && !excluded.includes(c.id))
+      .map((c) =>
+        c.id === 'mara' && c.status === 'defending' && baseRole.animation === 'watch'
+          ? { ...c, status: 'home' }
+          : c,
+      ),
+    baseRole.stat,
+    { supervision: baseRole.animation !== 'watch' },
+  );
+  const workers = crewResidents;
   const quality =
     r.id === 'furnace'
       ? 3
@@ -377,29 +321,49 @@ export function roomForecast(s, id, excluded = []) {
     !core && baseRole.work && quality > 1
       ? Number(bestStat >= 20) + Number(quality >= 3 && bestStat >= 30)
       : 0;
+  const effects = furnitureEffects(s, state.decorations);
   const role = {
     ...baseRole,
     output: Object.fromEntries(
-      Object.entries(baseRole.output).map(([id, n]) => [id, n + yieldBonus]),
+      Object.entries(baseRole.output).map(([id, n]) => [
+        id,
+        n +
+          yieldBonus +
+          (id === 'aether'
+            ? effects.aetherYield || 0
+            : id === 'herbs'
+              ? effects.herbsYield || 0
+              : 0),
+      ]),
     ),
   };
-  const work = workers.reduce((n, c) => n + c.work, 0);
+  const crewWork = contextual.total;
+  const enchantmentWork = crewWork && baseRole.animation === 'watch' ? effects.watchWork || 0 : 0;
+  const work = crewWork + enchantmentWork;
   const shortage = Object.entries(role.inputs || {}).find(
     ([id, n]) => s.guild.house.materials[id] < n,
   );
   const paused =
     roomPause(s, r) ||
+    (s.outside?.research?.room === id && 'Creature research in progress') ||
     (role.animation === 'watch' && !s.guild.house.mara.defend && 'Home watch stood down') ||
     (!state.enabled && 'Room production paused') ||
     (!work && 'No fit workers at home') ||
     (shortage && 'Waiting for ' + shortage[0]) ||
     null;
   return {
-    room: r,
+    room:
+      s.household?.opening === 'ready' && id === 'towerCrown'
+        ? { ...r, name: 'Tower herb garden' }
+        : r,
     core,
     role,
     quality,
     yieldBonus,
+    effects,
+    enchantmentWork,
+    relationship: contextual.relationship,
+    supervision: contextual.supervision,
     bestStat,
     workers,
     work: paused ? 0 : work,
@@ -414,7 +378,8 @@ export function setRoomProduction(s, id, enabled) {
   s.guild.house.rooms[id].enabled = enabled;
 }
 export function awardHomeXP(s, workers, hooks) {
-  for (const c of workers.filter((c) => s.roster.some((r) => r.id === c.id)))
+  coworkerMemory(s, workers);
+  for (const c of workers.filter((c) => !c.echo && s.roster.some((r) => r.id === c.id)))
     if (!s.guild.homeXP.workers.includes(c.id)) {
       hooks.awardXP(s, c, 5);
       s.guild.homeXP.workers.push(c.id);
@@ -432,12 +397,7 @@ export function advanceHouse(s, hooks) {
       lines.push(r.name + ': ' + state.progress + '/' + f.role.work + ' work');
       continue;
     }
-    for (const [id, n] of Object.entries(f.role.inputs || {})) s.guild.house.materials[id] -= n;
-    for (const [id, n] of Object.entries(f.role.output)) {
-      if (id === 'gold') hooks.earn(s, n, r.name + ' production');
-      else if (['salvage', 'supplies'].includes(id)) s.guild[id] += n;
-      else s.guild.house.materials[id] += n;
-    }
+    tradeResources(s, f.role.inputs || {}, f.role.output, hooks, r.name + ' production');
     state.progress = 0;
     const workers = f.workers.filter((w) => w.fit).map((w) => guildWorker(s, w.id));
     awardHomeXP(s, workers, hooks);
@@ -466,78 +426,6 @@ export function maraPower(s, excluded = []) {
       .reduce((sum, r) => sum + roomForecast(s, r.id, excluded).work * 2, 0)
   );
 }
-export const materialRecipes = [
-  ...[
-    ['shortSword', { ore: 2, timber: 1 }, 20, 4, 'weapon'],
-    ['huntingBow', { timber: 2, cloth: 1 }, 20, 4, 'weapon'],
-    ['ashStaff', { timber: 2, aether: 1 }, 20, 4, 'weapon'],
-    ['buckler', { timber: 1, ore: 1 }, 15, 3, 'armour'],
-    ['paddedCoat', { cloth: 2, herbs: 1 }, 20, 4, 'armour'],
-    ['leatherCap', { cloth: 1, ore: 1 }, 10, 3, 'armour'],
-    ['softShoes', { cloth: 1, timber: 1 }, 10, 3, 'armour'],
-  ].map(([item, materials, gold, work, category]) => ({
-    id: 'materials_' + item,
-    item,
-    materials,
-    gold,
-    work,
-    category,
-  })),
-  ...[
-    ['banner', { cloth: 2 }],
-    ['rug', { cloth: 2 }],
-    ['plant', { herbs: 1, timber: 1 }],
-    ['shelf', { timber: 2, cloth: 1 }],
-  ].map(([furniture, materials]) => ({
-    id: 'materials_' + furniture,
-    furniture,
-    materials,
-    gold: 5,
-    work: 2,
-    category: 'furniture',
-  })),
-  {
-    id: 'brassComponents',
-    name: 'Brass components',
-    materials: { ore: 3, aether: 1 },
-    gold: 15,
-    work: 4,
-    category: 'material',
-    materialOutput: { components: 2 },
-  },
-  {
-    id: 'salvageBundle',
-    name: 'Usable fittings',
-    materials: { timber: 2, ore: 1 },
-    gold: 10,
-    work: 4,
-    category: 'material',
-    resourceOutput: { salvage: 4 },
-  },
-  {
-    id: 'supplyPacks',
-    name: 'Expedition supply packs',
-    materials: { herbs: 2, cloth: 1 },
-    gold: 5,
-    work: 3,
-    category: 'material',
-    resourceOutput: { supplies: 2 },
-  },
-  ...[2, 3, 4].map((tier) => ({
-    id: 'maraTier' + tier,
-    name: ['', '', 'Reinforce Mara', 'Mara sentry frame', 'Mara runic guard'][tier],
-    maraTier: tier,
-    materials:
-      tier === 2
-        ? { components: 2, ore: 4, timber: 2 }
-        : tier === 3
-          ? { components: 4, ore: 6, aether: 2 }
-          : { components: 6, ore: 10, aether: 4 },
-    gold: tier === 2 ? 40 : tier === 3 ? 90 : 160,
-    work: tier === 2 ? 4 : 6,
-    category: 'mara',
-  })),
-].map((r) => ({ ...r, salvage: 0, facility: 'workshop' }));
 export function validateHouse(s, furniturePlaced) {
   const h = s.guild.house,
     bad = () => {

@@ -6,7 +6,7 @@ import { revisedCopy } from './revised-copy.js';
 import { playerCopy } from './player-copy.js';
 
 test('Mara establishes Halden’s death and the correspondence packet at the opening', () => {
-  const text = D.initial().journal[0].text;
+  const text = D.initial({ opening: 'legacy' }).journal[0].text;
   assert.match(text, /Halden built me, then raised me/);
   assert.match(text, /They died last autumn/);
   assert.match(text, /letters/);
@@ -16,7 +16,7 @@ test('Mara establishes Halden’s death and the correspondence packet at the ope
 });
 
 test('Halden’s room records identify their existing correspondence rather than a newly discovered letter', () => {
-  const state = D.initial();
+  const state = D.initial({ opening: 'legacy' });
   state.flags.cellarDrained = true;
   D.recoverRecord(state, 'cellar');
   const record = D.records.find((record) => record.id === 'cellar');
@@ -37,7 +37,7 @@ test('regional record recovery retains the revised specific field evidence', () 
 });
 
 test('an old opening account migrates to the revised text without changing campaign progress', () => {
-  const state = D.initial();
+  const state = D.initial({ opening: 'legacy' });
   const old = [...revisedCopy].find(([text]) => text.startsWith('Mara introduced herself'));
   assert.ok(old);
   state.journal[0].text = old[0];

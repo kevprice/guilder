@@ -1,5 +1,39 @@
-import { equipmentBonus, itemDefinition } from './equipment.js';
-import { classWorkFactor, talentValue } from './classes.js';
+import {
+  craftingProgress,
+  recordCraft,
+  migrateCrafting,
+  validateCrafting,
+} from './crafting-progression.js';
+export { craftingProgress } from './crafting-progression.js';
+import { crewContribution } from './workforce.js';
+import { effectiveWorkStat } from './workforce.js';
+export { effectiveWorkStat } from './workforce.js';
+import {
+  recipeCosts,
+  resourceShortfalls,
+  spendResources,
+  refundResources,
+  creditResources,
+} from './resource-ledger.js';
+import {
+  facilities,
+  medicalRooms,
+  furnishings,
+  recipes,
+  expeditionAreas,
+  guildMissions,
+  guildProfiles,
+} from './guild-content.js';
+export {
+  facilities,
+  furnishings,
+  recipes,
+  expeditionAreas,
+  guildMissions,
+  guildProfiles,
+} from './guild-content.js';
+import { furnitureEffects } from './furnishing-upgrades.js';
+import { itemDefinition, equippedItems } from './equipment.js';
 import * as H from './house-rooms.js';
 import * as E from './guild-economy.js';
 import * as R from './guild-routes.js';
@@ -22,17 +56,6 @@ export {
   workerAssignmentError,
 } from './house-rooms.js';
 
-export const facilities = [
-  { id: 'workshop', name: 'Workshop', stat: 'str', unlock: 'Restore the service room.' },
-  { id: 'garden', name: 'Garden', stat: 'int', unlock: 'Restore the reclaimed greenhouse.' },
-  {
-    id: 'infirmary',
-    name: 'Infirmary',
-    stat: 'end',
-    unlock: 'Choose the greenhouse hospice, or restore a regional infirmary or hospital.',
-  },
-];
-export const medicalRooms = ['fenRoom2', 'frostRoom3', 'deepRoom1', 'starRoom1'];
 export function facilitySite(s, id) {
   if (id === 'workshop') return s.flags.repaired ? 'service' : null;
   if (id === 'garden') return s.flags.garden ? 'garden' : null;
@@ -42,242 +65,10 @@ export function facilitySite(s, id) {
   }
   return null;
 }
-export const furnishings = [
-  {
-    id: 'forge',
-    name: 'Forge',
-    facility: 'workshop',
-    effect: '+1 work on weapon projects.',
-    blueprint: 'mill',
-  },
-  {
-    id: 'outfitter',
-    name: 'Outfitter’s bench',
-    facility: 'workshop',
-    effect: 'Armour and footwear cost 1 less scrap.',
-    blueprint: 'mill',
-  },
-  {
-    id: 'raisedBeds',
-    name: 'Raised beds',
-    facility: 'garden',
-    effect: 'Each crop produces 3 supplies.',
-    blueprint: 'tower',
-  },
-  {
-    id: 'cloche',
-    name: 'Cloche',
-    facility: 'garden',
-    effect: 'Crops require 3 work.',
-    blueprint: 'tower',
-  },
-  {
-    id: 'treatmentBed',
-    name: 'Treatment bed',
-    facility: 'infirmary',
-    effect: 'Treatment requires 1 work.',
-    blueprint: 'drains',
-  },
-  {
-    id: 'medicalCabinet',
-    name: 'Medical cabinet',
-    facility: 'infirmary',
-    effect: 'Supply-funded medical kits cost 1 supply.',
-    blueprint: 'drains',
-  },
-  ...[
-    ['banner', 'Guild banner'],
-    ['rug', 'Woven rug'],
-    ['plant', 'Potted plant'],
-    ['shelf', 'Book shelves'],
-  ].map(([id, name]) => ({ id, name, decoration: true, effect: 'Decoration · no stat bonuses.' })),
-  {
-    id: 'jailerFaceplate',
-    name: 'Jailer’s faceplate',
-    decoration: true,
-    trophy: 'cleared_cells',
-    effect: 'Recovered after defeating the Iron jailer.',
-  },
-  {
-    id: 'ratTrophy',
-    name: 'Rat-king trophy',
-    decoration: true,
-    trophy: 'cleared_ratway',
-    effect: 'Recovered after defeating the rat king.',
-  },
-];
-const equipmentRecipes = [
-  ['shortSword', 6, 20, 4, 'weapon'],
-  ['huntingBow', 6, 20, 4, 'weapon'],
-  ['ashStaff', 6, 20, 4, 'weapon'],
-  ['buckler', 4, 15, 3, 'armour'],
-  ['paddedCoat', 5, 20, 4, 'armour'],
-  ['leatherCap', 3, 10, 3, 'armour'],
-  ['softShoes', 3, 10, 3, 'armour'],
-  ['longSword', 12, 70, 6, 'weapon', 'mill'],
-  ['leatherArmour', 12, 70, 6, 'armour', 'mill'],
-];
-export const recipes = [
-  ...E.patternRecipes,
-  ...H.materialRecipes,
-  ...equipmentRecipes.map(([item, salvage, gold, work, category, blueprint]) => ({
-    id: item,
-    item,
-    facility: 'workshop',
-    salvage,
-    gold,
-    work,
-    category,
-    blueprint,
-  })),
-  {
-    id: 'refitSword',
-    name: 'Refit short sword → long sword',
-    sourceEquipment: 'shortSword',
-    item: 'longSword',
-    facility: 'workshop',
-    blueprint: 'mill',
-    salvage: 6,
-    gold: 50,
-    work: 4,
-    category: 'weapon',
-  },
-  {
-    id: 'refitCoat',
-    name: 'Refit padded coat → leather armour',
-    sourceEquipment: 'paddedCoat',
-    item: 'leatherArmour',
-    facility: 'workshop',
-    blueprint: 'mill',
-    salvage: 7,
-    gold: 50,
-    work: 4,
-    category: 'armour',
-  },
-  ...['equipment', 'furniture'].map((kind) => ({
-    id: 'reclaim' + (kind === 'equipment' ? 'Equipment' : 'Furniture'),
-    name: 'Reclaim stored ' + kind,
-    reclaim: kind,
-    facility: 'workshop',
-    salvage: 0,
-    gold: 0,
-    work: 2,
-    category: 'reclaim',
-  })),
-  ...furnishings
-    .filter((f) => !f.trophy)
-    .map((f) => ({
-      id: f.id,
-      furniture: f.id,
-      facility: 'workshop',
-      blueprint: f.blueprint,
-      salvage: f.decoration ? 1 : 4,
-      gold: f.decoration ? 5 : 20,
-      work: f.decoration ? 2 : 4,
-      category: 'furniture',
-    })),
-  { id: 'crop', facility: 'garden', salvage: 0, gold: 0, work: 4, category: 'crop' },
-  {
-    id: 'treatment',
-    facility: 'infirmary',
-    supplies: 1,
-    salvage: 0,
-    gold: 0,
-    work: 2,
-    category: 'treatment',
-  },
-];
-export const expeditionAreas = [
-  {
-    id: 'mill',
-    name: 'Mill road',
-    requires: ['wallSurveyed'],
-    stat: 'agi',
-    target: 6,
-    threat: 10,
-    title: 'The mill’s fallen gantry',
-    decision:
-      'A collapsed timber gantry bars the old store. A sound route runs around it, but the party spots sealed supply tins and usable iron inside. Mara has marked a safe bracing method in their notes.',
-    safe: 'Use a supply to brace the gantry',
-    risky: 'Climb the gantry and recover the cache',
-    lead: 'The mill’s workshop records show how to assemble a forge and an outfitter’s bench. They also include patterns for a long sword and leather armour.',
-  },
-  {
-    id: 'drains',
-    name: 'Lower drains',
-    requires: ['searched_sluice'],
-    stat: 'end',
-    target: 10,
-    threat: 18,
-    title: 'A cache above the drain',
-    decision:
-      'A maintenance locker sits above a cold spillway. The surveyed walkway is sound; reaching the locker means staying in the water while another companion holds the rope. A supply can instead be traded to the local pump crew for safe access.',
-    safe: 'Trade a supply to the pump crew',
-    risky: 'Wade to the maintenance locker',
-    lead: 'The drain crew’s first-aid drawings provide plans for a treatment bed and a medical cabinet. Their service route ends at the sluice; sealed story passages still require their own keys.',
-  },
-  {
-    id: 'tower',
-    name: 'Tower approaches',
-    requires: ['tower'],
-    stat: 'int',
-    target: 10,
-    threat: 15,
-    title: 'The wind-damaged nursery',
-    decision:
-      'Beyond the tower’s outer approach, a small nursery has survived beneath a damaged glass roof. The party can finish its survey from the sheltered path. Recovering its remaining stock requires stabilising the roof or reading the old counterweight diagram.',
-    safe: 'Use a supply to stabilise the roof',
-    risky: 'Read and reset the counterweights',
-    lead: 'Nursery drawings explain raised beds and glass cloches. The guild can grow more supplies in its restored greenhouse. These outer paths offer no shortcut through the tower’s wards.',
-  },
-];
-export const guildMissions = expeditionAreas.flatMap((area) =>
-  ['survey', 'salvage'].map((activity) => ({
-    id: activity + '_' + area.id,
-    area: area.id,
-    activity,
-    name: (activity === 'survey' ? 'Survey: ' : 'Recovery: ') + area.name,
-    days: 2,
-    capacity: 3,
-    injuryDays: 1,
-    reward: activity === 'salvage' ? 10 : 0,
-    xp: 25,
-    requires: activity === 'survey' ? area.requires : ['surveyed_' + area.id],
-    ...(activity === 'survey'
-      ? { oneShot: true, sets: ['surveyed_' + area.id], exclusive: 'surveyed_' + area.id }
-      : { cooldown: 2 }),
-    checks: [
-      {
-        stat: area.stat,
-        min: area.target,
-        label: 'Combined ' + area.stat.toUpperCase() + ' ' + area.target,
-      },
-    ],
-    desc:
-      activity === 'survey'
-        ? 'Guild development · discover facility blueprints. Two base working days, with a decision after the first. Nonlethal; waiting at camp is safe. Rewards: 2 scrap, 1 supply and 25 XP per survivor.'
-        : 'Resource expedition · recover 4 scrap, 10 gold and 25 XP per survivor. Two base working days with a decision after the first. Nonlethal; two-day cooldown after completion.',
-    result: area.lead,
-  })),
-);
-export const guildProfiles = Object.fromEntries(
-  guildMissions.map((m) => {
-    const a = expeditionAreas.find((a) => a.id === m.area);
-    return [
-      m.id,
-      {
-        stat: a.stat,
-        amount: a.target,
-        threat: a.threat,
-        skills: { guard: 5, tracking: 5, literacy: 5 },
-      },
-    ];
-  }),
-);
-
 export function managementState() {
   return {
-    version: 7,
+    version: 9,
+    crafting: { completed: [] },
     patterns: [],
     readPatterns: [],
     mechanisms: [],
@@ -344,7 +135,9 @@ export function grantTrophies(s) {
 }
 export function migrateManagement(s) {
   if (s.guild === undefined) s.guild = managementState();
-  const legacy = s.guild.version < 7;
+  const legacy = s.guild.version < 8;
+  if (s.guild.version < 9 && s.guild.house?.materials)
+    for (const id of ['briarHorn', 'briarSample', 'flameKit']) s.guild.house.materials[id] ??= 0;
   validateManagement(s);
   if (s.guild.version === 1) {
     s.guild.nextOrder = 0;
@@ -371,6 +164,11 @@ export function migrateManagement(s) {
     s.guild.version = 7;
     R.initialiseRoutes(s);
   }
+  if (s.guild.version === 7) {
+    migrateCrafting(s);
+    s.guild.version = 8;
+  }
+  if (s.guild.version === 8) s.guild.version = 9;
   reconcileAssignments(s);
   grantTrophies(s);
   if (legacy) E.discoverPatterns(s, true);
@@ -380,11 +178,6 @@ export function discoverPatterns(s, quiet = false) {
 }
 export function sellResource(s, id, quantity, hooks) {
   E.sellResource(s, id, quantity, hooks);
-}
-export function effectiveWorkStat(c, stat) {
-  return Math.floor(
-    (c[stat] + equipmentBonus(c, stat) + talentValue(c, stat)) * classWorkFactor(c),
-  );
 }
 export function utilityDefinition(s, id) {
   const uid = s.guild.facilities[id].utility;
@@ -414,25 +207,48 @@ export function workBreakdown(s, id, recipe = null, workerId = s.guild.facilitie
   const stats = worker ? effectiveWorkStat(worker, def.stat) : null;
   const room = H.facilityRoom(s, id),
     crew = s.guild.house && room ? s.guild.house.rooms[room].workers.slice(1) : [];
-  const contributions = [
+  const crewResidents = [
     worker,
     ...crew.filter((id) => id !== workerId).map((id) => guildWorker(s, id)),
-  ]
-    .filter(Boolean)
-    .map((c) => H.workerContribution(c, def.stat));
+  ].filter(Boolean);
+  const contextual = crewContribution(s, crewResidents, def.stat);
+  const contributions = contextual.workers;
+  const effects = furnitureEffects(s, [f.utility, ...f.decorations]);
+  const staffed = contributions.some((c) => c.fit);
   const parts = {
-    mara:
-      !contributions.some((c) => c.id === 'mara') &&
-      (!H.assignedRoom(s, 'mara') || H.assignedRoom(s, 'mara').id === room) &&
-      guildWorker(s, 'mara').status === 'home'
-        ? 1
-        : 0,
+    mara: 0,
     upgrade: f.tier - 1,
     worker: contributions.filter((c) => c.fit).length,
     stat: contributions.reduce((n, c) => n + Math.max(0, c.work - Number(c.fit)), 0),
-    utility: Number(utility === 'forge' && recipe?.category === 'weapon'),
+    utility: staffed
+      ? Number(utility === 'forge' && recipe?.category === 'weapon') +
+        (recipe?.category === 'weapon' ? effects.weaponWork || 0 : 0) +
+        (effects.workshopWork || 0)
+      : 0,
+    relationship: contextual.relationship,
+    supervision: contextual.supervision,
+    tools:
+      id === 'workshop'
+        ? contributions
+            .filter((c) => c.fit)
+            .reduce(
+              (n, c) =>
+                n +
+                equippedItems(guildWorker(s, c.id)).reduce(
+                  (v, item) => v + (item.houseWork || 0),
+                  0,
+                ),
+              0,
+            )
+        : 0,
   };
-  const potential = Object.values(parts).reduce((sum, value) => sum + value, 0);
+  parts.mastery = id === 'workshop' && staffed ? craftingProgress(s).bonus : 0;
+  const potential = staffed
+    ? Math.max(
+        1,
+        Object.values(parts).reduce((sum, value) => sum + value, 0),
+      )
+    : 0;
   const paused = productionPause(s, id) || (!potential && 'No fit workers at home') || null;
   return {
     ...parts,
@@ -542,18 +358,7 @@ export function roomWorkAbsence(s, ids) {
   });
 }
 export function resourceShortfall(s, inputs) {
-  return [
-    ['gold', s.gold],
-    ['salvage', s.guild.salvage],
-    ['supplies', s.guild.supplies],
-  ]
-    .filter(([key, have]) => (inputs[key] || 0) > have)
-    .map(([key, have]) => ({ resource: key, amount: inputs[key] - have }))
-    .concat(
-      Object.entries(inputs.materials || {})
-        .filter(([id, n]) => s.guild.house.materials[id] < n)
-        .map(([id, n]) => ({ resource: id, amount: n - s.guild.house.materials[id] })),
-    );
+  return resourceShortfalls(s, recipeCosts(inputs));
 }
 export function setGardenPolicy(s, mode, reserve = s.guild.gardenPolicy.reserve) {
   if (!facilitySite(s, 'garden')) throw Error('Restore the greenhouse before managing crops.');
@@ -582,13 +387,14 @@ export function setCarePolicy(s, mode, priority, reserve) {
 export function queueWorkshopOrder(s, recipeId, quantity = 1) {
   if (!facilitySite(s, 'workshop')) throw Error('Restore the workshop before planning orders.');
   const recipe = projectRecipe(s, 'workshop', recipeId);
-  if (recipe.sourceEquipment || recipe.reclaim)
+  if (recipe.sourceEquipment || recipe.sourceFurniture || recipe.reclaim)
     throw Error('Choose a specific stored item to refit or reclaim.');
   if (recipe.maraTier) throw Error('Upgrade Mara as an individual workshop project.');
   if (recipe.routeTool)
     throw Error('Build a door mechanism as an individual project; the guild needs one copy.');
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99)
     throw Error('Choose between 1 and 99 items per order.');
+  if (!Number.isSafeInteger(s.guild.nextOrder + 1)) throw Error('Workshop order limit reached.');
   const order = {
     uid: 'order-' + ++s.guild.nextOrder,
     recipe: recipeId,
@@ -623,7 +429,7 @@ export function workshopQueueForecast(s) {
     ...s.guild.house.materials,
   };
   let days = active?.days || 0,
-    blocked = !facilityAvailable(s, 'workshop');
+    blocked = !facilityAvailable(s, 'workshop') || (!!active && active.days === null);
   return f.queue.map((order) => {
     const recipe = projectRecipe(s, 'workshop', order.recipe);
     const cost = {
@@ -634,18 +440,8 @@ export function workshopQueueForecast(s) {
         Object.entries(recipe.materials).map(([id, n]) => [id, n * order.remaining]),
       ),
     };
-    const unitCosts = {
-      gold: recipe.gold,
-      salvage: recipe.salvage,
-      supplies: recipe.supplies,
-      ...recipe.materials,
-    };
-    const allCosts = {
-      gold: cost.gold,
-      salvage: cost.salvage,
-      supplies: cost.supplies,
-      ...cost.materials,
-    };
+    const unitCosts = recipeCosts(recipe);
+    const allCosts = recipeCosts(recipe, order.remaining);
     const affordableUnits = Math.min(
       order.remaining,
       ...Object.keys(unitCosts)
@@ -674,6 +470,7 @@ function startQueuedProject(s, hooks) {
     order = f.queue[0];
   if (!order || f.project || !facilityAvailable(s, 'workshop')) return null;
   const r = projectRecipe(s, 'workshop', order.recipe);
+  if (!dailyWork(s, 'workshop', r)) return 'Workshop: assign a fit crew before queued work begins.';
   const shortfall = resourceShortfall(s, r);
   if (shortfall.length)
     return (
@@ -699,22 +496,23 @@ export function projectRecipe(s, id, recipeId, source = s.guild.facilities[id]?.
   if (r.maraTier && r.maraTier !== s.guild.house?.mara.tier + 1)
     throw Error('Build Mara’s upgrades in order.');
   const utility = utilityDefinition(s, id)?.id;
+  const effects = furnitureEffects(s, [s.guild.facilities[id].utility]);
   return {
     ...r,
     supplies: r.supplies || 0,
     materials: r.materials || {},
     salvage: Math.max(0, r.salvage - Number(utility === 'outfitter' && r.category === 'armour')),
     work:
-      r.category === 'crop' && utility === 'cloche'
-        ? 3
+      r.category === 'crop' && (utility === 'cloche' || effects.cropWork)
+        ? effects.cropWork || 3
         : r.category === 'treatment' && utility === 'treatmentBed'
           ? 1
           : r.work,
     yield:
       r.reclaim && source
         ? reclamationYield(source)
-        : r.category === 'crop' && utility === 'raisedBeds'
-          ? 3
+        : r.category === 'crop' && (utility === 'raisedBeds' || effects.cropYield)
+          ? effects.cropYield || 3
           : 2,
   };
 }
@@ -722,10 +520,13 @@ function reclamationYield(source) {
   const recipe = recipes.find(
     (r) =>
       !r.sourceEquipment &&
+      !r.sourceFurniture &&
       !r.materials &&
       (source.kind === 'equipment' ? r.item === source.item.id : r.furniture === source.item.id),
   );
   if (recipe) return Math.max(1, Math.floor(recipe.salvage / 2));
+  if (source.kind === 'furniture')
+    return furnishings.find((f) => f.id === source.item.id).decoration ? 1 : 2;
   const item = itemDefinition(source.item.id);
   return Math.min(
     3,
@@ -733,7 +534,7 @@ function reclamationYield(source) {
   );
 }
 function storedConversionSource(s, recipe, uid) {
-  const kind = recipe.reclaim || 'equipment';
+  const kind = recipe.reclaim || (recipe.sourceFurniture ? 'furniture' : 'equipment');
   const item = (kind === 'equipment' ? s.inventory : s.guild.furniture).find((i) => i.uid === uid);
   if (!item) throw Error('Choose an item currently in storage.');
   const blocked = conversionBlock(s, recipe, item);
@@ -741,7 +542,7 @@ function storedConversionSource(s, recipe, uid) {
   return { kind, item };
 }
 function conversionBlock(s, recipe, item) {
-  const kind = recipe.reclaim || 'equipment',
+  const kind = recipe.reclaim || (recipe.sourceFurniture ? 'furniture' : 'equipment'),
     uid = item.uid;
   if (kind === 'equipment') {
     if (item.owner !== null) return 'Unequip this item in the store room first.';
@@ -750,6 +551,8 @@ function conversionBlock(s, recipe, item) {
       return 'This item does not match the refit pattern.';
   } else {
     if (furnishings.find((f) => f.id === item.id).trophy) return 'Earned trophies are kept intact.';
+    if (recipe.sourceFurniture && item.id !== recipe.sourceFurniture)
+      return 'This furnishing does not match the upgrade pattern.';
     if (furniturePlacement(s, uid)) return 'Remove this furnishing to storage first.';
   }
   return null;
@@ -757,11 +560,9 @@ function conversionBlock(s, recipe, item) {
 export function workshopConversions(s) {
   const conversions = [];
   for (const base of recipes.filter(
-    (r) =>
-      (r.sourceEquipment || r.reclaim) &&
-      (!r.blueprint || s.guild.blueprints.includes(r.blueprint)),
+    (r) => (r.sourceEquipment || r.sourceFurniture || r.reclaim) && E.recipeKnown(s, r),
   )) {
-    const kind = base.reclaim || 'equipment';
+    const kind = base.reclaim || (base.sourceFurniture ? 'furniture' : 'equipment');
     for (const item of kind === 'equipment' ? s.inventory : s.guild.furniture) {
       if (conversionBlock(s, base, item)) continue;
       const source = { kind, item };
@@ -774,16 +575,16 @@ export function workshopConversions(s) {
           kind === 'equipment'
             ? itemDefinition(item.id).name
             : furnishings.find((f) => f.id === item.id).name,
-        days: facilityAvailable(s, 'workshop')
-          ? Math.ceil(r.work / dailyWork(s, 'workshop', r))
-          : null,
+        days: dailyWork(s, 'workshop', r) ? Math.ceil(r.work / dailyWork(s, 'workshop', r)) : null,
       });
     }
   }
   return conversions;
 }
 export function startWorkshopConversion(s, recipeId, uid, hooks) {
-  const recipe = recipes.find((r) => r.id === recipeId && (r.sourceEquipment || r.reclaim));
+  const recipe = recipes.find(
+    (r) => r.id === recipeId && (r.sourceEquipment || r.sourceFurniture || r.reclaim),
+  );
   if (!recipe) throw Error('Choose a workshop refit or reclamation project.');
   const source = storedConversionSource(s, recipe, uid);
   startProject(s, 'workshop', recipeId, null, hooks, source);
@@ -886,24 +687,7 @@ function requireFacility(s, id) {
   return s.guild.facilities[id];
 }
 function spendInputs(s, inputs, pay, why) {
-  const missing = resourceShortfall(s, inputs);
-  if (missing.length)
-    throw Error(
-      'Need ' +
-        missing
-          .map(
-            (m) =>
-              m.amount +
-              ' ' +
-              (E.resources.find((r) => r.id === m.resource)?.name.toLowerCase() || m.resource),
-          )
-          .join(' + ') +
-        '.',
-    );
-  if (inputs.gold) pay(s, inputs.gold, why);
-  s.guild.salvage -= inputs.salvage;
-  s.guild.supplies -= inputs.supplies;
-  for (const [id, n] of Object.entries(inputs.materials || {})) s.guild.house.materials[id] -= n;
+  spendResources(s, inputs, { pay }, why);
 }
 export function assignWorker(s, id, residentId) {
   requireFacility(s, id);
@@ -928,9 +712,9 @@ export function startProject(s, id, recipeId, patient, hooks, source = null) {
   const base = projectRecipe(s, id, recipeId, null);
   if (base.routeTool && s.guild.mechanisms.includes(base.routeTool))
     throw Error('This mechanism is already owned by the guild.');
-  if ((base.sourceEquipment || base.reclaim) && !source)
+  if ((base.sourceEquipment || base.sourceFurniture || base.reclaim) && !source)
     throw Error('Choose a specific stored item to refit or reclaim.');
-  if (source && !(base.sourceEquipment || base.reclaim))
+  if (source && !(base.sourceEquipment || base.sourceFurniture || base.reclaim))
     throw Error('This project does not use a stored item.');
   if (source) source = storedConversionSource(s, base, source.item?.uid);
   const r = projectRecipe(s, id, recipeId, source);
@@ -963,10 +747,7 @@ export function cancelProject(s, id, hooks) {
   const f = s.guild.facilities[id];
   if (!f?.project) throw Error('No room project to cancel.');
   const p = f.project;
-  if (p.inputs.gold) hooks.earn(s, p.inputs.gold, 'Refund: ' + p.recipe);
-  s.guild.salvage += p.inputs.salvage;
-  s.guild.supplies += p.inputs.supplies;
-  for (const [id, n] of Object.entries(p.inputs.materials || {})) s.guild.house.materials[id] += n;
+  refundResources(s, p.inputs, hooks, 'Refund: ' + p.recipe);
   if (p.source)
     (p.source.kind === 'equipment' ? s.inventory : s.guild.furniture).push(p.source.item);
   f.project = null;
@@ -1130,11 +911,29 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     label = r.name + ' ready to install';
     R.refreshRouteProgress(s);
   } else if (r.materialOutput || r.resourceOutput) {
-    for (const [id, n] of Object.entries(r.materialOutput || {})) s.guild.house.materials[id] += n;
-    for (const [id, n] of Object.entries(r.resourceOutput || {})) s.guild[id] += n;
+    creditResources(s, { ...r.materialOutput, ...r.resourceOutput });
     label = Object.entries({ ...r.materialOutput, ...r.resourceOutput })
       .map(([id, n]) => '+' + n + ' ' + (id === 'salvage' ? 'scrap' : id))
       .join(', ');
+  } else if (p.source && !r.reclaim) {
+    const item = p.source.item;
+    item.id = r.item || r.furniture;
+    (p.source.kind === 'equipment' ? s.inventory : s.guild.furniture).push(item);
+    const name = r.item
+      ? hooks.itemName(r.item)
+      : furnishings.find((f) => f.id === r.furniture).name;
+    label = name + ' upgraded in place · #' + item.uid.split('-').at(-1) + ' ready in storage';
+    s.scenes.push({
+      title: r.enchantment ? 'Enchantment bound' : 'Upgrade completed',
+      body:
+        label +
+        '. ' +
+        (r.furniture
+          ? furnishings.find((f) => f.id === r.furniture).effect +
+            ' Place it in a compatible room to activate it.'
+          : itemDefinition(r.item).desc),
+      ...(r.item ? { equipmentRewards: [r.item] } : { guildRewards: [r.furniture] }),
+    });
   } else if (r.item) {
     hooks.awardEquipment(s, r.item, r.sourceEquipment ? 'Guild workshop refit' : 'Guild workshop');
     label = hooks.itemName(r.item) + ' added to the store room';
@@ -1147,14 +946,14 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
       guildRewards: [r.furniture],
     });
   } else if (r.reclaim) {
-    s.guild.salvage += p.yield;
+    creditResources(s, { salvage: p.yield });
     const name =
       p.source.kind === 'equipment'
         ? hooks.itemName(p.source.item.id)
         : furnishings.find((f) => f.id === p.source.item.id).name;
     label = name + ' reclaimed → +' + p.yield + ' scrap';
   } else if (r.category === 'crop') {
-    s.guild.supplies += p.yield;
+    creditResources(s, { supplies: p.yield });
     label = '+' + p.yield + ' supplies harvested';
   } else {
     const patient = s.roster.find((c) => c.id === p.patient);
@@ -1164,13 +963,30 @@ export function completeRoomProject(s, id, p, hooks, workedWorker) {
     if (!patient.recovery) patient.status = 'home';
     label = patient.name + ': ' + removed + ' recovery days removed';
   }
+  const rank = recordCraft(s, p.recipe);
+  if (rank)
+    s.scenes.push({
+      title: 'Workshop: ' + rank.name,
+      body:
+        'Completed ' +
+        rank.count +
+        ' different designs. A staffed workshop now gains +' +
+        rank.bonus +
+        ' work each day from guild experience.',
+    });
   const workers = Array.isArray(workedWorker) ? workedWorker : workedWorker ? [workedWorker] : [];
   const awarded = workers.filter(
-    (c) => s.roster.some((r) => r.id === c.id) && !s.guild.homeXP.workers.includes(c.id),
+    (c) => !c.echo && s.roster.some((r) => r.id === c.id) && !s.guild.homeXP.workers.includes(c.id),
   );
   H.awardHomeXP(s, workers, hooks);
   for (const c of awarded) label += ' · ' + c.name + ' +5 XP';
-  const completion = { id: ++s.guild.nextCompletion, day: s.day, facility: id, text: label };
+  const completion = {
+    id: ++s.guild.nextCompletion,
+    day: s.day,
+    facility: id,
+    recipe: p.recipe,
+    text: label,
+  };
   s.guild.completions.push(completion);
   return label;
 }
@@ -1198,8 +1014,7 @@ export function advanceRooms(s, hooks) {
           c.id === f.project.patient &&
           c.status === 'injured' &&
           !c.undead &&
-          work > 0 &&
-          c.recovery > Math.ceil((f.project.work - f.project.progress) / work),
+          (!work || c.recovery > Math.ceil((f.project.work - f.project.progress) / work)),
       )
     ) {
       cancelProject(s, def.id, hooks);
@@ -1220,6 +1035,16 @@ export function advanceRooms(s, hooks) {
       );
       continue;
     }
+    if (!work) {
+      if (f.project)
+        lines.push(
+          def.name +
+            ': ' +
+            (workBreakdown(s, def.id, r).paused || 'Production paused') +
+            (f.project ? ' · ' + f.project.progress + '/' + f.project.work + ' work saved.' : '.'),
+        );
+      continue;
+    }
     if (def.id === 'garden' && !f.project) startProject(s, 'garden', 'crop', null, hooks);
     const p = f.project;
     if (!p) continue;
@@ -1237,10 +1062,7 @@ export function advanceRooms(s, hooks) {
           ? completeRoomProject(s, def.id, p, hooks, workedWorker)
           : p.progress + '/' + p.work + ' work') +
         (worker && (worker.status !== 'home' || worker.injury)
-          ? ' · ' +
-            worker.name +
-            ' unavailable' +
-            (H.assignedRoom(s, 'mara') ? '' : '; caretaker work continues when Mara is available')
+          ? ' · ' + worker.name + ' unavailable'
           : ''),
     );
     if (p.progress >= p.work) f.project = null;
@@ -1304,7 +1126,7 @@ export function validateManagement(s) {
   };
   if (
     !g ||
-    ![1, 2, 3, 4, 5, 6, 7].includes(g.version) ||
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(g.version) ||
     !['salvage', 'supplies', 'nextFurniture', 'nextCompletion', 'readCompletion'].every((k) =>
       nonnegativeInt(g[k]),
     ) ||
@@ -1329,6 +1151,7 @@ export function validateManagement(s) {
     Object.keys(g.facilities).length !== facilities.length
   )
     bad();
+  if (g.version >= 8) validateCrafting(s);
   if (g.version >= 7) R.validateRouteState(s);
   if (
     g.version >= 6 &&
@@ -1383,6 +1206,7 @@ export function validateManagement(s) {
               r.id === o.recipe &&
               r.facility === 'workshop' &&
               !r.sourceEquipment &&
+              !r.sourceFurniture &&
               !r.reclaim &&
               !r.maraTier &&
               !r.routeTool &&
@@ -1424,10 +1248,10 @@ export function validateManagement(s) {
     if (p !== null) {
       const r = recipes.find((r) => r.id === p?.recipe && r.facility === def.id);
       if (r?.routeTool && g.mechanisms.includes(r.routeTool)) bad();
-      if (r?.sourceEquipment || r?.reclaim) {
+      if (r?.sourceEquipment || r?.sourceFurniture || r?.reclaim) {
         const source = p.source,
           item = source?.item;
-        const kind = r.reclaim || 'equipment';
+        const kind = r.reclaim || (r.sourceFurniture ? 'furniture' : 'equipment');
         if (
           g.version < 3 ||
           !item ||
@@ -1444,6 +1268,7 @@ export function validateManagement(s) {
             : !/^furniture-[1-9][0-9]*$/.test(item.uid) ||
               Number(item.uid.slice(10)) > g.nextFurniture ||
               !furnishings.some((f) => f.id === item.id && !f.trophy) ||
+              (r.sourceFurniture && item.id !== r.sourceFurniture) ||
               g.furniture.some((i) => i.uid === item.uid))
         )
           bad();
@@ -1452,7 +1277,8 @@ export function validateManagement(s) {
         !r ||
         (r.blueprint && !g.blueprints.includes(r.blueprint)) ||
         !nonnegativeInt(p.progress) ||
-        ![1, 2, 3, 4, 6].includes(p.work) ||
+        !Number.isSafeInteger(p.work) ||
+        p.work < 1 ||
         p.progress >= p.work ||
         !p.inputs ||
         !['gold', 'salvage', 'supplies'].every((k) => nonnegativeInt(p.inputs[k])) ||
@@ -1502,7 +1328,9 @@ export function validateManagement(s) {
         !Number.isInteger(c.day) ||
         c.day < 1 ||
         c.day > s.day ||
-        typeof c.text !== 'string',
+        typeof c.text !== 'string' ||
+        (c.recipe !== undefined &&
+          !recipes.some((r) => r.id === c.recipe && r.facility === c.facility)),
     ) ||
     !g.homeXP ||
     !Number.isInteger(g.homeXP.day) ||

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { gainLevel, awardExperience, xpRequired } from './classes.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 1000;
   D.recruit(s, 'ivo');
   return s;
@@ -88,7 +88,7 @@ test('legacy fast-level builds retain stats and abilities but cannot add rejecte
   assert.deepEqual(D.load(D.save(loaded)), loaded);
 });
 test('outside help opens the archive and releases trained residents without teaching the party literacy', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 1000;
   D.recruit(s, 'bryn');
   const c = s.roster[0];

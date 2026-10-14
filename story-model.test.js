@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from './domain.js';
 function early() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');

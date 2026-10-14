@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { questRewards, renderQuestReward } from './quest-rewards.js';
 const esc = (value) => String(value).replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'ivo');
   s.selected = 'ivo';
   s.flags.tower = true;

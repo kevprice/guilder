@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { gainLevel, personalProtection, talents } from './classes.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 2000;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
@@ -113,7 +113,8 @@ test('Raise dead creates a different persistent zombie, with no natural healing 
   const oldStr = b.str,
     gold = s.gold;
   D.raiseDead(s, i.id, b.id);
-  assert.equal(b.str, oldStr + 6);
+  assert.equal(b.str, 8);
+  assert.equal(b.echo.originalStats.str, oldStr);
   assert.equal(s.gold, gold - 80);
   assert.equal(D.classOf(b).name, 'Reanimated zombie');
   assert(!b.skills.includes('guard'));

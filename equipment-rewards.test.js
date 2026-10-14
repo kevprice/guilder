@@ -6,7 +6,7 @@ import { equipmentIcon, renderEquipmentRewards } from './equipment-rewards.js';
 const esc = (value) =>
   String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 test('investigating treasure includes prominent physical equipment rewards and only awards them once', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   s.selected = 'bryn';
   s.flags.discovered_sluice = true;
@@ -27,7 +27,7 @@ test('investigating treasure includes prominent physical equipment rewards and o
   assert.equal(s.inventory.length, 1);
 });
 test('earned equipment uses the same reward panel and retains its store-room restrictions', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   const uid = D.awardEquipment(s, 'oathShield', 'The keeper’s reward');
   assert.equal(s.inventory.find((item) => item.uid === uid).id, 'oathShield');
   const html = renderEquipmentRewards(s.scenes.at(-1).equipmentRewards, {

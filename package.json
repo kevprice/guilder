@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
+    "test:household": "node tools/household-scenario.mjs",
+    "test:progression": "node tools/progression-scenario.mjs",
     "docs": "node generate-reference.mjs && prettier --write CHARACTERS.md CLASSES_AND_SKILLS.md HOMECOMINGS.md PERSONAL_RECORDS.md RESIDENT_DISCOVERIES.md",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

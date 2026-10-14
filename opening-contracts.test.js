@@ -12,7 +12,7 @@ function complete(s, id) {
   if (s.roster[0].status === 'injured') D.treat(s, 'bryn');
 }
 test('a fresh guild reaches the wall and cellar through distinct jobs without stat-choice grinding', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   assert.equal(D.availableContracts(s).filter((d) => d.oneShot).length, 4);
   complete(s, 'wallSurvey');
@@ -48,7 +48,7 @@ test('opening saves gain the faster Bryn baseline once, preserving stronger buil
     [2, 8, true, false, 8],
     [2, 8, false, true, 8],
   ]) {
-    const s = D.initial();
+    const s = D.initial({ opening: 'legacy' });
     D.recruit(s, 'bryn');
     const c = s.roster[0];
     Object.assign(c, { level, str: strength, undead });

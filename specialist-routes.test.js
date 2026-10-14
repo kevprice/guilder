@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { gainLevel } from './classes.js';
 import { passageError, passageLabel, trapDisarmed } from './sprawl.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'ivo');
   D.recruit(s, 'nell');
   gainLevel(s.roster[1]);

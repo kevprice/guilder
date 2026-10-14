@@ -35,7 +35,7 @@ const art = {
 };
 export function furnitureIcon(id, esc = (s) => s) {
   const def = furnishings.find((f) => f.id === id);
-  return `<svg class="furniture-icon" viewBox="0 0 64 64" role="img" aria-label="${esc(def?.name || 'Furniture')}">${art[id] || ''}</svg>`;
+  return `<svg class="furniture-icon" viewBox="0 0 64 64" role="img" aria-label="${esc(def?.name || 'Furniture')}">${art[def?.baseArt || id] || ''}${def?.upgrade ? '<path d="M12 49h40M15 53h34" stroke="#ddbb74" stroke-width="3"/>' : ''}${def?.id === 'hornboundForge' ? '<path d="M16 27l-7-13 4-9m35 22 7-13-4-9" stroke="#e0c596" stroke-width="3" fill="none"/>' : ''}${def?.enchantment ? '<path d="M32 18l7 10-7 10-7-10z" fill="none" stroke="#8bd2dc" stroke-width="2"/>' : ''}</svg>`;
 }
 export function renderGuildRewards(ids, esc, s = null) {
   return (ids || [])
@@ -89,7 +89,9 @@ export function furnitureFootprints(zone) {
     { x: roomX + 153, y: 250, w: 25, h: 45 },
   ];
 }
-export function paintFurniture(ctx, id, footprint, camera) {
+export function paintFurniture(ctx, id, footprint, camera, time = 0, active = false) {
+  const definition = furnishings.find((f) => f.id === id);
+  id = definition?.baseArt || id;
   ctx.save();
   ctx.translate(footprint.x - camera, footprint.y);
   ctx.scale(footprint.w / 64, footprint.h / 64);
@@ -332,6 +334,70 @@ export function paintFurniture(ctx, id, footprint, camera) {
     box(38, 28, 4, 5, '#2c2930');
     box(29, 43, 7, 5, '#d1c5a6');
   }
+  if (definition?.upgrade) {
+    if (id === 'forge') {
+      box(10, 28, 5, 31, '#a5b3be');
+      box(49, 28, 5, 31, '#a5b3be');
+      box(14, 54, 36, 4, '#c2a36e');
+    } else if (id === 'raisedBeds') {
+      line(
+        [
+          [6, 43],
+          [6, 37],
+          [57, 37],
+          [57, 43],
+        ],
+        '#95bdc5',
+        3,
+      );
+      box(52, 23, 7, 18, '#7796a0');
+    }
+  }
+  if (definition?.id === 'hornboundForge') {
+    line(
+      [
+        [18, 26],
+        [11, 16],
+        [11, 8],
+        [5, 13],
+      ],
+      '#d8c091',
+      3,
+    );
+    line(
+      [
+        [46, 26],
+        [53, 16],
+        [53, 8],
+        [59, 13],
+      ],
+      '#d8c091',
+      3,
+    );
+  }
+  if (definition?.enchantment) {
+    const pulse = active ? 0.68 + Math.sin(time * 2.4) * 0.2 : 0.45;
+    const y = id === 'forge' ? 43 : id === 'raisedBeds' || id === 'plant' ? 51 : 30;
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = '#8bd2dc';
+    ctx.shadowBlur = active ? 7 : 0;
+    line(
+      [
+        [32, y - 6],
+        [37, y],
+        [32, y + 6],
+        [27, y],
+        [32, y - 6],
+      ],
+      '#a4e4dc',
+      2,
+    );
+    if (id === 'forge' && active) box(27, 43, 10, 8, '#a4e4dc');
+    if ((id === 'raisedBeds' || id === 'plant') && active)
+      for (const x of [19, 34, 46]) box(x, 17 + Math.sin(time + x) * 2, 3, 3, '#d8ebb6');
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
   ctx.restore();
 }
 export function paintGuildFurnishings(ctx, camera, s, rooms, time, labels = true) {
@@ -345,7 +411,20 @@ export function paintGuildFurnishings(ctx, camera, s, rooms, time, labels = true
     const footprints = furnitureFootprints(zone);
     ctx.save();
     symbols.forEach((id, i) => {
-      if (id) paintFurniture(ctx, id, footprints[i], camera);
+      if (id)
+        paintFurniture(
+          ctx,
+          id,
+          footprints[i],
+          camera,
+          time,
+          !!f.project &&
+            dailyWork(
+              s,
+              zone.id,
+              f.project ? { category: zone.id === 'garden' ? 'crop' : undefined } : null,
+            ) > 0,
+        );
     });
     if (!labels) {
       ctx.restore();

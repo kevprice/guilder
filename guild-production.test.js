@@ -6,13 +6,15 @@ import { gainLevel } from './classes.js';
 import { renderRooms } from './room-panel.js';
 
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.garden = s.flags.hospice = s.flags.wallSurveyed = true;
   s.gold = 1000;
   s.guild.salvage = 100;
   s.guild.blueprints = ['mill', 'drains', 'tower'];
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
+  D.assignRoomWorker(s, 'service', 2, 'mara');
+  D.assignRoomWorker(s, 'garden', 1, 'rowan');
   return s;
 }
 function tick(s, n = 1) {
@@ -39,7 +41,7 @@ test('version 1 management migrates queues and policies without replacing stocks
   s.guild.supplies = 0;
   const before = structuredClone(s),
     saved = reload(s);
-  assert.equal(saved.guild.version, 7);
+  assert.equal(saved.guild.version, 9);
   assert.deepEqual(saved.guild.facilities.workshop.queue, []);
   assert.deepEqual(saved.guild.gardenPolicy, { mode: 'continuous', reserve: 8 });
   for (const key of ['gold', 'inventory', 'roster', 'day', 'flags', 'missions'])
@@ -332,7 +334,7 @@ test('the next queued weapon gets its forge bonus in departure forecasts without
   D.dispatch(s, 'survey_mill', ['bryn']);
   const panel = renderRooms(s, helpers, { section: 'workshop' });
   assert.match(panel, /2 work per day/);
-  assert.match(panel, /forge \+1/);
+  assert.match(panel, /furnishing \+1/);
   s.gold = 0;
   assert.equal(D.projectForecast(s, 'workshop').days, null);
   assert.equal(D.projectForecast(s, 'workshop').paused, 'Waiting for resources');

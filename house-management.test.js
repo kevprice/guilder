@@ -15,7 +15,7 @@ const helpers = {
 };
 const reload = (s) => D.load(D.save(s));
 function guild(third = false) {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.gold = 1000;
   s.flags.repaired = s.flags.wallSurveyed = s.flags.tower = true;
   D.recruit(s, 'bryn');
@@ -24,6 +24,7 @@ function guild(third = false) {
     for (const flag of D.recruits.find((c) => c.id === 'nell').requires || []) s.flags[flag] = true;
     D.recruit(s, 'nell');
   }
+  D.assignRoomWorker(s, 'service', 2, 'mara');
   return s;
 }
 function tick(s, n = 1) {
@@ -47,7 +48,7 @@ function materials(s, n = 20) {
 }
 
 test('every house room has a job, bounded crew and two decoration slots; new material stocks start empty', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   assert.equal(D.houseRooms.length, 68);
   assert.equal(new Set(D.houseRooms.map((r) => r.id)).size, 68);
   for (const r of D.houseRooms) {
@@ -115,7 +116,7 @@ test('stat thresholds and equipment improve crew output; extra facility workers 
   assert.equal(D.workerContribution(bryn, 'str').work, 3);
   D.assignRoomWorker(s, 'service', 0, 'bryn');
   D.assignRoomWorker(s, 'service', 2, 'ivo');
-  assert.equal(D.dailyWork(s, 'workshop'), 7);
+  assert.equal(D.dailyWork(s, 'workshop'), 6);
   const xp = s.roster.map((c) => c.xp),
     visits = s.roster.map((c) => c.visits);
   D.startRoomProject(s, 'workshop', 'shortSword');
@@ -130,7 +131,7 @@ test('stat thresholds and equipment improve crew output; extra facility workers 
     visits,
   );
   s = reload(s);
-  assert.equal(D.dailyWork(s, 'workshop'), 7);
+  assert.equal(D.dailyWork(s, 'workshop'), 6);
 });
 
 test('gathering advances only on game days, keeps partial progress and collects once after reload', () => {
@@ -448,7 +449,7 @@ test('version 4 migration preserves legacy projects, leads, decorations, campaig
   delete s.guild.house;
   const before = structuredClone(s),
     loaded = reload(s);
-  assert.equal(loaded.guild.version, 7);
+  assert.equal(loaded.guild.version, 9);
   assert.equal(room(loaded, 'service').workers[0], 'bryn');
   for (const key of ['gold', 'roster', 'flags', 'missions', 'inventory', 'residentPositions'])
     assert.deepEqual(loaded[key], before[key]);

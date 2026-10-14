@@ -1,3 +1,33 @@
+import { partyLaunchPreview } from './party-preparation.js';
+export { partyLaunchPreview } from './party-preparation.js';
+import { assignOwnedEquipment } from './equipment.js';
+import {
+  mainRoomAvailable,
+  groundBoundary,
+  homeThreatLocation,
+  homeThreatLocations,
+  reconcileHomeThreats,
+} from './house-access.js';
+export { homeThreatLocation } from './house-access.js';
+import * as X from './expeditions.js';
+import {
+  householdState,
+  recommissionRoom as commission,
+  validateHousehold,
+  migrateHousehold,
+} from './ready-house.js';
+import { socialState, reanimationMemories, validateSocial } from './household-social.js';
+export {
+  activeExpeditions,
+  pendingOrders,
+  operationView,
+  expeditionPreview,
+  dossier,
+  researchForecast,
+  residentExpedition,
+} from './expeditions.js';
+export { recommissionError } from './ready-house.js';
+export { relationshipsFor } from './household-social.js';
 import * as G from './guild-management.js';
 import * as R from './guild-routes.js';
 export {
@@ -274,6 +304,12 @@ export const skills = {
   ],
   scout: [
     {
+      id: 'sneaking',
+      name: 'Sneaking',
+      desc: 'Reduces scouting detection and helps the party remain hidden.',
+      level: 2,
+    },
+    {
       id: 'tracking',
       name: 'Tracking',
       desc: 'Finds quarry caches, safe paths and shelter routes.',
@@ -344,6 +380,7 @@ export {
   facilityAvailable,
   dailyWork,
   workBreakdown,
+  craftingProgress,
   projectForecast,
   roomWorkAbsence,
   resourceShortfall,
@@ -550,7 +587,7 @@ function validateGuildExpedition(s, m) {
     throw Error('Invalid development expedition data.');
 }
 
-export function initial() {
+function legacyInitial() {
   return {
     version: 2,
     openingBalanceVersion: 1,
@@ -580,8 +617,77 @@ export function initial() {
     ],
     transactions: [],
     reports: [],
+    household: householdState(),
+    social: socialState(),
+    outside: X.expeditionState(),
   };
 }
+export function initial({ opening = 'ready' } = {}) {
+  if (!['ready', 'legacy'].includes(opening)) throw Error('Choose a supported opening.');
+  const s = legacyInitial();
+  if (opening === 'legacy') return s;
+  s.household = householdState('ready');
+  Object.assign(s.flags, {
+    opening: true,
+    repaired: true,
+    breach: true,
+    garden: true,
+    hospice: true,
+    tower: true,
+  });
+  s.guild.blueprints = ['mill', 'drains', 'tower'];
+  for (const id of ['bryn', 'ivo', 'nell']) recruit(s, id);
+  s.roster.find((c) => c.id === 'nell').skills.push('sneaking');
+  s.guild.roomsAnnounced = [...s.household.rooms];
+  s.guild.unlocksAnnounced = R.routeItems.filter((i) => s.flags[i.flag]).map((i) => i.id);
+  s.journal = [
+    {
+      kind: 'Household',
+      text: 'The house is already built. Rowan and Mara keep it running with Bryn, Ivo and Nell. Completed resources belong to shared stores. Assign crews, investigate outside reports, and bring home materials and memories.',
+    },
+  ];
+  G.discoverPatterns(s, true);
+  s.guild.readPatterns = [...s.guild.patterns];
+  s.scenes = [];
+  return s;
+}
+export function launchParty(s, site, intent, ids) {
+  const preview = partyLaunchPreview(s, site, ids, intent);
+  if (preview.blocked) throw Error(preview.blocked);
+  return X.dispatchExpedition(s, site, intent, ids, preview.preparation, guildHooks);
+}
+export function equipPartyMember(s, ids, id, slot, uid = null) {
+  if (!ids.includes(id)) throw Error('Choose a resident in the selected party.');
+  assignOwnedEquipment(s, id, slot, uid);
+  refreshHomeDefence(s);
+}
+export function dispatchExpedition(s, site, intent, party, preparation = {}) {
+  return X.dispatchExpedition(s, site, intent, party, preparation, guildHooks);
+}
+export function reinforceExpedition(s, uid, party, intent, preparation = {}) {
+  return X.reinforceExpedition(s, uid, party, intent, preparation, guildHooks);
+}
+export function orderExpedition(s, uid, order) {
+  return X.orderExpedition(s, uid, order, outsideHooks);
+}
+export function startResearch(s, id) {
+  return X.startResearch(s, id, guildHooks);
+}
+export function cancelResearch(s) {
+  return X.cancelResearch(s);
+}
+export function householdRoomReady(s, id) {
+  return s.household?.opening === 'ready' && s.household.rooms.includes(id);
+}
+export function recommissionRoom(s, id) {
+  return commission(s, id, guildHooks);
+}
+const outsideHooks = {
+  ...guildHooks,
+  harm: applyHarm,
+  returnEquipment,
+  xp: (s, c, n) => guildHooks.awardXP(s, c, n),
+};
 export function home(s) {
   return [
     {
@@ -601,6 +707,12 @@ export function home(s) {
     },
     ...s.roster.filter((c) => c.status === 'home'),
   ];
+}
+export function selectResident(s, id, origin) {
+  if (!home(s).some((c) => c.id === id)) throw Error('This resident is not available to control.');
+  if (origin) rememberPosition(s, s.selected, origin);
+  s.selected = id;
+  return residentPosition(s, id);
 }
 export function chapter(s) {
   const id = s.flags.gateOpen
@@ -664,7 +776,7 @@ export function enterPassage(s, id, origin) {
     c = home(s).find((c) => c.id === s.selected);
   if (!p || !c || origin.floor !== p.y || Math.abs(origin.x - p.x) > 65)
     throw Error('Walk to the labelled passage first.');
-  if (c.id === 'rowan' && !s.flags.free)
+  if (c.id === 'rowan' && !s.flags.free && s.household?.opening !== 'ready')
     throw Error('Rowan is still bound to the entrance. Send an adventurer.');
   if (
     (p.from === 'tower' && !s.flags.tower) ||
@@ -996,7 +1108,8 @@ export function learnTalent(s, id, key) {
 export function spellTargets(s, id, key) {
   const c = resident(s, id);
   if (!hasTalent(c, key) || !['home', 'injured', 'assigned', 'away'].includes(c.status)) return [];
-  const mission = activeMissions(s).find((m) => m.party.includes(id));
+  const mission =
+    X.residentExpedition(s, id) || activeMissions(s).find((m) => m.party.includes(id));
   return s.roster.filter(
     (p) =>
       p.status !== 'dead' &&
@@ -1043,7 +1156,12 @@ export function castRestoration(s, id, targetId, key = 'heal') {
   );
 }
 export function recoverRemains(s, id) {
+  X.assertOrders(s);
   const c = resident(s, id);
+  if (X.residentExpedition(s, id))
+    throw Error(
+      'The fallen resident is still with an outside operation. Rescue or return its party first.',
+    );
   if (c.status !== 'dead' || c.bodyRecovered) throw Error('No missing remains to recover.');
   if (activeMissions(s).some((m) => m.party.includes(id)))
     throw Error('The fallen resident is still with an active party. Withdraw its survivors first.');
@@ -1071,6 +1189,14 @@ export function raiseDead(s, id, targetId) {
     throw Error('Raise dead needs a rested necromancer and recovered mortal remains at home.');
   pay(s, 80, 'Raise dead · ' + target.name);
   target.originalClass = target.specialisation || target.type;
+  target.echo = {
+    version: 1,
+    raisedDay: s.day,
+    caster: id,
+    originalStats: { str: target.str, end: target.end, agi: target.agi, int: target.int },
+    originalLevel: target.level,
+  };
+  reanimationMemories(s, caster, target);
   target.undead = true;
   target.specialisation = null;
   target.talents = [];
@@ -1078,10 +1204,7 @@ export function raiseDead(s, id, targetId) {
   for (const level of Object.keys(target.levelChoices || {}))
     target.levelChoices[level] = { kind: 'legacy', id: 'preserved' };
   target.skills = ['undeadLabour', 'graveEndurance'];
-  target.str += 6;
-  target.end += 8;
-  target.agi = Math.max(1, target.agi - 3);
-  target.int = Math.max(1, Math.floor(target.int / 2));
+  Object.assign(target, { str: 8, end: 10, agi: 2, int: 1, points: 0 });
   target.status = 'home';
   target.injury = 0;
   target.recovery = 0;
@@ -1126,6 +1249,7 @@ export function awardEquipment(s, id, source = 'An expedition') {
 export function buyEquipment(s, gear) {
   const def = itemDefinition(gear);
   if (!def) throw Error('Unknown equipment.');
+  if (def.craftOnly) throw Error('Bind this enchantment to an existing item in the workshop.');
   if (def.rarity === 'rare' && !s.flags.truth)
     throw Error('Rare equipment requires uncovering the guild truth.');
   pay(s, def.cost, def.name + ' placed in store room');
@@ -1336,6 +1460,7 @@ export function dispatch(s, id, ids, supplies = false) {
     );
   if (!ids.length || ids.length > def.capacity || new Set(ids).size !== ids.length)
     throw Error('Choose a distinct party within capacity.');
+  if (def.homeEvent) reconcileHomeThreats(s, [id]);
   const party = ids.map((id) => s.roster.find((c) => c.id === id));
   if (party.some((c) => !c || c.status !== 'home'))
     throw Error('All party members must be fit and at home.');
@@ -1503,6 +1628,7 @@ export function withdraw(s, uid, ids = null) {
     cost: 0,
     party: names,
   });
+  if (def.homeEvent && m.status === 'withdrawn') X.recordHomeOutcome(s, m, false);
 }
 function applyChoice(s, key, choice) {
   const result = outcomeText(s, choice.result);
@@ -1739,6 +1865,7 @@ function resolve(s, m, choice) {
     });
   }
   m.status = 'resolved';
+  if (def.homeEvent) X.recordHomeOutcome(s, m, true);
   m.completedDay = s.day;
   G.reconcileAssignments(s);
   G.discoverPatterns(s);
@@ -1765,6 +1892,10 @@ function homeAttacksEnabled(s) {
   return s.roster.filter((c) => !['dead', 'departed'].includes(c.status)).length >= 3;
 }
 export function dailyHomeEvent(s) {
+  reconcileHomeThreats(
+    s,
+    homeThreats.map((d) => d.id),
+  );
   if (!homeAttacksEnabled(s)) return;
   s.eventSeed = ((s.eventSeed ?? 97) * 48271) % 2147483647;
   const current = homeThreats.find((d) => s.threats?.[d.id]?.active);
@@ -1867,13 +1998,7 @@ export function dailyHomeEvent(s) {
     );
     const def = unlocked[Math.floor(s.eventSeed / 100) % unlocked.length];
     s.threats ||= {};
-    const locations = [
-      { room: 'guildhall', x: 640, y: 380 },
-      ...(s.flags.repaired ? [{ room: 'service', x: 865, y: 380 }] : []),
-      ...rooms
-        .filter((r) => s.flags[r.operational])
-        .map((r) => ({ room: r.id, x: r.x + 170, y: 380 })),
-    ];
+    const locations = homeThreatLocations(s);
     const location = locations[Math.floor(s.eventSeed / 1000) % locations.length];
     s.threats[def.id] = { progress: 0, active: true, age: 0, damage: 0, ...location };
     note(
@@ -1937,10 +2062,10 @@ function applyMissionHarm(s, m, def) {
 }
 
 export function day(s) {
-  const position = s.residentPositions?.[s.selected];
-  if (position) G.settleResident(s, s.selected, position);
+  X.assertOrders(s);
   s.day++;
   G.advanceRooms(s, guildHooks);
+  X.advanceResearch(s, outsideHooks);
   if (s.rowanRecovery > 0) s.rowanRecovery--;
   s.roster
     .filter((c) => c.status === 'injured' && !c.undead)
@@ -2046,6 +2171,7 @@ export function day(s) {
       else resolve(s, m);
     }
   }
+  X.advanceExpeditions(s, outsideHooks);
   G.reconcileAssignments(s);
 }
 export function decide(s, uid, id) {
@@ -2148,34 +2274,22 @@ export function missionLetter(s, id) {
   return text;
 }
 export function roomAvailable(s, room) {
-  return !!s.flags[room.anchor];
+  return mainRoomAvailable(s, room);
 }
 export function walkingBoundary(s, id) {
   return id === 'rowan' && !s.flags.repaired && !s.flags.anchor ? 680 : worldBoundary(s);
 }
 export function worldBoundary(s) {
-  let max = s.flags.anchor ? 1220 : s.flags.breach ? 955 : 690;
-  for (const room of originalRooms) {
-    if (!roomAvailable(s, room)) break;
-    if (room.id === 'library' && !s.flags.libraryOpened) {
-      max = 1260;
-      break;
-    }
-    max = room.x + room.w - 25;
-  }
-  if (s.flags.free)
-    for (const room of expansionRooms) {
-      if (!roomAvailable(s, room)) break;
-      max = room.x + room.w - 25;
-    }
-  return max;
+  return groundBoundary(s);
 }
+
 export function repairRoom(s, id) {
   if (damagedRooms(s).length)
     throw Error('Repair the ghost-damaged rooms before restoring further story rooms.');
   const room = rooms.find((r) => r.id === id);
   if (!room || !roomAvailable(s, room)) throw Error('Recover this room’s anchor first.');
-  if (s.flags[room.operational]) throw Error('The room is already operational.');
+  if (s.flags[room.operational] || householdRoomReady(s, id))
+    throw Error('The room is already operational.');
   const c = home(s).find((c) => c.id === s.selected);
   if (!c) throw Error('Select an available resident.');
   if (room.requiresSkill && !c.skills.includes(room.requiresSkill) && !s.flags.archiveAssistance)
@@ -2417,6 +2531,7 @@ export function emergency(s) {
 export function treat(s, id) {
   const c = resident(s, id);
   if (c.status !== 'injured') throw Error('No injury to treat.');
+  if (c.undead) throw Error('Undead bodies require necromantic repairs, not living treatment.');
   pay(s, 15, `Treatment for ${c.name}`);
   c.status = 'home';
   c.recovery = 0;
@@ -2552,6 +2667,27 @@ export function load(raw) {
           }))) ||
       (c.lastCastDay !== undefined &&
         (!Number.isInteger(c.lastCastDay) || c.lastCastDay < 1 || c.lastCastDay > s.day)) ||
+      (c.echo !== undefined &&
+        (!c.undead ||
+          !c.echo ||
+          c.echo.version !== 1 ||
+          !Number.isInteger(c.echo.raisedDay) ||
+          c.echo.raisedDay < 1 ||
+          c.echo.raisedDay > s.day ||
+          !s.roster.some((p) => p.id === c.echo.caster) ||
+          c.echo.originalLevel !== c.level ||
+          !c.echo.originalStats ||
+          !['str', 'end', 'agi', 'int'].every(
+            (k) => Number.isSafeInteger(c.echo.originalStats[k]) && c.echo.originalStats[k] >= 0,
+          ) ||
+          c.str !== 8 ||
+          c.end !== 10 ||
+          c.agi !== 2 ||
+          c.int !== 1 ||
+          c.points !== 0 ||
+          c.specialisation ||
+          c.talents?.length ||
+          c.legacyTalents?.length)) ||
       (c.bodyRecovered !== undefined && typeof c.bodyRecovered !== 'boolean')
     )
       throw Error('Invalid class progression.');
@@ -2569,7 +2705,10 @@ export function load(raw) {
       Object.entries(s.navigationSeen).some(([key, value]) =>
         ['contracts', 'stories'].includes(key)
           ? !Array.isArray(value) || value.some((id) => typeof id !== 'string')
-          : !['reports', 'journal'].includes(key) || !Number.isInteger(value) || value < 0,
+          : !['reports', 'journal', 'outside'].includes(key) ||
+            !Number.isInteger(value) ||
+            value < 0 ||
+            (key === 'outside' && value > (s.outside?.events?.length || 0)),
       ))
   )
     throw Error('Invalid navigation read markers.');
@@ -2718,7 +2857,13 @@ export function load(raw) {
     }
     s.dungeonBalanceVersion = 1;
   }
-  const activeMembers = new Set();
+  if (s.household === undefined) s.household = householdState();
+  if (s.social === undefined) s.social = socialState();
+  X.ensureExpeditions(s);
+  migrateHousehold(s);
+  validateHousehold(s);
+  validateSocial(s);
+  const activeMembers = X.validateExpeditions(s);
   for (const m of s.missions) {
     const def = contracts.find((c) => c.id === m.id);
     if (
@@ -2873,6 +3018,10 @@ export function load(raw) {
   )
     throw Error('Invalid equipment inventory.');
   G.migrateManagement(s);
+  reconcileHomeThreats(
+    s,
+    homeThreats.map((d) => d.id),
+  );
   for (const m of s.missions) validateGuildExpedition(s, m);
   delete s.storeVisitor;
   if (

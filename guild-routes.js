@@ -111,7 +111,7 @@ export function routeStatus(s, id, c = s.roster.find((r) => r.id === s.selected)
     !!c &&
     c.status === 'home' &&
     !c.injury &&
-    (c.id !== 'rowan' || !!s.flags.free) &&
+    (c.id !== 'rowan' || !!s.flags.free || s.household?.opening === 'ready') &&
     (solved || primaryReady);
   return {
     id,

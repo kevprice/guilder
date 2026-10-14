@@ -4,7 +4,7 @@ import * as D from './domain.js';
 import { gainLevel } from './classes.js';
 import { navigationNotices } from './navigation-notices.js';
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
   s.selected = 'bryn';
@@ -95,7 +95,7 @@ test('equipment requisition competes with ability choice and awards a physical o
   assert.deepEqual(D.load(D.save(s)).roster[0].levelChoices, c.levelChoices);
 });
 test('paid village work earns twelve gold without requiring damage and clearly announces payment', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   D.recruit(s, 'bryn');
   s.eventSeed = 17;
   const gold = s.gold,

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as D from './domain.js';
 import { guildStairs } from './exploration.js';
 test('dormant residents require discovery and capabilities, awaken once, and persist with personal dialogue', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.stairs = true;
   s.flags.searched_crypt = true;
   s.flags.anchor = true;
@@ -44,7 +44,7 @@ test('dormant residents require discovery and capabilities, awaken once, and per
   assert.ok(D.risk(saved, 'road', ['ysra']).safe);
 });
 test('vertical routes preserve floors and gate the labyrinth false stair', () => {
-  const s = D.initial(),
+  const s = D.initial({ opening: 'legacy' }),
     c = D.home(s)[0];
   assert.match(guildStairs({ x: 350, y: 380, floor: 380 }, 'up', s, c).error, /Repair/);
   s.flags.tower = true;
@@ -58,7 +58,7 @@ test('vertical routes preserve floors and gate the labyrinth false stair', () =>
 });
 
 test('concealed floor discoveries are recorded once and require connected rooms', () => {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   assert.throws(() => D.visitFloor(s, -100), /not connected/);
   s.flags.tower = true;
   D.visitFloor(s, -100);

@@ -1,3 +1,4 @@
+import { renderUpgrades } from './upgrade-ui.js';
 import * as D from './domain.js';
 import { furnitureIcon } from './guild-art.js';
 import { equipmentIcon } from './equipment-rewards.js';
@@ -30,6 +31,7 @@ export function renderRooms(
     roomSearch = '',
     craftCategory = 'all',
     craftRecipe = null,
+    craftQuantity = 1,
     craftSource = null,
     materialId = null,
     saleQuantity = 1,
@@ -42,7 +44,12 @@ export function renderRooms(
   if (section === 'house') return header + renderRoomInspector(s, { esc, card, btn }, houseRoom);
   if (section === 'recipes')
     return (
-      header + renderCrafting(s, { esc, card, btn }, { craftCategory, craftRecipe, craftSource })
+      header +
+      renderCrafting(
+        s,
+        { esc, card, btn },
+        { craftCategory, craftRecipe, craftSource, craftQuantity },
+      )
     );
   if (section === 'stores')
     return header + renderStores(s, { esc, card, btn }, { materialId, saleQuantity });
@@ -83,7 +90,13 @@ export function renderRooms(
             ? ' +' + c.work + ' · ' + stat + ' ' + c.stat
             : '/ ' + c.status + ' · bonus paused'),
       ),
-      w.utility ? 'forge +1' : '',
+      w.utility ? 'furnishing +' + w.utility : '',
+      w.relationship
+        ? 'crew relationships ' + (w.relationship > 0 ? '+' : '') + w.relationship
+        : '',
+      w.supervision ? 'necromantic supervision +' + w.supervision : '',
+      w.tools ? 'hearth-bound tools +' + w.tools : '',
+      w.mastery ? 'workshop experience +' + w.mastery : '',
     ]
       .filter(Boolean)
       .join(' · ');
@@ -109,7 +122,7 @@ export function renderRooms(
     return html + renderDecorating(s, { esc, card, btn }, furnitureUid, decorationRoom);
   if (['all', 'overview'].includes(section))
     html +=
-      '<p class="stats">Assign Rowan, Mara or companions to worker slots. Unassigned Mara provides caretaker work; assigning her directs that work to one room. Adventurers gain 5 XP on a staffed completion; home work does not count as an expedition visit.</p>';
+      '<p class="stats">Assign Rowan, Mara or companions to worker slots. Rooms need a fit assigned crew; empty rooms pause and keep their progress. Adventurers gain 5 XP on a staffed completion; home work does not count as an expedition visit.</p>';
   if (['all', 'overview'].includes(section))
     html += card(
       'Work throughout the house',
@@ -150,7 +163,7 @@ export function renderRooms(
       const d = D.furnishings.find((f) => f.id === project.source.item.id);
       html += card(
         d.name + ' · Held at the workshop',
-        `${furnitureIcon(d.id, esc)}<p>Reserved for reclamation · ${project.progress}/${project.work} work. Cancellation returns this exact piece to storage.</p>${btn('Manage reclamation', 'roomPage:workshop')}`,
+        `${furnitureIcon(d.id, esc)}<p>Reserved for workshop work · ${project.progress}/${project.work} work. Cancellation returns this exact piece to storage.</p>${btn('Manage project', 'roomPage:workshop')}`,
       );
     }
     const placed = new Set(
@@ -245,7 +258,7 @@ export function renderRooms(
           p.source.kind === 'equipment'
             ? D.equipment.find((e) => e.id === p.source.item.id)
             : D.furnishings.find((d) => d.id === p.source.item.id);
-        body += `<p class="conversion-held">Held: ${esc(input.name)} · #${p.source.item.uid.split('-').at(-1)}. ${r.reclaim ? 'Completion dismantles it for ' + p.yield + ' scrap.' : 'Completion replaces it with ' + esc(D.equipment.find((e) => e.id === r.item).name) + '.'} Cancel to return this piece and all paid inputs.</p>`;
+        body += `<p class="conversion-held">Held: ${esc(input.name)} · #${p.source.item.uid.split('-').at(-1)}. ${r.reclaim ? 'Completion dismantles it for ' + p.yield + ' scrap.' : 'Completion upgrades this same item to ' + esc(r.item ? D.equipment.find((e) => e.id === r.item).name : D.furnishings.find((e) => e.id === r.furniture).name) + '.'} Cancel to return this piece and all paid inputs.</p>`;
       }
     } else if (def.id === 'garden') {
       const crop = D.projectRecipe(s, 'garden', 'crop');
@@ -341,7 +354,10 @@ export function renderRooms(
           D.recipes
             .filter(
               (r) =>
-                r.furniture && !r.materials && (!r.blueprint || g.blueprints.includes(r.blueprint)),
+                r.furniture &&
+                !r.sourceFurniture &&
+                !r.materials &&
+                (!r.blueprint || g.blueprints.includes(r.blueprint)),
             )
             .map((base) => {
               const r = D.projectRecipe(s, def.id, base.id),
@@ -350,9 +366,12 @@ export function renderRooms(
             })
             .join('') +
           '</div></details>';
+      body += renderUpgrades(s, { esc, btn });
       const conversions = D.workshopConversions(s);
       for (const reclaim of [false, true]) {
-        const options = conversions.filter((r) => !!r.reclaim === reclaim);
+        const options = conversions.filter(
+          (r) => !!r.reclaim === reclaim && !r.sourceFurniture && !r.enchantment,
+        );
         body += `<details class="workshop-conversions"><summary>${reclaim ? 'Reclaim spare equipment and furniture' : 'Refit stored equipment'}</summary><p class="stats">${reclaim ? 'Dismantle a stored piece for scrap. No gold cost. Rare equipment, equipped gear, placed furniture and trophies are kept intact.' : 'Reuse a stored short sword or padded coat to make sturdier equipment. Survey the mill road to discover these patterns.'} Each project reserves its exact item. Cancellation returns the piece and paid inputs. Started projects take priority over planned orders.</p>`;
         if (!options.length)
           body += `<p class="stats">${reclaim ? 'No spare stored pieces available.' : !g.blueprints.includes('mill') ? 'Survey the mill road to unlock refit patterns.' : 'Store a short sword or padded coat to use these patterns.'}</p>`;

@@ -21,12 +21,14 @@ const helpers = {
 };
 const reload = (s) => D.load(D.save(s));
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.wallSurveyed = s.flags.tower = s.flags.garden = s.flags.hospice = true;
   s.gold = 500;
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
   for (const m of D.materials) s.guild.house.materials[m.id] = 12;
+  D.assignRoomWorker(s, 'service', 2, 'mara');
+  D.assignRoomWorker(s, 'garden', 1, 'rowan');
   return s;
 }
 const tick = (s, n = 1) => {
@@ -211,7 +213,7 @@ test('version 5 saves quietly gain earned patterns with no change to resources, 
   D.startRoomProject(s, 'workshop', 'materials_shortSword');
   const before = structuredClone(s),
     loaded = reload(s);
-  assert.equal(loaded.guild.version, 7);
+  assert.equal(loaded.guild.version, 9);
   assert.deepEqual(loaded.guild.patterns, ['pattern_scholarHood']);
   assert.deepEqual(loaded.scenes, before.scenes);
   for (const key of ['gold', 'roster', 'flags', 'inventory', 'missions'])

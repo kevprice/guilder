@@ -6,7 +6,7 @@ import { renderRooms } from './room-panel.js';
 import { navigationNotices, acknowledgeNavigation } from './navigation-notices.js';
 
 function guild() {
-  const s = D.initial();
+  const s = D.initial({ opening: 'legacy' });
   s.flags.repaired = s.flags.garden = s.flags.hospice = true;
   s.gold = 500;
   s.guild.salvage = 20;
@@ -14,6 +14,8 @@ function guild() {
   D.recruit(s, 'bryn');
   D.recruit(s, 'ivo');
   D.setGardenPolicy(s, 'paused');
+  D.assignRoomWorker(s, 'service', 2, 'mara');
+  D.assignRoomWorker(s, 'hospice', 1, 'rowan');
   return s;
 }
 function injure(s, id, recovery) {
@@ -41,11 +43,14 @@ test('care stays manual by default and version 3 migration preserves active rese
   injure(s, 'ivo', 7);
   const uid = D.awardEquipment(s, 'shortSword');
   D.startWorkshopConversion(s, 'refitSword', uid);
+  D.assignRoomWorker(s, 'service', 0, 'mara');
+  D.assignRoomWorker(s, 'hospice', 0, 'rowan');
   s.guild.version = 3;
   delete s.guild.carePolicy;
   const before = structuredClone(s),
     loaded = reload(s);
-  before.guild.version = 7;
+  before.guild.version = 9;
+  before.guild.crafting = { completed: [] };
   before.guild.carePolicy = { mode: 'manual', priority: 'longest', reserve: 2 };
   before.guild.patterns = ['pattern_longSword'];
   before.guild.unlocksAnnounced = ['cellarKey'];
@@ -105,6 +110,7 @@ test('protected supplies pause automatic starts, while a garden harvest can fund
   assert.equal(s.guild.facilities.infirmary.project, null);
   assert.equal(s.guild.supplies, 2);
   assert.match(s.guild.dailySummary.lines.join('\n'), /protected supply reserve reached/);
+  D.assignRoomWorker(s, 'garden', 1, 'mara');
   D.setGardenPolicy(s, 'reserve', 4);
   tick(s, 3);
   assert.equal(s.guild.supplies, 2);
@@ -279,6 +285,7 @@ test('hospice and laboratory playthroughs use only their appropriate medical roo
   injure(s, 'bryn', 6);
   assert.throws(() => D.setCarePolicy(s, 'auto', 'longest', 2), /Restore an infirmary/);
   s.flags.fenRoom2Ready = true;
+  D.assignRoomWorker(s, 'fenRoom2', 1, 'rowan');
   D.setCarePolicy(s, 'auto', 'longest', 2);
   assert.equal(D.facilitySite(s, 'infirmary'), 'fenRoom2');
   tick(s);
