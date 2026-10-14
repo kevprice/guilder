@@ -204,6 +204,31 @@ export function expeditionPreview(s, siteId, intent, ids = [], preparation = {})
       s.outside?.sites[siteId].clearedDay === null ? null : s.outside.sites[siteId].clearedDay + 7,
   };
 }
+export function reconnaissanceReport(siteId, intel) {
+  if (!intel || intel.count === null) return 'No reliable observations were gathered.';
+  const d = siteDefinitions.find((d) => d.id === siteId);
+  const count = (intel.complete ? '' : 'at least ') + intel.count;
+  const observed = d.species
+    ? 'Scouts observed ' +
+      count +
+      ' large horned creature' +
+      (intel.count === 1 ? '' : 's') +
+      '. A creature sketch is available for research.'
+    : 'Scouts counted ' +
+      count +
+      ' armed patrol member' +
+      (intel.count === 1 ? '' : 's') +
+      ' near the old toll arch.';
+  return (
+    'Observed on day ' +
+    intel.day +
+    '. ' +
+    observed +
+    (intel.complete
+      ? ''
+      : ' Scouting was interrupted; this is a partial report and more threats may remain unseen.')
+  );
+}
 function createOperation(s, id, intent, ids, p, hooks, parent = null, reinforcementIntent = null) {
   const { d, site } = siteFor(s, id);
   const party = validParty(s, ids, intent === 'scout' ? 3 : 6);
@@ -553,9 +578,31 @@ function returnParty(s, o, hooks) {
   }
   outcomeSocial(s, o);
   o.phase = 'resolved';
+  const scouting = o.intent === 'scout';
+  const scoutingText = scouting ? reconnaissanceReport(o.site, o.observed) : '';
+  if (scouting) {
+    const names = living(s, o)
+      .map((c) => c.name)
+      .join(', ');
+    const body =
+      (names ? 'Scouts returned: ' + names + '.' : 'The scouting expedition has ended.') +
+      '\n\n' +
+      scoutingText;
+    const notice = event(s, o, 'scouts-returned', body);
+    s.scenes.unshift({
+      title: 'Scouting report · ' + siteDefinitions.find((d) => d.id === o.site).name,
+      body,
+      operation: o.uid,
+      event: notice.uid,
+    });
+  }
   s.reports.unshift({
     day: s.day,
-    title: siteDefinitions.find((d) => d.id === o.site).name + ': ' + o.outcome,
+    title:
+      (scouting ? 'Scouting report · ' : '') +
+      siteDefinitions.find((d) => d.id === o.site).name +
+      ': ' +
+      o.outcome,
     text: s.outside.events
       .filter((e) => e.operation === o.uid)
       .map((e) => e.text)

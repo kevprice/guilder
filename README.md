@@ -21,7 +21,7 @@ New games use this opening. Existing saves retain their residents, rooms, resour
 - A/D or arrow keys move; Space jumps; W/S use stairs; E interacts.
 - Click an object to approach it. Nearby objects show an interaction icon; hover its control for the description, or tap it to interact.
 - Switch characters through the home strip or Tab while the playfield is focused. Each person keeps their own room and position.
-- Use Focus room, Wide view, +/− or the mouse wheel to adjust the camera.
+- Drag the view or use Shift + arrow keys to pan the camera independently. Select a resident’s portrait, press F or use Find selected resident to jump to them; walking does not move the camera. Focus room frames the current room once. Use Wide view, +/− or the mouse wheel to zoom.
 - Characters, Training and Diaries use individual pages. Stories follows the investigation; Reports records completed expeditions.
 
 Bryn is the opening companion. Ivo is discovered on the restored tower’s lower landing and starts with Magical literacy. Nell is found after investigating the holding cells; Oren waits beneath the crypt’s burial stair. Later discoveries follow recovered records, keys and regional expedition milestones.

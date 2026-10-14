@@ -696,3 +696,64 @@ test('living party training improves combat and noncombat field labour', () => {
   b.talents = [];
   assert.equal(crewContribution(s, [b, s.roster[1]], 'str', { away: true }).training, 0);
 });
+
+test('returning scouts show their actual report once and replace uncertain briefings with visible findings', () => {
+  let s = D.initial();
+  assert.match(
+    renderExpeditions(s, helpers, { site: 'oldPatrol' }),
+    /Their numbers and intentions are uncertain/,
+  );
+  const uid = D.dispatchExpedition(s, 'oldPatrol', 'scout', ['nell']);
+  s.outside.operations.at(-1).rng = seedFor(
+    (n) => n >= X.detectionChance(s, 'oldPatrol', [s.roster[2]]),
+  );
+  tick(s, 2);
+  assert(!s.scenes.some((n) => n.operation === uid));
+  tick(s);
+  const intel = s.outside.intel.oldPatrol;
+  const report = s.scenes.find((n) => n.operation === uid);
+  assert.match(report.title, /Scouting report/);
+  assert.match(report.body, new RegExp('counted ' + intel.count + ' armed patrol'));
+  assert.match(report.body, /Nell/);
+  assert(s.outside.events.some((e) => e.uid === report.event && e.type === 'scouts-returned'));
+  assert.match(s.reports.find((r) => r.operation === uid).text, /armed patrol/);
+  const html = renderExpeditions(s, helpers, { site: 'oldPatrol' });
+  assert.match(html, /<strong>Scouting report<\/strong>/);
+  assert.match(html, new RegExp('counted ' + intel.count + ' armed patrol'));
+  assert(!html.includes('Their numbers and intentions are uncertain'));
+  assert(!html.includes('Their numbers are unknown'));
+  s = reload(s);
+  tick(s, 3);
+  assert.equal(s.scenes.filter((n) => n.operation === uid).length, 1);
+  assert.equal(s.reports.filter((r) => r.operation === uid).length, 1);
+  assert.equal(
+    s.outside.events.filter((e) => e.operation === uid && e.type === 'scouts-returned').length,
+    1,
+  );
+  assert.match(
+    renderExpeditions(s, helpers, { site: 'oldPatrol' }),
+    /observations may be out of date/,
+  );
+  s.scenes = [];
+  s = reload(s);
+  tick(s);
+  assert(!s.scenes.some((n) => n.operation === uid));
+});
+
+test('scouts who withdraw bring a visible partial report without revealing the unseen force', () => {
+  const s = D.initial(),
+    uid = D.dispatchExpedition(s, 'oldPatrol', 'scout', ['nell']);
+  forceSpot(s, uid);
+  tick(s);
+  D.orderExpedition(s, uid, 'retreat');
+  tick(s);
+  const report = s.scenes.find((n) => n.operation === uid),
+    intel = s.outside.intel.oldPatrol;
+  assert.equal(intel.complete, false);
+  assert.match(report.body, new RegExp('at least ' + intel.count + ' armed patrol'));
+  assert.match(report.body, /partial report/);
+  const html = renderExpeditions(s, helpers, { site: 'oldPatrol' });
+  assert.match(html, /Partial scouting report/);
+  assert(!html.includes('Their numbers and intentions are uncertain'));
+  assert(!html.includes('counted ' + s.outside.sites.oldPatrol.count + ' armed patrol'));
+});

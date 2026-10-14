@@ -29,7 +29,7 @@ export const siteDefinitions = [
     report:
       'Travellers report watchfires and unfamiliar voices near the old toll arch. Their numbers and intentions are uncertain.',
     warning:
-      'An armed patrol may surround a noisy group. Scout its numbers before committing a force.',
+      'The watchfires suggest armed guards. Their numbers are unknown; scouts can investigate.',
     reward: 30,
   },
 ];

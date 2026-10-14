@@ -828,7 +828,7 @@ function renderUI() {
   let html = `<div class="panel-header"><div><h2>${{ Rooms: 'House', Characters: 'Residents', Stories: 'Story' }[tab] || tab || ''}</h2></div><button class="panel-close" data-close="true" aria-label="Close panel">×</button></div><div id="panel-content" class="panel-content" tabindex="0" aria-label="Panel content">`;
   if (tab === 'Options')
     html +=
-      '<dl class="controls"><dt>Walk</dt><dd>A / D · ← / →</dd><dt>Jump</dt><dd>Space</dd><dt>Stairs</dt><dd>W / S</dd><dt>Interact</dt><dd>E</dd><dt>Switch resident</dt><dd>Tab</dd><dt>Zoom</dt><dd>Mouse wheel · + / −</dd><dt>Close</dt><dd>Escape</dd></dl>';
+      '<dl class="controls"><dt>Walk</dt><dd>A / D · ← / →</dd><dt>Jump</dt><dd>Space</dd><dt>Stairs</dt><dd>W / S</dd><dt>Interact</dt><dd>E</dd><dt>Switch resident</dt><dd>Tab</dd><dt>Pan camera</dt><dd>Drag the view · Shift + arrow keys</dd><dt>Find resident</dt><dd>F · select their portrait</dd><dt>Zoom</dt><dd>Mouse wheel · + / −</dd><dt>Close</dt><dd>Escape</dd></dl>';
   if (tab === 'Overview') {
     html +=
       '<p><a href="/guild-sprawl.html" target="_blank" rel="noopener">View the full tower and underworld map →</a></p>';
@@ -986,7 +986,10 @@ $('status').onclick = () => {
   renderUI();
 };
 function chooseResident(id) {
-  if (id === state.selected) return;
+  if (id === state.selected) {
+    centerOnResident();
+    return;
+  }
   if (!D.home(state).some((c) => c.id === id)) throw Error('Resident unavailable.');
   pendingDoor = null;
   D.leaveStore(state);
@@ -1008,6 +1011,7 @@ function chooseResident(id) {
     residentWalks.delete(id);
   }
   player = D.selectResident(state, id, residentWalks.has(leaving) ? null : player);
+  centerOnResident();
   keys = {};
   hoveredObject = null;
   walkTarget = null;
@@ -1406,11 +1410,13 @@ document.addEventListener('click', (e) => {
     if (op === 'homeDefend') {
       const ids = [...document.querySelectorAll('#home-party input:checked')].map((e) => e.value);
       D.dispatch(state, id, ids);
+      closePanel();
     }
     if (op === 'fieldDispatch') {
       D.launchParty(state, id, value, fieldParty);
       fieldParty = [];
       fieldLoadout = false;
+      closePanel();
       toast(
         value === 'scout'
           ? 'Scouts departed to gather information.'
@@ -1423,6 +1429,7 @@ document.addEventListener('click', (e) => {
         (e) => e.value,
       );
       D.reinforceExpedition(state, id, ids, value, { medical: state.guild.supplies >= 3 });
+      closePanel();
     }
     if (op === 'fieldResearch') D.startResearch(state, id);
     if (op === 'fieldResearchCancel') D.cancelResearch(state);
@@ -1485,6 +1492,7 @@ document.addEventListener('click', (e) => {
       state = D.initial();
       state.flags.opening = true;
       player = spawn();
+      centerOnResident();
       walkTarget = null;
       toast('A new guild begins.');
     }
@@ -1500,7 +1508,8 @@ document.addEventListener('click', (e) => {
         loc = def.homeEvent
           ? { x: 640, y: 380, ...state.threats[m.id] }
           : def.location || { x: 760, y: 1250 };
-      player = { x: loc.x - 170, y: loc.y, floor: loc.y, vy: 0 };
+      camera = loc.x - graphics.width / 2;
+      cameraY = loc.y - 380;
       tab = null;
       walkTarget = null;
     }
@@ -1511,13 +1520,15 @@ document.addEventListener('click', (e) => {
     if (op === 'remains') D.recoverRemains(state, id);
     if (op === 'repairDamage') D.repairDamage(state, id);
     if (op === 'withdraw') D.withdraw(state, id, value ? [value] : null);
-    if (op === 'dispatch')
+    if (op === 'dispatch') {
       D.dispatch(
         state,
         id,
         [...document.querySelectorAll(`[data-party="${id}"]:checked`)].map((x) => x.value),
         { medicalKit: $('kit-' + id).value },
       );
+      closePanel();
+    }
     if (op === 'decide') {
       D.decide(state, id, value);
       $('scene').close();
@@ -1538,6 +1549,7 @@ document.addEventListener('click', (e) => {
       if (!raw) throw Error('No checkpoint yet.');
       state = D.load(raw);
       player = D.residentPosition(state, state.selected);
+      centerOnResident();
       walkTarget = null;
       toast('Checkpoint restored.');
     }
@@ -1736,6 +1748,7 @@ document.addEventListener('change', async (e) => {
     try {
       state = D.load(await e.target.files[0].text());
       player = D.residentPosition(state, state.selected);
+      centerOnResident();
       walkTarget = null;
       persist();
       renderUI();
@@ -1807,10 +1820,25 @@ const zoomControls = document.createElement('div');
 zoomControls.className = 'zoom-controls';
 zoomControls.setAttribute('aria-label', 'Room camera');
 zoomControls.innerHTML =
-  '<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-room" title="Focus room" aria-label="Focus room"></button><button id="wide-view" title="Wide view" aria-label="Wide view"></button>';
+  '<button id="zoom-out" aria-label="Zoom out">−</button><output id="zoom-level" aria-live="polite">125%</output><button id="zoom-in" aria-label="Zoom in">+</button><button id="focus-resident" title="Find selected resident · F" aria-label="Find selected resident"></button><button id="focus-room" title="Focus room" aria-label="Focus room"></button><button id="wide-view" title="Wide view" aria-label="Wide view"></button>';
 $('world').append(zoomControls);
+$('focus-resident').innerHTML = resourceIcon('residents', 'Find selected resident');
+$('focus-resident').onclick = centerOnResident;
 $('focus-room').innerHTML = resourceIcon('focus', 'Focus room');
 $('wide-view').innerHTML = resourceIcon('wide', 'Wide view');
+// The view is independent of simulation positions. Only explicit focus actions recenter it.
+function centerOnResident() {
+  camera = player.x - graphics.width / 2;
+  cameraY = player.floor - 380;
+  graphics.focus = false;
+  hoveredObject = null;
+}
+function panView(dx, dy) {
+  camera += dx;
+  cameraY += dy;
+  graphics.focus = false;
+  hoveredObject = null;
+}
 function setZoom(value) {
   graphics.setZoom(value);
   $('zoom-level').textContent = Math.round(graphics.targetZoom * 100) + '%';
@@ -1828,8 +1856,9 @@ $('wide-view').onclick = () => {
   setZoom(0.85);
 };
 $('focus-room').onclick = () => {
-  graphics.focus = true;
   const room = visualRoom();
+  camera = (room ? room.x + room.w / 2 : player.x) - graphics.width / 2;
+  cameraY = player.floor - 435;
   setZoom(Math.min(2.5, (graphics.width * 0.8) / (room?.w || 500)));
 };
 canvas.addEventListener(
@@ -1842,7 +1871,55 @@ canvas.addEventListener(
   },
   { passive: false },
 );
+let cameraDrag = null;
+let suppressCameraClick = false;
+canvas.style.touchAction = 'none';
+canvas.addEventListener('pointerdown', (e) => {
+  if (cameraDrag || tab || $('scene').open || ![0, 1, 2].includes(e.button)) return;
+  cameraDrag = {
+    id: e.pointerId,
+    x: e.clientX,
+    y: e.clientY,
+    startX: e.clientX,
+    startY: e.clientY,
+    moved: false,
+  };
+  suppressCameraClick = false;
+  canvas.setPointerCapture(e.pointerId);
+  canvas.focus();
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!cameraDrag || e.pointerId !== cameraDrag.id) return;
+  if (tab || $('scene').open) {
+    cameraDrag = null;
+    return;
+  }
+  if (
+    !cameraDrag.moved &&
+    Math.hypot(e.clientX - cameraDrag.startX, e.clientY - cameraDrag.startY) < 6
+  )
+    return;
+  const bounds = canvas.getBoundingClientRect();
+  const scale = Math.min(bounds.width / graphics.width, bounds.height / 650) * graphics.zoom;
+  panView((cameraDrag.x - e.clientX) / scale, (cameraDrag.y - e.clientY) / scale);
+  cameraDrag.x = e.clientX;
+  cameraDrag.y = e.clientY;
+  cameraDrag.moved = true;
+  canvas.style.cursor = 'grabbing';
+});
+function finishCameraDrag(e) {
+  if (!cameraDrag || e.pointerId !== cameraDrag.id) return;
+  suppressCameraClick = cameraDrag.moved || e.type === 'pointercancel';
+  cameraDrag = null;
+  if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+  canvas.style.cursor = 'default';
+}
+canvas.addEventListener('pointerup', finishCameraDrag);
+canvas.addEventListener('pointercancel', finishCameraDrag);
+canvas.addEventListener('lostpointercapture', finishCameraDrag);
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousemove', (e) => {
+  if (cameraDrag?.moved) return;
   if (tab || $('scene').open) {
     hoveredObject = null;
     return;
@@ -2357,6 +2434,11 @@ $('hint').onclick = () => {
 };
 canvas.tabIndex = 0;
 canvas.addEventListener('click', (e) => {
+  if (suppressCameraClick) {
+    suppressCameraClick = false;
+    return;
+  }
+  if ($('scene').open) return;
   const bounds = canvas.getBoundingClientRect();
   const scale = Math.min(bounds.width / graphics.width, bounds.height / 650);
   const inset = (bounds.width - graphics.width * scale) / 2;
@@ -2432,6 +2514,14 @@ document.addEventListener('keydown', (e) => {
   if (['Tab', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key))
     e.preventDefault();
   const key = e.key.toLowerCase();
+  if (e.shiftKey && key.startsWith('arrow')) {
+    keys.shift = true;
+    keys[key] = true;
+    return;
+  }
+  if (!e.repeat && key === 'f') centerOnResident();
+  if (['+', '='].includes(key)) setZoom(graphics.targetZoom + 0.25);
+  if (['-', '_'].includes(key)) setZoom(graphics.targetZoom - 0.25);
   if (!e.repeat && !keys[key]) {
     if (e.key === 'Tab') {
       const list = D.home(state);
@@ -2572,25 +2662,11 @@ function drawResident(c, x, y, controlled = false, forcedFacing = null, presenta
   return pose;
 }
 function drawWorld(c) {
-  const activeRoom = visualRoom();
-  if (graphics.focus && activeRoom) {
-    const key = player.floor + ':' + activeRoom.x;
-    if (graphics.focusKey !== key) {
-      graphics.focusKey = key;
-      setZoom(Math.min(2.5, (graphics.width * 0.8) / activeRoom.w));
-    }
-  }
-  const target =
-    graphics.focus && activeRoom
-      ? activeRoom.x + activeRoom.w / 2 - graphics.width / 2
-      : player.x - graphics.width / 2;
-  camera += (target - camera) * 0.08;
-  cameraY += (player.floor - 380 - (graphics.focus ? 55 : 0) - cameraY) * 0.09;
   graphics.begin(ctx);
   const ambience = {
     camera,
     cameraY,
-    floor: player.floor,
+    floor: cameraY + 380,
     time: graphics.reducedMotion ? 0 : last / 1000,
     width: graphics.width,
   };
@@ -3093,6 +3169,12 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000 || 0, 0.035);
   last = now;
   graphics.tick(dt);
+  if (keys.shift && !tab && !$('scene').open) {
+    panView(
+      (((keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0)) * 600 * dt) / graphics.zoom,
+      (((keys.arrowdown ? 1 : 0) - (keys.arrowup ? 1 : 0)) * 600 * dt) / graphics.zoom,
+    );
+  }
   for (const [id, journey] of residentWalks) {
     const resident = D.guildWorker(state, id);
     if (
@@ -3116,7 +3198,9 @@ function frame(now) {
   }
   const c = D.home(state).find((c) => c.id === state.selected) || D.home(state)[0];
   if (!$('scene').open && !tab && !residentWalks.has(state.selected)) {
-    let dir = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+    let dir = keys.shift
+      ? 0
+      : (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
     if (dir) walkTarget = null;
     else if (walkTarget !== null) {
       if (Math.abs(walkTarget - player.x) < 8) walkTarget = null;
@@ -3208,6 +3292,7 @@ try {
 const contentErrors = D.validateContent();
 if (contentErrors.length) console.error(contentErrors);
 player = D.residentPosition(state, state.selected);
+centerOnResident();
 if (loadedSave) persist();
 renderUI();
 requestAnimationFrame(frame);
